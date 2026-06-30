@@ -1,1 +1,7 @@
+# Generate
+node_modules/
+dist/
+
+# Private
 .private/
+.env
