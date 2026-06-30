@@ -40,14 +40,13 @@ export function toRSS11(input: FeedInput, opts: SerializeOptions): string {
   if (options.copyright) channel.push(el('dc:rights', undefined, options.copyright))
   channel.push(el('items', undefined, itemNodes))
 
-  const hasContent = items.some((item) => item.content != null)
   const root = el(
     'Channel',
     {
       xmlns: 'http://purl.org/net/rss1.1#',
       'xmlns:rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
       'xmlns:dc': 'http://purl.org/dc/elements/1.1/',
-      'xmlns:content': hasContent ? 'http://purl.org/rss/1.0/modules/content/' : undefined,
+      'xmlns:content': 'http://purl.org/rss/1.0/modules/content/',
       ...(options.language ? { 'xml:lang': options.language } : {}),
       'rdf:about': feedUri,
     },
