@@ -4,7 +4,6 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     'middleware/index': 'src/middleware/index.ts',
-    'renderer/index': 'src/renderer/index.ts',
     'formats/rss': 'src/formats/rss/index.ts',
     'formats/atom': 'src/formats/atom/index.ts',
     'formats/json': 'src/formats/json.ts',

@@ -250,36 +250,6 @@ app.use('*', feedMiddleware({ cacheControl: 'public, max-age=600' }))
 app.get('/feed', (c) => c.var.serveFeed(buildFeed()))
 ```
 
-## Using `c.render()`
-
-Prefer Hono's renderer convention? `feedRenderer` wires `serveFeed` into `c.render`, the same
-way `jsxRenderer` wires up HTML. Pass it as route middleware and return `c.render(input)`:
-
-```ts
-// ESM
-import { Hono } from 'hono'
-import { feedRenderer } from 'hono-feed/renderer'
-
-// CJS
-const { Hono } = require('hono')
-const { feedRenderer } = require('hono-feed/renderer')
-
-const app = new Hono()
-
-// `buildFeed()` is just your own helper returning a Feed (or `{ options, items }`).
-app.get('/feed', feedRenderer({ baseUrl: 'https://example.com' }), (c) =>
-  c.render(buildFeed(), { format: 'atom' }),
-)
-```
-
-> [!NOTE]
->   
-> `feedRenderer` augments Hono's global `ContextRenderer` type, so importing `hono-feed/renderer`
-> anywhere makes `c.render()` take a feed across your whole project — the same trade-off
-> `jsxRenderer` makes. Keeping it on its own entry point is what makes that opt-in: you get the
-> augmentation only if you import it. If you'd rather keep the helper scoped to a route, use
-> [`feedMiddleware`](#sharing-options-with-middleware) instead.
-
 ## What goes in a feed
 
 `new Feed(options)` describes the channel; `feed.addItem(item)` adds an entry. Only `title`

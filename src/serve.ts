@@ -61,7 +61,7 @@ export function serveFeed(
 
   validateInput(resolved, format)
 
-  const feedUrl = resolved.options.feedUrl ?? c.req.url
+  const feedUrl = resolved.options.feedUrl ?? url.origin + url.pathname
   const serializeOpts = {
     pretty,
     baseUrl: base,
