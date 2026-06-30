@@ -53,13 +53,14 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
   }
   nodes.push(...itemNodes)
 
+  const hasContent = items.some((item) => item.content != null)
   const root = el(
     'rdf:RDF',
     {
       'xmlns:rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
       xmlns: 'http://purl.org/rss/1.0/',
       'xmlns:dc': 'http://purl.org/dc/elements/1.1/',
-      'xmlns:content': 'http://purl.org/rss/1.0/modules/content/',
+      'xmlns:content': hasContent ? 'http://purl.org/rss/1.0/modules/content/' : undefined,
     },
     nodes,
   )
