@@ -68,7 +68,7 @@
     "prepublishOnly": "pnpm build"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "publishConfig": {
     "access": "public",
