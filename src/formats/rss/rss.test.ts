@@ -78,6 +78,14 @@ describe('toRSS', () => {
     expect(out).not.toContain('\u0007')
   })
 
+  it('omits xmlns:content when no item has content', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a', link: 'https://example.com/1' }],
+    })
+    expect(out).not.toContain('xmlns:content')
+  })
+
   it('emits the version attribute for 0.93 / 0.94', () => {
     expect(toRSS(input, { rssVersion: '0.94' })).toContain('<rss version="0.94"')
   })
