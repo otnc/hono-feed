@@ -1,0 +1,59 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release: a semver bump (patch/minor/major/prerelease) or an explicit version (e.g. 0.2.0)'
+        required: true
+        default: patch
+
+permissions:
+  contents: write # push the version commit/tag and create the GitHub Release
+  id-token: write # npm provenance
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run ci
+      - run: pnpm run typecheck
+      - run: pnpm run test
+      - run: pnpm run build
+
+      - name: Bump version
+        id: bump
+        run: |
+          NEW_VERSION=$(npm version "${{ inputs.version }}" --no-git-tag-version)
+          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to npm
+        run: pnpm publish --no-git-checks --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Commit, tag and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -am "release: ${{ steps.bump.outputs.version }}"
+          git tag "${{ steps.bump.outputs.version }}"
+          git push --follow-tags
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ steps.bump.outputs.version }}" --title "${{ steps.bump.outputs.version }}" --generate-notes

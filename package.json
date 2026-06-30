@@ -1,0 +1,87 @@
+{
+  "name": "hono-feed",
+  "version": "0.1.0",
+  "description": "RSS 2.0 / Atom 1.0 / JSON Feed 1.1 response helper for Hono",
+  "keywords": [
+    "hono",
+    "rss",
+    "atom",
+    "json-feed",
+    "feed",
+    "middleware"
+  ],
+  "homepage": "https://github.com/otnc/hono-feed#readme",
+  "bugs": {
+    "url": "https://github.com/otnc/hono-feed/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/otnc/hono-feed.git"
+  },
+  "license": "Apache-2.0",
+  "author": "otoneko. (https://github.com/otnc)",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./middleware": {
+      "types": "./dist/middleware/index.d.ts",
+      "import": "./dist/middleware/index.js",
+      "require": "./dist/middleware/index.cjs"
+    },
+    "./rss": {
+      "types": "./dist/formats/rss.d.ts",
+      "import": "./dist/formats/rss.js",
+      "require": "./dist/formats/rss.cjs"
+    },
+    "./atom": {
+      "types": "./dist/formats/atom.d.ts",
+      "import": "./dist/formats/atom.js",
+      "require": "./dist/formats/atom.cjs"
+    },
+    "./json": {
+      "types": "./dist/formats/json.d.ts",
+      "import": "./dist/formats/json.js",
+      "require": "./dist/formats/json.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome check --write .",
+    "ci": "biome ci .",
+    "prepublishOnly": "pnpm build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "peerDependencies": {
+    "hono": ">=4.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.1",
+    "hono": "^4.12.27",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}
