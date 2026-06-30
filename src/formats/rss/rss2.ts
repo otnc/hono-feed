@@ -31,12 +31,13 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
 
   for (const item of items) channel.push(rssItem(item, base))
 
+  const hasContent = items.some((item) => item.content != null)
   const root = el(
     'rss',
     {
       version: opts.rssVersion ?? '2.0',
       'xmlns:atom': 'http://www.w3.org/2005/Atom',
-      'xmlns:content': 'http://purl.org/rss/1.0/modules/content/',
+      'xmlns:content': hasContent ? 'http://purl.org/rss/1.0/modules/content/' : undefined,
     },
     [el('channel', undefined, channel)],
   )
