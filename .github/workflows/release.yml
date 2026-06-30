@@ -37,8 +37,16 @@ jobs:
       - name: Bump version
         id: bump
         run: |
-          NEW_VERSION=$(npm version "${{ inputs.version }}" --no-git-tag-version)
-          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+          OLD="$(node -p "require('./package.json').version")"
+          npm version "${{ inputs.version }}" --no-git-tag-version --allow-same-version >/dev/null
+          NEW="$(node -p "require('./package.json').version")"
+          echo "version=v${NEW}" >> "$GITHUB_OUTPUT"
+          if [ "$OLD" = "$NEW" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Version is already ${NEW}; skipping the bump commit but still releasing."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Publish to npm
         run: pnpm publish --no-git-checks --access public --provenance
@@ -49,9 +57,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -am "release: ${{ steps.bump.outputs.version }}"
-          git tag "${{ steps.bump.outputs.version }}"
-          git push --follow-tags
+          # Only commit when the bump actually changed package.json; otherwise just tag and release.
+          if [ "${{ steps.bump.outputs.changed }}" = "true" ]; then
+            git commit -am "release: ${{ steps.bump.outputs.version }}"
+          fi
+          if ! git rev-parse -q --verify "refs/tags/${{ steps.bump.outputs.version }}" >/dev/null; then
+            git tag "${{ steps.bump.outputs.version }}"
+          fi
+          git push origin HEAD "${{ steps.bump.outputs.version }}"
 
       - name: Create GitHub Release
         env:
