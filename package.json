@@ -68,7 +68,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "check": "biome check --write .",
+    "check": "biome check --write . && tsc --noEmit",
     "ci": "biome ci .",
     "prepublishOnly": "pnpm build"
   },
