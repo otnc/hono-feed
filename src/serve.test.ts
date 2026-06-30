@@ -60,6 +60,15 @@ describe('serveFeed', () => {
     expect(res.headers.get('content-type')).toBe('application/feed+json; charset=utf-8')
   })
 
+  it('does not include query params in the feedUrl when using detectFromQuery', async () => {
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, buildFeed(), { detectFromQuery: true }))
+    const res = await a.request('https://example.com/feed?format=atom')
+    const text = await res.text()
+    expect(text).toContain('https://example.com/feed')
+    expect(text).not.toContain('?format=atom')
+  })
+
   it('detects the format from the URL extension', async () => {
     const a = new Hono()
     a.get('/feed.json', (c) => serveFeed(c, buildFeed()))
