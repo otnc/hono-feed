@@ -27,6 +27,7 @@ closes
 <!-- Please complete the following checks before submitting. -->
 
 - [ ] Check if duplicate PR(s) already exist.
-- [ ] Read `CONTRIBUTING.md` (Project rules)
+- [ ] Read `CONTRIBUTING.md` (rules)
 - [ ] Run `pnpm check` (lint & format)
 - [ ] Run `pnpm test` (functions test)
+- [ ] Run `pnpm build` (`dist/`)
