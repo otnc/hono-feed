@@ -23,12 +23,12 @@ updates the lockfile for you.)
 | `pnpm test` | Run the tests once with vitest (`pnpm test:watch` to keep them running) |
 | `pnpm typecheck` | Type-check with `tsc --noEmit` |
 | `pnpm check` | Lint, format and organize imports, writing the fixes (Biome) |
-| `pnpm ci` | The same checks without writing — what CI runs |
+| `pnpm run ci` | The same checks without writing — what CI runs |
 
 Before opening a pull request, make sure the full set passes:
 
 ```sh
-pnpm ci && pnpm typecheck && pnpm test && pnpm build
+pnpm run ci && pnpm typecheck && pnpm test && pnpm build
 ```
 
 ## How the code is organized
