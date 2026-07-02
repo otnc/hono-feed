@@ -13,6 +13,8 @@ const CONTENT_TYPE: Record<FeedFormat, string> = {
   json: 'application/feed+json; charset=utf-8',
 }
 
+const ENCODER = new TextEncoder()
+
 /**
  * Turn a neutral feed (a `Feed` instance or `{ options, items }`) into a correct
  * `Response`, handling content negotiation, conditional requests and caching.
@@ -102,7 +104,7 @@ export function serveFeed(
     return c.body(null, 304, headers)
   }
 
-  headers['Content-Length'] = String(new TextEncoder().encode(body).length)
+  headers['Content-Length'] = String(ENCODER.encode(body).length)
 
   if (c.req.method === 'HEAD') return c.body(null, 200, headers)
   return c.body(body, 200, headers)
