@@ -134,8 +134,8 @@ function etagMatches(headerValue: string, etag: string): boolean {
   const normalize = (t: string) => t.trim().replace(/^W\//, '')
   const target = normalize(etag)
   for (const candidate of headerValue.split(',')) {
-    const c = candidate.trim()
-    if (c === '*' || normalize(c) === target) return true
+    const normalized = candidate.trim()
+    if (normalized === '*' || normalize(normalized) === target) return true
   }
   return false
 }
