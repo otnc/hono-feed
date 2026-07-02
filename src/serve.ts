@@ -97,10 +97,13 @@ export function serveFeed(
     headers.ETag = etagValue
   }
 
-  const updatedDate = resolved.options.updated ?? latestDate(resolved.items)
-  if (lastModified && updatedDate) headers['Last-Modified'] = updatedDate.toUTCString()
+  let updatedDate: Date | undefined
+  if (lastModified) {
+    updatedDate = resolved.options.updated ?? latestDate(resolved.items)
+    if (updatedDate) headers['Last-Modified'] = updatedDate.toUTCString()
+  }
 
-  if (isNotModified(c, etagValue, lastModified ? updatedDate : undefined)) {
+  if (isNotModified(c, etagValue, updatedDate)) {
     return c.body(null, 304, headers)
   }
 
