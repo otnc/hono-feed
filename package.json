@@ -36,6 +36,11 @@
       "import": "./dist/middleware/index.js",
       "require": "./dist/middleware/index.cjs"
     },
+    "./renderer": {
+      "types": "./dist/renderer/index.d.ts",
+      "import": "./dist/renderer/index.js",
+      "require": "./dist/renderer/index.cjs"
+    },
     "./rss": {
       "types": "./dist/formats/rss.d.ts",
       "import": "./dist/formats/rss.js",
