@@ -110,6 +110,14 @@ export function serveFeed(
   return c.body(body, 200, headers)
 }
 
+/** Bind a `serveFeed` call to `c`, folding in defaults that per-call options can override. */
+export function bindServeFeed(
+  c: Context,
+  defaults: ServeFeedOptions,
+): (input: FeedInput | Feed, options?: ServeFeedOptions) => Response {
+  return (input, options) => serveFeed(c, input, { ...defaults, ...options })
+}
+
 function isNotModified(
   c: Context,
   etagValue: string | undefined,
