@@ -1,5 +1,8 @@
 # hono-feed
 
+[![npm](https://img.shields.io/npm/v/hono-feed)](https://www.npmjs.com/package/hono-feed) [![npm](https://img.shields.io/npm/dm/hono-feed)](https://www.npmjs.com/package/hono-feed)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/otnc/hono-feed/ci.yml?branch=main)](https://github.com/otnc/hono-feed/actions) [![GitHub](https://img.shields.io/github/license/otnc/hono-feed)](https://github.com/otnc/hono-feed/blob/main/LICENSE) [![Bundle Size](https://img.shields.io/bundlephobia/min/hono-feed)](https://bundlephobia.com/result?p=hono-feed) [![Bundle Size](https://img.shields.io/bundlephobia/minzip/hono-feed)](https://bundlephobia.com/result?p=hono-feed) [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/otnc/hono-feed)](https://github.com/otnc/hono-feed/pulse) [![GitHub last commit](https://img.shields.io/github/last-commit/otnc/hono-feed)](https://github.com/otnc/hono-feed/commits/main)
+
 > RSS, Atom and JSON Feed for [Hono](https://hono.dev) — done right.
 
 Serving a feed sounds simple, but the details bite: dates have to be in the exact format each
