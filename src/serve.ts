@@ -15,6 +15,12 @@ const CONTENT_TYPE: Record<FeedFormat, string> = {
 
 const ENCODER = new TextEncoder()
 
+const SERIALIZERS: Record<FeedFormat, typeof toRSS> = {
+  rss: toRSS,
+  atom: toAtom,
+  json: toJSONFeed,
+}
+
 /**
  * Turn a neutral feed (a `Feed` instance or `{ options, items }`) into a correct
  * `Response`, handling content negotiation, conditional requests and caching.
@@ -75,17 +81,7 @@ export function serveFeed(
     suppressDeprecationWarnings,
   }
 
-  let body: string
-  switch (format) {
-    case 'atom':
-      body = toAtom(resolved, serializeOpts)
-      break
-    case 'json':
-      body = toJSONFeed(resolved, serializeOpts)
-      break
-    default:
-      body = toRSS(resolved, serializeOpts)
-  }
+  const body = SERIALIZERS[format](resolved, serializeOpts)
 
   const headers: Record<string, string> = { 'Content-Type': CONTENT_TYPE[format] }
   if (cacheControl !== false) headers['Cache-Control'] = cacheControl
@@ -97,10 +93,13 @@ export function serveFeed(
     headers.ETag = etagValue
   }
 
-  const updatedDate = resolved.options.updated ?? latestDate(resolved.items)
-  if (lastModified && updatedDate) headers['Last-Modified'] = updatedDate.toUTCString()
+  let updatedDate: Date | undefined
+  if (lastModified) {
+    updatedDate = resolved.options.updated ?? latestDate(resolved.items)
+    if (updatedDate) headers['Last-Modified'] = updatedDate.toUTCString()
+  }
 
-  if (isNotModified(c, etagValue, lastModified ? updatedDate : undefined)) {
+  if (isNotModified(c, etagValue, updatedDate)) {
     return c.body(null, 304, headers)
   }
 

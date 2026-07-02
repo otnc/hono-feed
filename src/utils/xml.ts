@@ -32,9 +32,11 @@ export function stripInvalidXmlChars(s: string): string {
   return s.replace(INVALID_XML_CHARS, '')
 }
 
+const TEXT_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;' }
+
 /** Escape `& < >` for text nodes (after dropping characters invalid in XML). */
 export function escapeText(s: string): string {
-  return stripInvalidXmlChars(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return stripInvalidXmlChars(s).replace(/[&<>]/g, (ch) => TEXT_ESCAPES[ch])
 }
 
 /**
