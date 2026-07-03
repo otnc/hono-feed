@@ -93,6 +93,28 @@ describe('serveFeed', () => {
     expect(res.headers.get('last-modified')).toBe('Mon, 29 Jun 2026 00:00:00 GMT')
   })
 
+  it('serves a title-only feed: the request URL satisfies the channel <link> fallback', async () => {
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, { options: { title: 'Example Blog' }, items: [] }))
+    const res = await a.request('https://example.com/feed')
+    expect(res.status).toBe(200)
+    expect(await res.text()).toContain('<link>https://example.com/feed</link>')
+  })
+
+  it('uses the request URL as the Atom feed id when the input has none', async () => {
+    const a = new Hono()
+    a.get('/feed', (c) =>
+      serveFeed(
+        c,
+        { options: { title: 't', updated: new Date('2026-06-29T00:00:00Z') }, items: [] },
+        { format: 'atom' },
+      ),
+    )
+    const res = await a.request('https://example.com/feed')
+    expect(res.status).toBe(200)
+    expect(await res.text()).toContain('<id>https://example.com/feed</id>')
+  })
+
   it('throws TypeError on a missing title', () => {
     const c = {
       req: { url: 'https://example.com/feed', method: 'GET', header: () => undefined },

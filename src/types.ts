@@ -93,7 +93,10 @@ export interface SerializeOptions {
   pretty?: boolean
   baseUrl?: string
   feedUrl?: string
-  /** XML declaration version (RSS/Atom). Default '1.0'. */
+  /**
+   * XML declaration version (RSS/Atom). Default '1.0'. `'1.1'` is rejected for Atom
+   * (RFC 4287 §2 requires XML 1.0) and RSS 0.90 (its spec pins the exact declaration).
+   */
   xmlVersion?: XmlVersion
   /** RSS version / structure. Default '2.0'. */
   rssVersion?: RssVersion
@@ -124,7 +127,10 @@ export interface ServeFeedOptions {
   baseUrl?: string
   /** Pretty-print the output. Default false. */
   pretty?: boolean
-  /** XML declaration version (RSS/Atom). Default '1.0'. */
+  /**
+   * XML declaration version (RSS/Atom). Default '1.0'. `'1.1'` is rejected for Atom
+   * (RFC 4287 §2 requires XML 1.0) and RSS 0.90 (its spec pins the exact declaration).
+   */
   xmlVersion?: XmlVersion
   /** RSS version / structure. Default '2.0'. */
   rssVersion?: RssVersion
