@@ -82,4 +82,55 @@ describe('JSON Feed 1.0 conformance (jsonfeed.org/version/1)', () => {
     )
     expect(feed.version).toBe('https://jsonfeed.org/version/1')
   })
+
+  it('emits the 1.0 shape: singular author, no 1.1-only language', () => {
+    const feed = JSON.parse(
+      toJSONFeed(
+        {
+          options: {
+            title: 't',
+            link: 'https://example.com/',
+            language: 'en',
+            author: { name: 'otnc' },
+          },
+          items: [
+            {
+              title: 'a',
+              link: 'https://example.com/1',
+              content: '<p>b</p>',
+              author: { name: 'otnc' },
+            },
+          ],
+        },
+        { jsonFeedVersion: '1', suppressDeprecationWarnings: true },
+      ),
+    )
+    expect(feed.author).toEqual({ name: 'otnc' })
+    expect(feed.authors).toBeUndefined()
+    expect(feed.language).toBeUndefined()
+    expect(feed.items[0].author).toEqual({ name: 'otnc' })
+    expect(feed.items[0].authors).toBeUndefined()
+  })
+})
+
+describe('JSON Feed body and id guarantees', () => {
+  it('falls back to content_text from description when content is absent', () => {
+    const feed = JSON.parse(
+      toJSONFeed({
+        options: { title: 't', link: 'https://example.com/' },
+        items: [{ title: 'a', link: 'https://example.com/1', description: 'plain body' }],
+      }),
+    )
+    expect(feed.items[0].content_text).toBe('plain body')
+    expect(feed.items[0].content_html).toBeUndefined()
+  })
+
+  it('throws for an item with neither id nor link (readers must discard such items)', () => {
+    expect(() =>
+      toJSONFeed({
+        options: { title: 't', link: 'https://example.com/' },
+        items: [{ title: 'a', content: '<p>b</p>' }],
+      }),
+    ).toThrow(/requires "id"/)
+  })
 })

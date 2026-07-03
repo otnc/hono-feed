@@ -65,11 +65,25 @@ describe('RSS 2.0 conformance (rssboard.org/rss-specification)', () => {
   it('guid isPermaLink is a valid boolean literal', () => {
     expect(xml).toMatch(/<guid isPermaLink="(true|false)">/)
   })
+
+  it('falls back to the feed URL for the mandatory channel <link> when link is absent', () => {
+    const out = toRSS(
+      { options: { title: 't', feedUrl: 'https://example.com/feed' }, items: [] },
+      { rssVersion: '2.0' },
+    )
+    expect(out).toContain('<link>https://example.com/feed</link>')
+  })
+
+  it('throws when neither link nor feedUrl can supply the channel <link>', () => {
+    expect(() => toRSS({ options: { title: 't' }, items: [] }, { rssVersion: '2.0' })).toThrow(
+      /requires "link"/,
+    )
+  })
 })
 
-// 0.91-0.94 share the <rss> structure but define far fewer elements than 2.0 (0.91 has no
-// item pubDate/enclosure/category, no channel generator/ttl). Only assert what every
-// version in the lineage verifiably requires: the channel trio and item title.
+// 0.91-0.94 share the <rss> structure but define far fewer elements than 2.0: item
+// category/enclosure arrived in 0.92, item pubDate in 0.93, and guid/author/generator/
+// ttl/namespaced extensions are 2.0-only. Output is gated accordingly.
 describe('RSS 0.91-0.94 conformance (shared <rss> lineage requirements only)', () => {
   for (const rssVersion of ['0.94', '0.93', '0.92', '0.91'] as const) {
     it(`${rssVersion}: channel carries title/link/description and the version attribute`, () => {
@@ -80,7 +94,49 @@ describe('RSS 0.91-0.94 conformance (shared <rss> lineage requirements only)', (
       expect(xml).toContain('<description>diary</description>')
       expect(xml).toContain('<title>post 1</title>')
     })
+
+    it(`${rssVersion}: never emits the 2.0-only elements or namespaced extensions`, () => {
+      const xml = toRSS(complete, { rssVersion })
+      for (const forbidden of [
+        '<generator>',
+        '<ttl>',
+        '<guid',
+        '<author>',
+        'xmlns:atom',
+        'atom:link',
+        'xmlns:content',
+        'content:encoded',
+      ]) {
+        expect(xml).not.toContain(forbidden)
+      }
+    })
   }
+
+  it('0.91: requires channel <language> and emits only title/link/description in items', () => {
+    expect(() =>
+      toRSS(
+        { options: { title: 't', link: 'https://example.com/' }, items: [] },
+        { rssVersion: '0.91' },
+      ),
+    ).toThrow(/RSS 0.91 requires "language"/)
+
+    const xml = toRSS(complete, { rssVersion: '0.91' })
+    expect(xml).toContain('<language>en</language>')
+    const item = xml.match(/<item>([\s\S]*?)<\/item>/)?.[1] ?? ''
+    expect(item).not.toContain('<pubDate>')
+    expect(item).not.toContain('<enclosure')
+    expect(item).not.toContain('<category')
+  })
+
+  it('0.92: allows enclosure/category but not item pubDate', () => {
+    const xml = toRSS(complete, { rssVersion: '0.92' })
+    expect(xml).toContain('<enclosure')
+    expect(xml).not.toContain('<pubDate>')
+  })
+
+  it('0.93: allows item pubDate', () => {
+    expect(toRSS(complete, { rssVersion: '0.93' })).toContain('<pubDate>')
+  })
 })
 
 describe('RSS 0.90 conformance (Netscape RDF Site Summary 0.90)', () => {
@@ -101,6 +157,10 @@ describe('RSS 0.90 conformance (Netscape RDF Site Summary 0.90)', () => {
     expect(xml).toMatch(
       /<item>[\s\S]*<title>post 1<\/title>[\s\S]*<link>https:\/\/example\.com\/1<\/link>/,
     )
+  })
+
+  it('rejects xmlVersion 1.1 — 0.90 requires the exact XML 1.0 declaration', () => {
+    expect(() => toRSS(complete, { rssVersion: '0.90', xmlVersion: '1.1' })).toThrow(/XML 1\.0/)
   })
 })
 
@@ -132,6 +192,17 @@ describe('RSS 1.0 conformance (web.resource.org/rss/1.0/spec, RDF Site Summary)'
       /<item rdf:about="[^"]+">[\s\S]*<title>post 1<\/title>[\s\S]*<link>https:\/\/example\.com\/1<\/link>/,
     )
   })
+
+  it('falls back to the item URI for the mandatory item <link> when link is absent', () => {
+    const out = toRSS(
+      {
+        options: { title: 't', feedUrl: 'https://example.com/feed' },
+        items: [{ title: 'a', id: 'https://example.com/a' }],
+      },
+      { rssVersion: '1.0', feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('<link>https://example.com/a</link>')
+  })
 })
 
 describe('RSS 1.1 conformance (inamidst.com/rss1.1/spec)', () => {
@@ -149,9 +220,11 @@ describe('RSS 1.1 conformance (inamidst.com/rss1.1/spec)', () => {
     expect(xml).not.toContain('rdf:Seq')
   })
 
+  it('items carries the mandatory rdf:parseType="Collection"', () => {
+    expect(xml).toContain('<items rdf:parseType="Collection">')
+  })
+
   it('item carries title and link, nested directly under <items>', () => {
-    // <items[^>]*> tolerates attributes: the spec requires rdf:parseType="Collection" on
-    // <items>, which the serializer does not yet emit (tracked in issue #15).
     expect(xml).toMatch(
       /<items[^>]*>[\s\S]*<item rdf:about="[^"]+">[\s\S]*<title>post 1<\/title>[\s\S]*<link>https:\/\/example\.com\/1<\/link>[\s\S]*<\/item>[\s\S]*<\/items>/,
     )

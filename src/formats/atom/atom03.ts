@@ -46,7 +46,8 @@ function atomEntry03(item: FeedItem, base?: string): Node {
   const ch: Node[] = [el('title', undefined, item.title)]
   if (link) ch.push(el('link', { rel: 'alternate', type: 'text/html', href: link }))
   ch.push(el('id', undefined, id))
-  if (item.published) ch.push(el('issued', undefined, rfc3339(item.published)))
+  // <issued> is mandatory in 0.3 (unlike published in 1.0); fall back to updated.
+  ch.push(el('issued', undefined, rfc3339(item.published ?? item.updated ?? new Date())))
   ch.push(el('modified', undefined, rfc3339(item.updated ?? item.published ?? new Date())))
   if (item.description) ch.push(el('summary', undefined, item.description))
   if (item.content) ch.push(el('content', { type: 'text/html', mode: 'escaped' }, item.content))

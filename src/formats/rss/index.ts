@@ -14,6 +14,10 @@ const OBSOLETE_RSS = new Set(['0.90', '0.91', '0.92', '0.93', '0.94'])
  */
 export function toRSS(input: FeedInput, opts: SerializeOptions = {}): string {
   const version = opts.rssVersion
+  // The 0.90 spec requires the exact <?xml version="1.0"?> declaration.
+  if (version === '0.90' && opts.xmlVersion === '1.1') {
+    throw new TypeError('hono-feed: RSS 0.90 requires an XML 1.0 declaration')
+  }
   if (version && OBSOLETE_RSS.has(version) && !opts.suppressDeprecationWarnings) {
     warnDeprecated(
       `rss:${version}`,

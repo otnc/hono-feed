@@ -67,9 +67,11 @@ export function serveFeed(
     format = f ?? defaultFormat
   }
 
-  validateInput(resolved, format)
-
+  // Validate with the request-derived feedUrl folded in: rules that accept feedUrl as a
+  // fallback (RSS channel <link>, Atom feed id) are satisfiable here even when the caller
+  // set neither, because serving always yields a self URL.
   const feedUrl = resolved.options.feedUrl ?? url.origin + url.pathname
+  validateInput({ options: { ...resolved.options, feedUrl }, items: resolved.items }, format)
   const serializeOpts = {
     pretty,
     baseUrl: base,

@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest'
 import type { FeedInput } from '../types'
 import { type FeedMiddlewareEnv, feed } from './index'
 
-const input: FeedInput = { options: { title: 't', link: 'https://example.com/' }, items: [] }
+const input: FeedInput = {
+  options: { title: 't', link: 'https://example.com/', updated: new Date('2026-06-29T00:00:00Z') },
+  items: [],
+}
 
 describe('feedMiddleware', () => {
   it('exposes a preconfigured serveFeed on c.var, overridable per call', async () => {

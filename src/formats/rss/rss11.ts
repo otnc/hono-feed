@@ -20,8 +20,9 @@ export function toRSS11(input: FeedInput, opts: SerializeOptions): string {
     if (!uri) throw new TypeError('hono-feed: RSS 1.1 item requires "link" or "id"')
 
     const ch: Node[] = [el('title', undefined, item.title)]
-    const link = absolutize(item.link, base)
-    if (link) ch.push(el('link', undefined, link))
+    // Item <link> is mandatory (as in RSS 1.0); fall back to the item URI (rdf:about).
+    const link = absolutize(item.link, base) ?? uri
+    ch.push(el('link', undefined, link))
     if (item.description) ch.push(el('description', undefined, item.description))
     if (item.published) ch.push(el('dc:date', undefined, rfc3339(item.published)))
     const author = Array.isArray(item.author) ? item.author[0] : item.author
@@ -33,12 +34,14 @@ export function toRSS11(input: FeedInput, opts: SerializeOptions): string {
     itemNodes.push(el('item', { 'rdf:about': uri }, ch))
   }
 
+  // Channel <link> is mandatory; fall back to the feed URI.
   const channel: Node[] = [el('title', undefined, options.title)]
-  if (home) channel.push(el('link', undefined, home))
+  channel.push(el('link', undefined, home ?? feedUri))
   channel.push(el('description', undefined, options.description ?? ''))
   if (options.updated) channel.push(el('dc:date', undefined, rfc3339(options.updated)))
   if (options.copyright) channel.push(el('dc:rights', undefined, options.copyright))
-  channel.push(el('items', undefined, itemNodes))
+  // The spec makes rdf:parseType="Collection" mandatory on <items> (it replaces 1.0's rdf:Seq).
+  channel.push(el('items', { 'rdf:parseType': 'Collection' }, itemNodes))
 
   const hasContent = items.some((item) => item.content != null)
   const root = el(

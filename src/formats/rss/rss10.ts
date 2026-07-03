@@ -23,8 +23,9 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
     seq.push(el('rdf:li', { 'rdf:resource': uri }))
 
     const ch: Node[] = [el('title', undefined, item.title)]
-    const link = absolutize(item.link, base)
-    if (link) ch.push(el('link', undefined, link))
+    // Item <link> is mandatory in RSS 1.0; fall back to the item URI (rdf:about).
+    const link = absolutize(item.link, base) ?? uri
+    ch.push(el('link', undefined, link))
     if (item.description) ch.push(el('description', undefined, item.description))
     if (item.published) ch.push(el('dc:date', undefined, rfc3339(item.published)))
     const author = Array.isArray(item.author) ? item.author[0] : item.author
@@ -36,8 +37,9 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
     itemNodes.push(el('item', { 'rdf:about': uri }, ch))
   }
 
+  // Channel <link> is mandatory; fall back to the feed URI.
   const channel: Node[] = [el('title', undefined, options.title)]
-  if (home) channel.push(el('link', undefined, home))
+  channel.push(el('link', undefined, home ?? feedUri))
   channel.push(el('description', undefined, options.description ?? ''))
   if (options.language) channel.push(el('dc:language', undefined, options.language))
   if (options.updated) channel.push(el('dc:date', undefined, rfc3339(options.updated)))
