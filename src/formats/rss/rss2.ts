@@ -94,7 +94,8 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
 
   if (caps.itemPubDate && item.published) ch.push(el('pubDate', undefined, rfc822(item.published)))
   if (item.description) ch.push(el('description', undefined, raw(cdata(item.description))))
-  if (caps.rss20 && item.content) ch.push(el('content:encoded', undefined, raw(cdata(item.content))))
+  if (caps.rss20 && item.content)
+    ch.push(el('content:encoded', undefined, raw(cdata(item.content))))
 
   // RSS author requires an email; skip when absent.
   if (caps.rss20) {

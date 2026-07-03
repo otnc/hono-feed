@@ -97,7 +97,16 @@ describe('RSS 0.91-0.94 conformance (shared <rss> lineage requirements only)', (
 
     it(`${rssVersion}: never emits the 2.0-only elements or namespaced extensions`, () => {
       const xml = toRSS(complete, { rssVersion })
-      for (const forbidden of ['<generator>', '<ttl>', '<guid', '<author>', 'xmlns:atom', 'atom:link', 'xmlns:content', 'content:encoded']) {
+      for (const forbidden of [
+        '<generator>',
+        '<ttl>',
+        '<guid',
+        '<author>',
+        'xmlns:atom',
+        'atom:link',
+        'xmlns:content',
+        'content:encoded',
+      ]) {
         expect(xml).not.toContain(forbidden)
       }
     })

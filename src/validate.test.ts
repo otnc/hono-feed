@@ -44,7 +44,10 @@ describe('validateInput', () => {
       /RSS feed requires "link"/,
     )
     expect(() =>
-      validateInput({ options: { title: 't', feedUrl: 'https://example.com/feed' }, items: [] }, 'rss'),
+      validateInput(
+        { options: { title: 't', feedUrl: 'https://example.com/feed' }, items: [] },
+        'rss',
+      ),
     ).not.toThrow()
   })
 
