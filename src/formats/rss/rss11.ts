@@ -38,7 +38,8 @@ export function toRSS11(input: FeedInput, opts: SerializeOptions): string {
   channel.push(el('description', undefined, options.description ?? ''))
   if (options.updated) channel.push(el('dc:date', undefined, rfc3339(options.updated)))
   if (options.copyright) channel.push(el('dc:rights', undefined, options.copyright))
-  channel.push(el('items', undefined, itemNodes))
+  // The spec makes rdf:parseType="Collection" mandatory on <items> (it replaces 1.0's rdf:Seq).
+  channel.push(el('items', { 'rdf:parseType': 'Collection' }, itemNodes))
 
   const hasContent = items.some((item) => item.content != null)
   const root = el(

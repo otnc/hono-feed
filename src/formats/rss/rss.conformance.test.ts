@@ -149,9 +149,11 @@ describe('RSS 1.1 conformance (inamidst.com/rss1.1/spec)', () => {
     expect(xml).not.toContain('rdf:Seq')
   })
 
+  it('items carries the mandatory rdf:parseType="Collection"', () => {
+    expect(xml).toContain('<items rdf:parseType="Collection">')
+  })
+
   it('item carries title and link, nested directly under <items>', () => {
-    // <items[^>]*> tolerates attributes: the spec requires rdf:parseType="Collection" on
-    // <items>, which the serializer does not yet emit (tracked in issue #15).
     expect(xml).toMatch(
       /<items[^>]*>[\s\S]*<item rdf:about="[^"]+">[\s\S]*<title>post 1<\/title>[\s\S]*<link>https:\/\/example\.com\/1<\/link>[\s\S]*<\/item>[\s\S]*<\/items>/,
     )
