@@ -13,6 +13,11 @@ export function validateInput(input: FeedInput, format: FeedFormat): void {
     throw new TypeError('hono-feed: Atom feed requires "id" (or "link" / "feedUrl")')
   }
 
+  // Channel <link> is mandatory in every RSS version (the serializers fall back to feedUrl).
+  if (format === 'rss' && !options.link && !options.feedUrl) {
+    throw new TypeError('hono-feed: RSS feed requires "link" (or "feedUrl")')
+  }
+
   items.forEach((item, i) => {
     if (typeof item.title !== 'string' || item.title.length === 0) {
       throw new TypeError(`hono-feed: item[${i}] "title" is required`)

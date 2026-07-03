@@ -8,10 +8,14 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   const { options, items } = input
   const base = opts.baseUrl
 
+  // Channel <link> is mandatory in every RSS version; fall back to the self URL.
+  const self = opts.feedUrl ?? absolutize(options.feedUrl, base)
+  const link = absolutize(options.link, base) ?? self
+  if (!link) throw new TypeError('hono-feed: RSS requires "link" (or "feedUrl")')
+
   const channel: Node[] = []
   channel.push(el('title', undefined, options.title))
-  const link = absolutize(options.link, base)
-  if (link) channel.push(el('link', undefined, link))
+  channel.push(el('link', undefined, link))
   channel.push(el('description', undefined, options.description ?? ''))
   if (options.language) channel.push(el('language', undefined, options.language))
   if (options.copyright) channel.push(el('copyright', undefined, options.copyright))
@@ -19,13 +23,13 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   channel.push(el('generator', undefined, options.generator ?? 'hono-feed'))
   if (options.ttl !== undefined) channel.push(el('ttl', undefined, String(options.ttl)))
 
-  const self = opts.feedUrl ?? absolutize(options.feedUrl, base)
   if (self) channel.push(el('atom:link', { href: self, rel: 'self', type: 'application/rss+xml' }))
 
   if (options.image) {
     const img: Node[] = [el('url', undefined, absolutize(options.image, base) ?? options.image)]
     img.push(el('title', undefined, options.title))
-    if (link) img.push(el('link', undefined, link))
+    // <image> requires url/title/link all three.
+    img.push(el('link', undefined, link))
     channel.push(el('image', undefined, img))
   }
 

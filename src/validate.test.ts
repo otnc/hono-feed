@@ -18,14 +18,29 @@ describe('validateInput', () => {
 
   it('requires a feed title and an item title', () => {
     expect(() => validateInput({ options: { title: '' }, items: [] }, 'rss')).toThrow(TypeError)
-    expect(() => validateInput({ options: { title: 't' }, items: [{ title: '' }] }, 'rss')).toThrow(
-      /item\[0\]/,
-    )
+    expect(() =>
+      validateInput(
+        { options: { title: 't', link: 'https://example.com/' }, items: [{ title: '' }] },
+        'rss',
+      ),
+    ).toThrow(/item\[0\]/)
   })
 
   it('rejects invalid dates', () => {
-    const bad = { options: { title: 't' }, items: [{ title: 'a', published: new Date('nope') }] }
+    const bad = {
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a', published: new Date('nope') }],
+    }
     expect(() => validateInput(bad, 'rss')).toThrow(/valid Date/)
+  })
+
+  it('requires link or feedUrl for RSS (channel <link> is mandatory)', () => {
+    expect(() => validateInput({ options: { title: 't' }, items: [] }, 'rss')).toThrow(
+      /RSS feed requires "link"/,
+    )
+    expect(() =>
+      validateInput({ options: { title: 't', feedUrl: 'https://example.com/feed' }, items: [] }, 'rss'),
+    ).not.toThrow()
   })
 
   it('enforces Atom id/updated requirements only for atom', () => {

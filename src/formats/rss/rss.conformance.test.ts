@@ -65,6 +65,20 @@ describe('RSS 2.0 conformance (rssboard.org/rss-specification)', () => {
   it('guid isPermaLink is a valid boolean literal', () => {
     expect(xml).toMatch(/<guid isPermaLink="(true|false)">/)
   })
+
+  it('falls back to the feed URL for the mandatory channel <link> when link is absent', () => {
+    const out = toRSS(
+      { options: { title: 't', feedUrl: 'https://example.com/feed' }, items: [] },
+      { rssVersion: '2.0' },
+    )
+    expect(out).toContain('<link>https://example.com/feed</link>')
+  })
+
+  it('throws when neither link nor feedUrl can supply the channel <link>', () => {
+    expect(() => toRSS({ options: { title: 't' }, items: [] }, { rssVersion: '2.0' })).toThrow(
+      /requires "link"/,
+    )
+  })
 })
 
 // 0.91-0.94 share the <rss> structure but define far fewer elements than 2.0 (0.91 has no
@@ -131,6 +145,17 @@ describe('RSS 1.0 conformance (web.resource.org/rss/1.0/spec, RDF Site Summary)'
     expect(xml).toMatch(
       /<item rdf:about="[^"]+">[\s\S]*<title>post 1<\/title>[\s\S]*<link>https:\/\/example\.com\/1<\/link>/,
     )
+  })
+
+  it('falls back to the item URI for the mandatory item <link> when link is absent', () => {
+    const out = toRSS(
+      {
+        options: { title: 't', feedUrl: 'https://example.com/feed' },
+        items: [{ title: 'a', id: 'https://example.com/a' }],
+      },
+      { rssVersion: '1.0', feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('<link>https://example.com/a</link>')
   })
 })
 
