@@ -149,6 +149,10 @@ describe('RSS 0.90 conformance (Netscape RDF Site Summary 0.90)', () => {
       /<item>[\s\S]*<title>post 1<\/title>[\s\S]*<link>https:\/\/example\.com\/1<\/link>/,
     )
   })
+
+  it('rejects xmlVersion 1.1 — 0.90 requires the exact XML 1.0 declaration', () => {
+    expect(() => toRSS(complete, { rssVersion: '0.90', xmlVersion: '1.1' })).toThrow(/XML 1\.0/)
+  })
 })
 
 describe('RSS 1.0 conformance (web.resource.org/rss/1.0/spec, RDF Site Summary)', () => {

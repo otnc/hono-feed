@@ -106,4 +106,22 @@ describe('Atom 0.3 conformance (draft-nottingham-atom-format, deprecated)', () =
     const entryModified = xml.match(/<entry>[\s\S]*?<modified>(.*?)<\/modified>/)?.[1]
     expect(entryModified).toMatch(RFC3339)
   })
+
+  it('emits the mandatory <issued> even when the item only has updated', () => {
+    const out = toAtom(
+      {
+        ...complete,
+        items: [{ ...complete.items[0], published: undefined }],
+      },
+      { atomVersion: '0.3', suppressDeprecationWarnings: true },
+    )
+    const issued = out.match(/<issued>(.*?)<\/issued>/)?.[1]
+    expect(issued).toMatch(RFC3339)
+  })
+})
+
+describe('Atom XML serialization (RFC 4287 §2)', () => {
+  it('rejects xmlVersion 1.1 — Atom documents are serialized as XML 1.0', () => {
+    expect(() => toAtom(complete, { xmlVersion: '1.1' })).toThrow(/XML 1\.0/)
+  })
 })
