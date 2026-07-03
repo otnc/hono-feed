@@ -73,7 +73,7 @@ const app = new Hono()
 // After — correct by construction, and shorter
 app.get('/feed', (c) =>
   serveFeed(c, {
-    options: { title: 'Example Blog', link: 'https://example.com/' },
+    options: { title: 'Example Blog', link: 'https://example.com/', author: { name: 'You' } },
     items: posts.map((p) => ({ title: p.title, link: p.url, published: p.date, content: p.body })),
   }),
 )
@@ -128,7 +128,7 @@ const app = new Hono()
 // After — same as above: one serveFeed call, with negotiation, 304 and caching included
 app.get('/feed', (c) =>
   serveFeed(c, {
-    options: { title: 'Example Blog', link: 'https://example.com/' },
+    options: { title: 'Example Blog', link: 'https://example.com/', author: { name: 'You' } },
     items: posts.map((p) => ({ title: p.title, link: p.url, published: p.date, content: p.body })),
   }),
 )
@@ -174,6 +174,7 @@ app.get('/feed', (c) => {
     title: 'Example Blog',
     link: 'https://example.com/',
     description: 'Notes and writing',
+    author: { name: 'You' }, // Atom requires an author on the feed or on every item
     updated: new Date(),
   })
 
@@ -197,7 +198,7 @@ That single endpoint now speaks all three formats. A feed reader gets RSS, a bro
 Prefer plain data over the builder? Pass an object instead:
 
 ```ts
-return serveFeed(c, { options: { title: 'Example Blog' }, items: [] })
+return serveFeed(c, { options: { title: 'Example Blog', updated: new Date() }, items: [] })
 ```
 
 ## Choosing the format
@@ -287,7 +288,9 @@ app.get('/feed', feedRenderer({ baseUrl: 'https://example.com' }), (c) =>
 ## What goes in a feed
 
 `new Feed(options)` describes the channel; `feed.addItem(item)` adds an entry. Only `title`
-is required in each — everything else is optional and maps to the right field in every format.
+is required everywhere — the other fields are optional in the neutral model and map to the
+right field in every format. On top of that, each format enforces the fields *its spec* makes
+mandatory (see the table below the example).
 
 ```ts
 // ESM
@@ -315,6 +318,18 @@ feed.addItem({
 })
 ```
 
+Rather than emit a document that violates its spec, `serveFeed` checks these per-format
+requirements up front and throws a `TypeError` when one is missing:
+
+| Format | The feed needs | Every item needs |
+| --- | --- | --- |
+| RSS | `link` (falls back to `feedUrl`, then the request URL) | — |
+| Atom | an `author` (here, or on every item) · `updated` when there are no items · `id` must be an absolute IRI | `id` or `link` (ids must be absolute IRIs) · `updated` or `published` · `link` or `content` |
+| JSON Feed | — | `id` or `link` · `content` or `description` |
+
+(Deprecated versions add a couple more — e.g. RSS 0.91 requires `language` — with equally
+explicit error messages.)
+
 > [!TIP]
 >   
 > hono-feed does the XML escaping for you, but it doesn't HTML-encode entities. If you need
@@ -340,7 +355,7 @@ All options for `serveFeed(c, input, options?)`:
 | `rssVersion` | `RssVersion` | `'2.0'` | Which RSS version / structure to emit |
 | `atomVersion` | `AtomVersion` | `'1.0'` | Which Atom version to emit |
 | `jsonFeedVersion` | `JsonFeedVersion` | `'1.1'` | Which JSON Feed version to emit |
-| `xmlVersion` | `XmlVersion` | `'1.0'` | XML declaration version (RSS/Atom) |
+| `xmlVersion` | `XmlVersion` | `'1.0'` | XML declaration version. `'1.1'` is rejected for Atom and RSS 0.90 (their specs require XML 1.0) |
 | `suppressDeprecationWarnings` | `boolean` | `false` | Mute warnings for deprecated versions |
 
 ## Feed versions
