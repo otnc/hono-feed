@@ -147,7 +147,7 @@ hono-feed has **zero dependencies** and uses only Web Standard APIs, so the same
 ## Install
 
 ```sh
-npm install hono-feed   # or: pnpm add hono-feed / bun add hono-feed
+npm install hono-feed # or: pnpm add hono-feed / bun add hono-feed
 ```
 
 ## Quick start
@@ -294,7 +294,7 @@ import { Feed } from 'hono-feed'
 const { Feed } = require('hono-feed')
 
 const feed = new Feed({
-  title: 'Example Blog',     // required
+  title: 'Example Blog', // required
   link: 'https://example.com/',
   description: 'Notes and writing',
   language: 'en',
@@ -303,7 +303,7 @@ const feed = new Feed({
 })
 
 feed.addItem({
-  title: 'Hello, world',     // required
+  title: 'Hello, world', // required
   link: 'https://example.com/hello',
   description: 'A short summary',
   content: '<p>The full HTML body.</p>',
