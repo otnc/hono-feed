@@ -98,7 +98,9 @@ describe('RSS 0.90 conformance (Netscape RDF Site Summary 0.90)', () => {
   })
 
   it('item carries title and link (both required by the 0.90 spec)', () => {
-    expect(xml).toMatch(/<item>[\s\S]*<title>post 1<\/title>[\s\S]*<link>https:\/\/example\.com\/1<\/link>/)
+    expect(xml).toMatch(
+      /<item>[\s\S]*<title>post 1<\/title>[\s\S]*<link>https:\/\/example\.com\/1<\/link>/,
+    )
   })
 })
 

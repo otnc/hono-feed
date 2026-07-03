@@ -77,7 +77,9 @@ describe('JSON Feed 1.1 conformance (jsonfeed.org/version/1.1)', () => {
 
 describe('JSON Feed 1.0 conformance (jsonfeed.org/version/1)', () => {
   it('version is the canonical 1.0 URL', () => {
-    const feed = JSON.parse(toJSONFeed(complete, { jsonFeedVersion: '1', suppressDeprecationWarnings: true }))
+    const feed = JSON.parse(
+      toJSONFeed(complete, { jsonFeedVersion: '1', suppressDeprecationWarnings: true }),
+    )
     expect(feed.version).toBe('https://jsonfeed.org/version/1')
   })
 })
