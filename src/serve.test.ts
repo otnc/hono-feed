@@ -7,10 +7,12 @@ const buildFeed = () =>
   new Feed({
     title: 'example blog',
     link: 'https://example.com/',
+    author: { name: 'otnc' },
     updated: new Date('2026-06-29T00:00:00Z'),
   }).addItem({
     title: 'post 1',
     link: 'https://example.com/1',
+    description: 'summary',
     published: new Date('2026-06-29T00:00:00Z'),
   })
 

@@ -3,9 +3,14 @@ import type { FeedInput } from './types'
 import { validateInput } from './validate'
 
 const valid: FeedInput = {
-  options: { title: 't', link: 'https://example.com/' },
+  options: { title: 't', link: 'https://example.com/', author: { name: 'a' } },
   items: [
-    { title: 'a', link: 'https://example.com/1', published: new Date('2026-06-29T00:00:00Z') },
+    {
+      title: 'a',
+      link: 'https://example.com/1',
+      description: 'd',
+      published: new Date('2026-06-29T00:00:00Z'),
+    },
   ],
 }
 
@@ -47,8 +52,77 @@ describe('validateInput', () => {
     expect(() => validateInput({ options: { title: 't' }, items: [] }, 'atom')).toThrow(
       /Atom feed requires/,
     )
-    const noId = { options: { title: 't', link: 'https://example.com/' }, items: [{ title: 'a' }] }
+    const noId = {
+      options: { title: 't', link: 'https://example.com/', author: { name: 'a' } },
+      items: [{ title: 'a' }],
+    }
     expect(() => validateInput(noId, 'atom')).toThrow(/Atom item/)
     expect(() => validateInput(noId, 'rss')).not.toThrow()
+  })
+
+  it('requires an Atom author on the feed or on every item (RFC 4287 §4.1.1)', () => {
+    const noAuthor: FeedInput = {
+      options: { title: 't', link: 'https://example.com/' },
+      items: [
+        { title: 'a', link: 'https://example.com/1', updated: new Date('2026-06-29T00:00:00Z') },
+      ],
+    }
+    expect(() => validateInput(noAuthor, 'atom')).toThrow(/requires an "author"/)
+    expect(() => validateInput(noAuthor, 'rss')).not.toThrow()
+
+    const itemAuthor = {
+      ...noAuthor,
+      items: [{ ...noAuthor.items[0], author: { name: 'a' } }],
+    }
+    expect(() => validateInput(itemAuthor, 'atom')).not.toThrow()
+  })
+
+  it('requires Atom ids to be absolute IRIs (RFC 4287 §4.2.6)', () => {
+    const slugId = {
+      options: { title: 't', link: 'https://example.com/', author: { name: 'a' } },
+      items: [
+        {
+          title: 'a',
+          id: 'post-1',
+          link: 'https://example.com/1',
+          updated: new Date('2026-06-29T00:00:00Z'),
+        },
+      ],
+    }
+    expect(() => validateInput(slugId, 'atom')).toThrow(/absolute IRI/)
+    expect(() => validateInput(slugId, 'rss')).not.toThrow()
+
+    const urnId = { ...slugId, items: [{ ...slugId.items[0], id: 'urn:uuid:1225c695-cfb8' }] }
+    expect(() => validateInput(urnId, 'atom')).not.toThrow()
+  })
+
+  it('requires link or content per Atom entry (RFC 4287 §4.1.2)', () => {
+    const bare = {
+      options: { title: 't', link: 'https://example.com/', author: { name: 'a' } },
+      items: [
+        {
+          title: 'a',
+          id: 'https://example.com/1',
+          updated: new Date('2026-06-29T00:00:00Z'),
+        },
+      ],
+    }
+    expect(() => validateInput(bare, 'atom')).toThrow(/requires "link" \(or "content"\)/)
+    const withContent = { ...bare, items: [{ ...bare.items[0], content: '<p>b</p>' }] }
+    expect(() => validateInput(withContent, 'atom')).not.toThrow()
+  })
+
+  it('requires updated for an Atom feed with no items', () => {
+    const empty = {
+      options: { title: 't', link: 'https://example.com/', author: { name: 'a' } },
+      items: [],
+    }
+    expect(() => validateInput(empty, 'atom')).toThrow(/requires "updated"/)
+    expect(() =>
+      validateInput(
+        { ...empty, options: { ...empty.options, updated: new Date('2026-06-29T00:00:00Z') } },
+        'atom',
+      ),
+    ).not.toThrow()
   })
 })
