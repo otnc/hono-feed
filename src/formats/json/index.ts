@@ -7,8 +7,10 @@ import { absolutize } from '../../utils/url'
 export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): string {
   const { options, items } = input
   const base = opts.baseUrl
+  // 1.0 uses the singular `author` and predates `language`.
+  const v1 = opts.jsonFeedVersion === '1'
 
-  if (opts.jsonFeedVersion === '1' && !opts.suppressDeprecationWarnings) {
+  if (v1 && !opts.suppressDeprecationWarnings) {
     warnDeprecated(
       'json:1',
       "JSON Feed 1.0 is superseded by 1.1; prefer jsonFeedVersion: '1.1'.",
@@ -26,12 +28,15 @@ export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): strin
   const self = opts.feedUrl ?? absolutize(options.feedUrl, base)
   if (self) feed.feed_url = self
   if (options.description) feed.description = options.description
-  if (options.language) feed.language = options.language
+  if (options.language && !v1) feed.language = options.language
   if (options.image) feed.icon = absolutize(options.image, base) ?? options.image
   if (options.favicon) feed.favicon = absolutize(options.favicon, base) ?? options.favicon
-  if (options.author) feed.authors = [jsonAuthor(options.author)]
+  if (options.author) {
+    if (v1) feed.author = jsonAuthor(options.author)
+    else feed.authors = [jsonAuthor(options.author)]
+  }
 
-  feed.items = items.map((item) => jsonItem(item, base))
+  feed.items = items.map((item) => jsonItem(item, v1, base))
 
   return JSON.stringify(feed, null, opts.pretty ? 2 : undefined)
 }
@@ -42,19 +47,27 @@ function jsonAuthor(a: Author): Record<string, string> {
   return o
 }
 
-function jsonItem(item: FeedItem, base?: string): Record<string, unknown> {
-  const o: Record<string, unknown> = { id: String(item.id ?? item.link ?? '') }
+function jsonItem(item: FeedItem, v1: boolean, base?: string): Record<string, unknown> {
+  // Readers must discard items without an id, so refusing here beats emitting one.
+  const id = item.id ?? item.link
+  if (!id) throw new TypeError('hono-feed: JSON Feed item requires "id" (or "link")')
+  const o: Record<string, unknown> = { id: String(id) }
 
   const url = absolutize(item.link, base)
   if (url) o.url = url
   o.title = item.title
   if (item.description) o.summary = item.description
+  // At least one of content_html / content_text must be present; fall back to the summary text.
   if (item.content) o.content_html = item.content
+  else if (item.description) o.content_text = item.description
   if (item.published) o.date_published = rfc3339(item.published)
   if (item.updated) o.date_modified = rfc3339(item.updated)
 
   const authors = item.author ? (Array.isArray(item.author) ? item.author : [item.author]) : []
-  if (authors.length) o.authors = authors.map(jsonAuthor)
+  if (authors.length) {
+    if (v1) o.author = jsonAuthor(authors[0])
+    else o.authors = authors.map(jsonAuthor)
+  }
   if (item.categories?.length) o.tags = item.categories.map((c) => c.term)
   if (item.image) o.image = absolutize(item.image, base) ?? item.image
 

@@ -112,6 +112,21 @@ describe('validateInput', () => {
     expect(() => validateInput(withContent, 'atom')).not.toThrow()
   })
 
+  it('requires id/link and content/description per JSON Feed item', () => {
+    const noId = {
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a', content: '<p>b</p>' }],
+    }
+    expect(() => validateInput(noId, 'json')).toThrow(/requires "id"/)
+
+    const noBody = {
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a', link: 'https://example.com/1' }],
+    }
+    expect(() => validateInput(noBody, 'json')).toThrow(/requires "content"/)
+    expect(() => validateInput(noBody, 'rss')).not.toThrow()
+  })
+
   it('requires updated for an Atom feed with no items', () => {
     const empty = {
       options: { title: 't', link: 'https://example.com/', author: { name: 'a' } },

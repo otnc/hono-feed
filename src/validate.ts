@@ -62,6 +62,17 @@ export function validateInput(input: FeedInput, format: FeedFormat): void {
         throw new TypeError(`hono-feed: Atom item[${i}] requires "link" (or "content")`)
       }
     }
+
+    if (format === 'json') {
+      // Readers must discard items without an id.
+      if (!item.id && !item.link) {
+        throw new TypeError(`hono-feed: JSON Feed item[${i}] requires "id" (or "link")`)
+      }
+      // Every item needs content_html or content_text (description backs content_text).
+      if (!item.content && !item.description) {
+        throw new TypeError(`hono-feed: JSON Feed item[${i}] requires "content" (or "description")`)
+      }
+    }
   })
 }
 
