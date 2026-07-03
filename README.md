@@ -368,7 +368,7 @@ RSS 1.0 and 1.1 are fully **supported, not deprecated** — reach for them when 
 > [!WARNING]
 >   
 > **RSS 0.9x, Atom 0.3 and JSON Feed 1.0 are deprecated.**  
-> They still produce valid output, but each logs a one-time, coded `DeprecationWarning` (`HONOFEED_DEP000N`) — through `process.emitWarning` on Node, or `console.warn` on edge runtimes.  
+> They still produce valid output, but each logs a one-time, coded `DeprecationWarning` (`HONOFEED_DEP000N`, see [HONOFEED_DEP.md](HONOFEED_DEP.md) for the full list) — through `process.emitWarning` on Node, or `console.warn` on edge runtimes.  
 > To silence it, set `suppressDeprecationWarnings: true`, the `HONO_FEED_NO_DEPRECATION` env var, or run Node with `--no-deprecation`.
 
 ## Low-level serializers

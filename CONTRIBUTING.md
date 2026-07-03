@@ -57,7 +57,7 @@ To add one:
 
 If you're **deprecating** a version, call `warnDeprecated(key, message, code)` from `src/utils/deprecation.ts` in that format's `index.ts`, guarded by `!opts.suppressDeprecationWarnings`.  
 It fires once per process, tags the warning with a stable code, and respects the usual mute switches.  
-Assign the next `HONOFEED_DEP00NN` code and list it in the README's deprecation warning.
+Assign the next `HONOFEED_DEP00NN` code and add a row to [HONOFEED_DEP.md](HONOFEED_DEP.md).
 
 ## Pull requests
 
