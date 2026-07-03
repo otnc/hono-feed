@@ -1,7 +1,7 @@
-import type { Author, FeedInput, FeedItem, SerializeOptions } from '../types'
-import { rfc3339 } from '../utils/date'
-import { warnDeprecated } from '../utils/deprecation'
-import { absolutize } from '../utils/url'
+import type { Author, FeedInput, FeedItem, SerializeOptions } from '../../types'
+import { rfc3339 } from '../../utils/date'
+import { warnDeprecated } from '../../utils/deprecation'
+import { absolutize } from '../../utils/url'
 
 /** Serialize the neutral model to a JSON Feed 1.1 string. */
 export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): string {

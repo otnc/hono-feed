@@ -31,33 +31,6 @@ Before opening a pull request, make sure the full set passes:
 pnpm run ci && pnpm typecheck && pnpm test && pnpm build
 ```
 
-## How the code is organized
-
-```
-src/
-├── index.ts            # public exports
-├── serve.ts            # serveFeed — the HTTP layer
-├── feed.ts             # the Feed builder
-├── negotiate.ts        # Accept parser + format decision
-├── validate.ts         # input validation
-├── types.ts            # the neutral model & option types
-├── middleware/         # feedMiddleware (subpath: hono-feed/middleware)
-├── formats/
-│   ├── index.ts        # re-exports toRSS / toAtom / toJSONFeed
-│   ├── rss/            # one file per version + index.ts that dispatches
-│   ├── atom/           # atom10 / atom03 + index.ts that dispatches
-│   └── json.ts         # JSON Feed 1.0 / 1.1
-└── utils/              # xml / date / url / etag / deprecation helpers
-```
-
-The flow is straightforward: `serveFeed` figures out the format and headers, then calls into
-`formats/` to turn the neutral model (defined in `types.ts`) into a string.
-
-The public subpaths — `hono-feed/{rss,atom,json,middleware}` — are wired up in two places:
-`tsup.config.ts` (the build entries) and `package.json` (the `exports` map). The per-version
-files inside `formats/rss` and `formats/atom` are bundled into those entries, so adding one
-doesn't need a new export.
-
 ## Conventions
 
 - **Formatting and linting is Biome** (`biome.json`) — single quotes, no semicolons, trailing

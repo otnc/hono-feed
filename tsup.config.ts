@@ -7,7 +7,7 @@ export default defineConfig({
     'renderer/index': 'src/renderer/index.ts',
     'formats/rss': 'src/formats/rss/index.ts',
     'formats/atom': 'src/formats/atom/index.ts',
-    'formats/json': 'src/formats/json.ts',
+    'formats/json': 'src/formats/json/index.ts',
   },
   format: ['esm', 'cjs'],
   dts: true,
