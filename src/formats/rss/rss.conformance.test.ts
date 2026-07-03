@@ -81,9 +81,9 @@ describe('RSS 2.0 conformance (rssboard.org/rss-specification)', () => {
   })
 })
 
-// 0.91-0.94 share the <rss> structure but define far fewer elements than 2.0 (0.91 has no
-// item pubDate/enclosure/category, no channel generator/ttl). Only assert what every
-// version in the lineage verifiably requires: the channel trio and item title.
+// 0.91-0.94 share the <rss> structure but define far fewer elements than 2.0: item
+// category/enclosure arrived in 0.92, item pubDate in 0.93, and guid/author/generator/
+// ttl/namespaced extensions are 2.0-only. Output is gated accordingly.
 describe('RSS 0.91-0.94 conformance (shared <rss> lineage requirements only)', () => {
   for (const rssVersion of ['0.94', '0.93', '0.92', '0.91'] as const) {
     it(`${rssVersion}: channel carries title/link/description and the version attribute`, () => {
@@ -94,7 +94,40 @@ describe('RSS 0.91-0.94 conformance (shared <rss> lineage requirements only)', (
       expect(xml).toContain('<description>diary</description>')
       expect(xml).toContain('<title>post 1</title>')
     })
+
+    it(`${rssVersion}: never emits the 2.0-only elements or namespaced extensions`, () => {
+      const xml = toRSS(complete, { rssVersion })
+      for (const forbidden of ['<generator>', '<ttl>', '<guid', '<author>', 'xmlns:atom', 'atom:link', 'xmlns:content', 'content:encoded']) {
+        expect(xml).not.toContain(forbidden)
+      }
+    })
   }
+
+  it('0.91: requires channel <language> and emits only title/link/description in items', () => {
+    expect(() =>
+      toRSS(
+        { options: { title: 't', link: 'https://example.com/' }, items: [] },
+        { rssVersion: '0.91' },
+      ),
+    ).toThrow(/RSS 0.91 requires "language"/)
+
+    const xml = toRSS(complete, { rssVersion: '0.91' })
+    expect(xml).toContain('<language>en</language>')
+    const item = xml.match(/<item>([\s\S]*?)<\/item>/)?.[1] ?? ''
+    expect(item).not.toContain('<pubDate>')
+    expect(item).not.toContain('<enclosure')
+    expect(item).not.toContain('<category')
+  })
+
+  it('0.92: allows enclosure/category but not item pubDate', () => {
+    const xml = toRSS(complete, { rssVersion: '0.92' })
+    expect(xml).toContain('<enclosure')
+    expect(xml).not.toContain('<pubDate>')
+  })
+
+  it('0.93: allows item pubDate', () => {
+    expect(toRSS(complete, { rssVersion: '0.93' })).toContain('<pubDate>')
+  })
 })
 
 describe('RSS 0.90 conformance (Netscape RDF Site Summary 0.90)', () => {
