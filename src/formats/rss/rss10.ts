@@ -1,8 +1,8 @@
 import type { FeedInput, SerializeOptions } from '../../types'
-import { firstAuthor } from '../../utils/author'
 import { rfc3339 } from '../../utils/date'
 import { absolutize } from '../../utils/url'
-import { cdata, el, type Node, raw, xmlDocument } from '../../utils/xml'
+import { el, type Node, xmlDocument } from '../../utils/xml'
+import { rdfItem } from './rdf-item'
 
 // RSS 1.0 (RDF Site Summary): `<rdf:RDF>` root with an `<items>`/`rdf:Seq` table of
 // contents plus Dublin Core + content modules.
@@ -19,23 +19,9 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
   const seq: Node[] = []
   const itemNodes: Node[] = []
   for (const item of items) {
-    const uri = item.id ?? absolutize(item.link, base)
-    if (!uri) throw new TypeError('hono-feed: RSS 1.0 item requires "link" or "id"')
+    const { uri, node } = rdfItem(item, base, '1.0')
     seq.push(el('rdf:li', { 'rdf:resource': uri }))
-
-    const ch: Node[] = [el('title', undefined, item.title)]
-    // Item <link> is mandatory in RSS 1.0; fall back to the item URI (rdf:about).
-    const link = absolutize(item.link, base) ?? uri
-    ch.push(el('link', undefined, link))
-    if (item.description) ch.push(el('description', undefined, item.description))
-    if (item.published) ch.push(el('dc:date', undefined, rfc3339(item.published)))
-    const author = firstAuthor(item.author)
-    if (author?.name) ch.push(el('dc:creator', undefined, author.name))
-    if (item.content) ch.push(el('content:encoded', undefined, raw(cdata(item.content))))
-    if (item.categories) {
-      for (const cat of item.categories) ch.push(el('dc:subject', undefined, cat.term))
-    }
-    itemNodes.push(el('item', { 'rdf:about': uri }, ch))
+    itemNodes.push(node)
   }
 
   // Channel <link> is mandatory; fall back to the feed URI.
