@@ -284,6 +284,8 @@ app.get('/feed', (c) =>
 
 `false` still omits the header entirely, same as always.
 
+The object form is recommended when the fields cover what you need — it can't typo a directive name or forget a comma. The raw string isn't deprecated, though: it's the header's own native shape, and it's still the way to reach directives (or vendor extensions) `CacheControlDirectives` doesn't model yet. Both forms are first-class and neither is going away.
+
 ## Sharing options with middleware
 
 Setting the same options on every route gets repetitive.  
