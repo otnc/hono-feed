@@ -1,8 +1,9 @@
-import type { Author, FeedInput, FeedItem, SerializeOptions } from '../../types'
+import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { authorList } from '../../utils/author'
 import { latestDate, rfc3339 } from '../../utils/date'
 import { absolutize } from '../../utils/url'
 import { el, type Node, xmlDocument } from '../../utils/xml'
+import { atomAuthorEl } from './author'
 
 // Atom 0.3 (deprecated, pre-RFC). Namespace purl.org/atom/ns#; uses tagline / modified /
 // issued / copyright and author <url>; content is escaped HTML.
@@ -19,7 +20,7 @@ export function toAtom03(input: FeedInput, opts: SerializeOptions): string {
   if (options.description) feed.push(el('tagline', undefined, options.description))
   if (link) feed.push(el('link', { rel: 'alternate', type: 'text/html', href: link }))
   feed.push(el('modified', undefined, rfc3339(options.updated ?? latestDate(items) ?? new Date())))
-  if (options.author) feed.push(authorEl03(options.author))
+  if (options.author) feed.push(atomAuthorEl(options.author, 'url'))
   feed.push(el('generator', undefined, options.generator ?? 'hono-feed'))
   if (options.copyright) feed.push(el('copyright', undefined, options.copyright))
   feed.push(el('id', undefined, feedId))
@@ -30,13 +31,6 @@ export function toAtom03(input: FeedInput, opts: SerializeOptions): string {
     ? { version: '0.3', xmlns: 'http://purl.org/atom/ns#', 'xml:lang': options.language }
     : { version: '0.3', xmlns: 'http://purl.org/atom/ns#' }
   return xmlDocument(el('feed', attrs, feed), { pretty: opts.pretty, version: opts.xmlVersion })
-}
-
-function authorEl03(a: Author): Node {
-  const ch: Node[] = [el('name', undefined, a.name)]
-  if (a.email) ch.push(el('email', undefined, a.email))
-  if (a.url) ch.push(el('url', undefined, a.url))
-  return el('author', undefined, ch)
 }
 
 function atomEntry03(item: FeedItem, base?: string): Node {
@@ -53,7 +47,7 @@ function atomEntry03(item: FeedItem, base?: string): Node {
   if (item.description) ch.push(el('summary', undefined, item.description))
   if (item.content) ch.push(el('content', { type: 'text/html', mode: 'escaped' }, item.content))
 
-  for (const a of authorList(item.author)) ch.push(authorEl03(a))
+  for (const a of authorList(item.author)) ch.push(atomAuthorEl(a, 'url'))
 
   return el('entry', undefined, ch)
 }

@@ -1,8 +1,9 @@
-import type { Author, FeedInput, FeedItem, SerializeOptions } from '../../types'
+import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { authorList } from '../../utils/author'
 import { latestDate, rfc3339 } from '../../utils/date'
 import { absolutize } from '../../utils/url'
 import { el, type Node, xmlDocument } from '../../utils/xml'
+import { atomAuthorEl } from './author'
 
 // Atom 1.0 (RFC 4287).
 export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
@@ -21,7 +22,7 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
   feed.push(el('updated', undefined, rfc3339(options.updated ?? latestDate(items) ?? new Date())))
   if (link) feed.push(el('link', { rel: 'alternate', href: link }))
   if (self) feed.push(el('link', { rel: 'self', type: 'application/atom+xml', href: self }))
-  if (options.author) feed.push(authorEl(options.author))
+  if (options.author) feed.push(atomAuthorEl(options.author, 'uri'))
   feed.push(el('generator', undefined, options.generator ?? 'hono-feed'))
   if (options.copyright) feed.push(el('rights', undefined, options.copyright))
 
@@ -31,13 +32,6 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
     ? { xmlns: 'http://www.w3.org/2005/Atom', 'xml:lang': options.language }
     : { xmlns: 'http://www.w3.org/2005/Atom' }
   return xmlDocument(el('feed', attrs, feed), { pretty: opts.pretty, version: opts.xmlVersion })
-}
-
-function authorEl(a: Author): Node {
-  const ch: Node[] = [el('name', undefined, a.name)]
-  if (a.email) ch.push(el('email', undefined, a.email))
-  if (a.url) ch.push(el('uri', undefined, a.url))
-  return el('author', undefined, ch)
 }
 
 function atomEntry10(item: FeedItem, base?: string): Node {
@@ -55,7 +49,7 @@ function atomEntry10(item: FeedItem, base?: string): Node {
   // content type="html" body is escaped as a text node.
   if (item.content) ch.push(el('content', { type: 'html' }, item.content))
 
-  for (const a of authorList(item.author)) ch.push(authorEl(a))
+  for (const a of authorList(item.author)) ch.push(atomAuthorEl(a, 'uri'))
 
   if (item.categories) {
     for (const cat of item.categories) {
