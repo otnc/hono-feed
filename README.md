@@ -456,7 +456,7 @@ Contributions Welcome! You can contribute in the following ways.
 
 - Create an Issue - Propose a new feature. Report a bug.
 - Pull Request - Fix a bug or typo. Refactor the code.
-- Share - Share your thoughts on the Blog, X, and others.
+- Share - Share your thoughts on the Blog, Twitter, and others.
 - Make your application - Please try to use hono-feed.
 
 For more details, see [CONTRIBUTING.md](./CONTRIBUTING.md).
