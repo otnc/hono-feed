@@ -10,7 +10,7 @@ export function toRSS090(input: FeedInput, opts: SerializeOptions): string {
   // Channel <link> is mandatory; fall back to the self URL.
   const home = absolutize(options.link, base) ?? opts.feedUrl ?? absolutize(options.feedUrl, base)
   if (!home) throw new TypeError('hono-feed: RSS 0.90 requires "link" (or "feedUrl")')
-  const imageUrl = options.image ? (absolutize(options.image, base) ?? options.image) : undefined
+  const imageUrl = options.image ? absolutize(options.image, base) : undefined
 
   const channel: Node[] = [el('title', undefined, options.title)]
   channel.push(el('link', undefined, home))

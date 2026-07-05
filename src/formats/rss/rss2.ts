@@ -53,7 +53,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   }
 
   if (options.image) {
-    const img: Node[] = [el('url', undefined, absolutize(options.image, base) ?? options.image)]
+    const img: Node[] = [el('url', undefined, absolutize(options.image, base))]
     img.push(el('title', undefined, options.title))
     // <image> requires url/title/link all three.
     img.push(el('link', undefined, link))
@@ -117,7 +117,7 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
   if (caps.itemRich092 && item.enclosure) {
     ch.push(
       el('enclosure', {
-        url: absolutize(item.enclosure.url, base) ?? item.enclosure.url,
+        url: absolutize(item.enclosure.url, base),
         type: item.enclosure.type,
         length: String(item.enclosure.length ?? 0),
       }),

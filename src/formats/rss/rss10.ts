@@ -14,7 +14,7 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
     opts.feedUrl ?? absolutize(options.feedUrl, base) ?? absolutize(options.link, base)
   if (!feedUri) throw new TypeError('hono-feed: RSS 1.0 requires "feedUrl" or "link"')
   const home = absolutize(options.link, base)
-  const imageUrl = options.image ? (absolutize(options.image, base) ?? options.image) : undefined
+  const imageUrl = options.image ? absolutize(options.image, base) : undefined
 
   const seq: Node[] = []
   const itemNodes: Node[] = []
