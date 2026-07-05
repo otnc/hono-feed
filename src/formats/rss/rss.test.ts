@@ -78,6 +78,57 @@ describe('toRSS', () => {
     expect(out).not.toContain('\u0007')
   })
 
+  it('emits channel copyright when set', () => {
+    const out = toRSS({ ...input, options: { ...input.options, copyright: '© otnc' } })
+    expect(out).toContain('<copyright>© otnc</copyright>')
+  })
+
+  it('marks guid isPermaLink="false" when the id differs from the link', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a', id: 'urn:uuid:1', link: 'https://example.com/1' }],
+    })
+    expect(out).toContain('<guid isPermaLink="false">urn:uuid:1</guid>')
+  })
+
+  it('omits guid when the item has neither id nor link', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a' }],
+    })
+    expect(out).not.toContain('<guid')
+  })
+
+  it('emits a bare email <author> when the item author has no name', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [
+        {
+          title: 'a',
+          link: 'https://example.com/1',
+          author: { name: '', email: 'otnc@example.com' },
+        },
+      ],
+    })
+    expect(out).toContain('<author>otnc@example.com</author>')
+  })
+
+  it('defaults enclosure length to 0 when omitted', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [
+        {
+          title: 'a',
+          link: 'https://example.com/1',
+          enclosure: { url: 'https://example.com/a.mp3', type: 'audio/mpeg' },
+        },
+      ],
+    })
+    expect(out).toContain(
+      '<enclosure url="https://example.com/a.mp3" type="audio/mpeg" length="0"/>',
+    )
+  })
+
   it('omits xmlns:content when no item has content', () => {
     const out = toRSS({
       options: { title: 't', link: 'https://example.com/' },
@@ -116,5 +167,172 @@ describe('toRSS', () => {
     expect(out).toContain('rdf:about="https://example.com/feed"')
     expect(out).toContain('<item rdf:about="https://example.com/1">')
     expect(out).not.toContain('rdf:Seq')
+  })
+
+  it('0.91 requires a per-item <link>, even though later 0.9x/2.0 versions do not', () => {
+    const noItemLink: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', language: 'en' },
+      items: [{ title: 'a', id: 'https://example.com/1' }],
+    }
+    expect(() => toRSS(noItemLink, { rssVersion: '0.91' })).toThrow(/0.91 item requires "link"/)
+    expect(() => toRSS(noItemLink, { rssVersion: '0.92' })).not.toThrow()
+  })
+
+  describe('RSS 0.90 (RDF)', () => {
+    it('requires link or feedUrl for the channel', () => {
+      expect(() => toRSS({ options: { title: 't' }, items: [] }, { rssVersion: '0.90' })).toThrow(
+        /RSS 0.90 requires "link"/,
+      )
+    })
+
+    it('requires link or id for each item', () => {
+      expect(() =>
+        toRSS(
+          { options: { title: 't', link: 'https://example.com/' }, items: [{ title: 'a' }] },
+          { rssVersion: '0.90' },
+        ),
+      ).toThrow(/RSS 0.90 item requires "link"/)
+    })
+
+    it('emits an <image> when options.image is set', () => {
+      const out = toRSS(
+        {
+          options: {
+            title: 't',
+            link: 'https://example.com/',
+            image: 'https://example.com/icon.png',
+          },
+          items: [],
+        },
+        { rssVersion: '0.90' },
+      )
+      expect(out).toContain('<image>')
+      expect(out).toContain('<url>https://example.com/icon.png</url>')
+    })
+  })
+
+  describe('RSS 1.0 (RDF)', () => {
+    it('requires a feedUrl or link', () => {
+      expect(() => toRSS({ options: { title: 't' }, items: [] }, { rssVersion: '1.0' })).toThrow(
+        /RSS 1.0 requires "feedUrl" or "link"/,
+      )
+    })
+
+    it('emits dc:rights when copyright is set', () => {
+      const out = toRSS(
+        { options: { title: 't', link: 'https://example.com/', copyright: '© otnc' }, items: [] },
+        { rssVersion: '1.0' },
+      )
+      expect(out).toContain('<dc:rights>© otnc</dc:rights>')
+    })
+
+    it('emits an image with an rdf:resource and a channel <image> back-reference', () => {
+      const out = toRSS(
+        {
+          options: {
+            title: 't',
+            link: 'https://example.com/',
+            image: 'https://example.com/icon.png',
+          },
+          items: [],
+        },
+        { rssVersion: '1.0' },
+      )
+      expect(out).toContain('<image rdf:resource="https://example.com/icon.png"/>')
+      expect(out).toContain('<image rdf:about="https://example.com/icon.png">')
+    })
+
+    it('omits the image <link> when the channel has no home link', () => {
+      const out = toRSS(
+        {
+          options: {
+            title: 't',
+            feedUrl: 'https://example.com/feed',
+            image: 'https://example.com/icon.png',
+          },
+          items: [],
+        },
+        { rssVersion: '1.0', feedUrl: 'https://example.com/feed' },
+      )
+      const img = out.match(/<image rdf:about="[^"]+">([\s\S]*?)<\/image>/)?.[1] ?? ''
+      expect(img).not.toContain('<link>')
+    })
+
+    it('emits dc:creator for the item author', () => {
+      const out = toRSS(
+        {
+          options: { title: 't', link: 'https://example.com/' },
+          items: [{ title: 'a', link: 'https://example.com/1', author: { name: 'otnc' } }],
+        },
+        { rssVersion: '1.0' },
+      )
+      expect(out).toContain('<dc:creator>otnc</dc:creator>')
+    })
+  })
+
+  describe('RSS 1.1 (<Channel>)', () => {
+    it('requires a feedUrl or link', () => {
+      expect(() => toRSS({ options: { title: 't' }, items: [] }, { rssVersion: '1.1' })).toThrow(
+        /RSS 1.1 requires "feedUrl" or "link"/,
+      )
+    })
+
+    it('emits dc:rights and xml:lang when set', () => {
+      const out = toRSS(
+        {
+          options: {
+            title: 't',
+            link: 'https://example.com/',
+            copyright: '© otnc',
+            language: 'en',
+          },
+          items: [],
+        },
+        { rssVersion: '1.1' },
+      )
+      expect(out).toContain('<dc:rights>© otnc</dc:rights>')
+      expect(out).toContain('xml:lang="en"')
+    })
+
+    it('falls back to the feed URI for the channel <link> when the channel has no home link', () => {
+      const out = toRSS(
+        { options: { title: 't', feedUrl: 'https://example.com/feed' }, items: [] },
+        { rssVersion: '1.1', feedUrl: 'https://example.com/feed' },
+      )
+      expect(out).toContain('<link>https://example.com/feed</link>')
+    })
+  })
+
+  it('emits dc:subject per category in RSS 1.0/1.1 items', () => {
+    const withCategory: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', feedUrl: 'https://example.com/feed' },
+      items: [
+        {
+          title: 'a',
+          link: 'https://example.com/1',
+          categories: [{ term: 'tech' }, { term: 'news' }],
+        },
+      ],
+    }
+    const rss10 = toRSS(withCategory, { rssVersion: '1.0', feedUrl: 'https://example.com/feed' })
+    expect(rss10).toContain('<dc:subject>tech</dc:subject>')
+    expect(rss10).toContain('<dc:subject>news</dc:subject>')
+
+    const rss11 = toRSS(withCategory, { rssVersion: '1.1', feedUrl: 'https://example.com/feed' })
+    expect(rss11).toContain('<dc:subject>tech</dc:subject>')
+    expect(rss11).toContain('<dc:subject>news</dc:subject>')
+  })
+
+  it('throws when an RSS 1.0/1.1 item has neither link nor id', () => {
+    const noItemUri: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', feedUrl: 'https://example.com/feed' },
+      items: [{ title: 'a' }],
+    }
+    expect(() =>
+      toRSS(noItemUri, { rssVersion: '1.0', feedUrl: 'https://example.com/feed' }),
+    ).toThrow(/RSS 1.0 item requires "link" or "id"/)
+    expect(() =>
+      toRSS(noItemUri, { rssVersion: '1.1', feedUrl: 'https://example.com/feed' }),
+    ).toThrow(/RSS 1.1 item requires "link" or "id"/)
   })
 })

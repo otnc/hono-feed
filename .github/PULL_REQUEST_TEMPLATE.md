@@ -31,3 +31,4 @@ closes
 - [ ] Run `pnpm check` (lint & format)
 - [ ] Run `pnpm test` (functions test)
 - [ ] Run `pnpm build` (`dist/`)
+- [ ] (optional) Run `pnpm test:coverage` and check nothing new went uncovered

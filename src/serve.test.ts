@@ -236,5 +236,89 @@ describe('serveFeed', () => {
       expect(res.status).toBe(200)
       expect(res.headers.get('content-type')).toBe('application/atom+xml; charset=utf-8')
     })
+
+    it('honours ?version= for atom, and answers 400 for an unknown atom version', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { detectFromQuery: true, format: 'atom' }))
+      const ok = await a.request('/feed?version=0.3')
+      expect(ok.status).toBe(200)
+      expect(ok.headers.get('content-type')).toBe('application/atom+xml; charset=utf-8')
+
+      const bad = await a.request('/feed?version=9.9')
+      expect(bad.status).toBe(400)
+      expect(bad.headers.get('cache-control')).toBe('no-store')
+    })
+
+    it('honours ?version= for json, and answers 400 for an unknown json version', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { detectFromQuery: true, format: 'json' }))
+      const ok = await a.request('/feed?version=1')
+      expect(ok.status).toBe(200)
+      const json = await ok.json()
+      expect(json.version).toBe('https://jsonfeed.org/version/1')
+
+      const bad = await a.request('/feed?version=9.9')
+      expect(bad.status).toBe(400)
+      expect(bad.headers.get('cache-control')).toBe('no-store')
+    })
+  })
+
+  describe('conditional requests', () => {
+    it('answers a non-matching If-None-Match with a full 200 response', async () => {
+      const res = await app().request('/feed', {
+        headers: { 'if-none-match': '"not-the-etag"' },
+      })
+      expect(res.status).toBe(200)
+      expect((await res.text()).length).toBeGreaterThan(0)
+    })
+
+    it('matches a weak etag among several comma-separated If-None-Match candidates', async () => {
+      const first = await app().request('/feed')
+      const etag = first.headers.get('etag') as string
+      const res = await app().request('/feed', {
+        headers: { 'if-none-match': `"something-else", ${etag}` },
+      })
+      expect(res.status).toBe(304)
+    })
+
+    it('treats If-None-Match: * as always matching', async () => {
+      const res = await app().request('/feed', { headers: { 'if-none-match': '*' } })
+      expect(res.status).toBe(304)
+    })
+
+    it('ignores an unparsable If-Modified-Since and returns 200', async () => {
+      const res = await app().request('/feed', {
+        headers: { 'if-modified-since': 'not-a-date' },
+      })
+      expect(res.status).toBe(200)
+    })
+  })
+
+  describe('etag / lastModified toggles', () => {
+    it('omits ETag when etag is false', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { etag: false }))
+      const res = await a.request('/feed')
+      expect(res.headers.get('etag')).toBeNull()
+    })
+
+    it('omits Last-Modified when lastModified is false', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { lastModified: false }))
+      const res = await a.request('/feed')
+      expect(res.headers.get('last-modified')).toBeNull()
+    })
+
+    it('omits Last-Modified when there is no date anywhere in the feed', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) =>
+        serveFeed(c, {
+          options: { title: 't', link: 'https://example.com/' },
+          items: [{ title: 'a', link: 'https://example.com/1', description: 'd' }],
+        }),
+      )
+      const res = await a.request('/feed')
+      expect(res.headers.get('last-modified')).toBeNull()
+    })
   })
 })

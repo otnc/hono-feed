@@ -1,6 +1,7 @@
 # Generate
 node_modules/
 dist/
+coverage/
 
 # Private
 .private/

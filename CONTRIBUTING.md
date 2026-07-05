@@ -22,6 +22,7 @@ pnpm install --frozen-lockfile
 | --- | --- |
 | `pnpm build` | Bundle ESM/CJS + type declarations with tsup |
 | `pnpm test` | Run the tests once with vitest (`pnpm test:watch` to keep them running) |
+| `pnpm test:coverage` | Run the tests with a coverage report (prints the path to the HTML report when done) |
 | `pnpm typecheck` | Type-check with `tsc --noEmit` |
 | `pnpm check` | Lint, format and organize imports, writing the fixes (Biome) |
 | `pnpm run ci` | The same checks without writing — what CI runs |

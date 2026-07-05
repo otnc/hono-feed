@@ -26,6 +26,48 @@ describe('parseAccept', () => {
     expect(parseAccept('application/json;q=-1')[0].q).toBe(0)
     expect(parseAccept(undefined)).toEqual([])
   })
+
+  it('breaks ties on equal q by specificity (type/subtype > type/* > */*)', () => {
+    const entries = parseAccept('*/*;q=0.5, text/plain;q=0.5, application/*;q=0.5')
+    expect(entries.map((e) => `${e.type}/${e.subtype}`)).toEqual([
+      'text/plain',
+      'application/*',
+      '*/*',
+    ])
+  })
+
+  it('preserves header order for entries tied on both q and specificity', () => {
+    const entries = parseAccept('application/rss+xml, application/atom+xml')
+    expect(entries.map((e) => `${e.type}/${e.subtype}`)).toEqual([
+      'application/rss+xml',
+      'application/atom+xml',
+    ])
+  })
+
+  it('captures non-q accept-params without affecting q', () => {
+    const entries = parseAccept('text/html;charset=utf-8;q=0.8')
+    expect(entries[0].params).toEqual({ charset: 'utf-8' })
+    expect(entries[0].q).toBe(0.8)
+  })
+
+  it('skips malformed entries missing a type or subtype', () => {
+    expect(parseAccept('garbage, application/json')).toHaveLength(1)
+    expect(parseAccept('application/, /json, application/json')).toHaveLength(1)
+  })
+
+  it('skips empty segments (trailing/leading/double commas)', () => {
+    expect(parseAccept(', application/json, , ')).toHaveLength(1)
+  })
+
+  it('ignores a bare accept-param with no "=" ', () => {
+    const entries = parseAccept('application/json;foo;q=0.5')
+    expect(entries[0].params).toEqual({})
+    expect(entries[0].q).toBe(0.5)
+  })
+
+  it('defaults q to 1 when the q value is not a number', () => {
+    expect(parseAccept('application/json;q=abc')[0].q).toBe(1)
+  })
 })
 
 describe('formatFromQuery', () => {
@@ -56,6 +98,19 @@ describe('negotiateFormat', () => {
     expect(negotiateFormat('*/*', 'atom')).toBe('atom')
     expect(negotiateFormat(undefined, 'rss')).toBeNull()
   })
+
+  it('returns null when no entry maps to a known format', () => {
+    expect(negotiateFormat('text/plain', 'rss')).toBeNull()
+  })
+
+  it('a q=0 wildcard rejects every format, even ones explicitly listed', () => {
+    expect(negotiateFormat('application/rss+xml, */*;q=0', 'rss')).toBeNull()
+    expect(negotiateFormat('application/*;q=0, application/json', 'rss')).toBeNull()
+  })
+
+  it('a q=0 entry for an unmapped type is a no-op (does not reject anything)', () => {
+    expect(negotiateFormat('text/plain;q=0, application/json', 'rss')).toBe('json')
+  })
 })
 
 describe('formatFromExtension', () => {
@@ -64,6 +119,11 @@ describe('formatFromExtension', () => {
     expect(formatFromExtension('/feed.json')).toBe('json')
     expect(formatFromExtension('/feed.xml')).toBe('rss')
     expect(formatFromExtension('/feed')).toBeNull()
+  })
+
+  it('detects the bare .rss / .atom extensions (without a further .xml suffix)', () => {
+    expect(formatFromExtension('/feed.rss')).toBe('rss')
+    expect(formatFromExtension('/feed.atom')).toBe('atom')
   })
 })
 
