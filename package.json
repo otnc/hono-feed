@@ -65,6 +65,7 @@
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage && node scripts/print-coverage-path.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "biome lint .",
     "format": "biome format --write .",
@@ -84,6 +85,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.1",
+    "@vitest/coverage-v8": "^4.1.9",
     "hono": "^4.12.27",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",

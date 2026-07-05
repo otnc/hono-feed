@@ -79,4 +79,104 @@ describe('toJSONFeed', () => {
       { url: 'https://example.com/a.mp3', mime_type: 'audio/mpeg', size_in_bytes: 123 },
     ])
   })
+
+  it('omits home_page_url and item url when link is absent', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: { title: 't' },
+        items: [{ title: 'a', id: 'urn:uuid:1', content: '<p>b</p>' }],
+      }),
+    )
+    expect(json.home_page_url).toBeUndefined()
+    expect(json.items[0].url).toBeUndefined()
+    expect(json.items[0].id).toBe('urn:uuid:1')
+  })
+
+  it('includes language for the default (1.1) version', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: { title: 't', link: 'https://example.com/', language: 'en' },
+        items: [],
+      }),
+    )
+    expect(json.language).toBe('en')
+  })
+
+  it('omits language for jsonFeedVersion 1 (predates language)', () => {
+    const json = JSON.parse(
+      toJSONFeed(
+        { options: { title: 't', link: 'https://example.com/', language: 'en' }, items: [] },
+        { jsonFeedVersion: '1' },
+      ),
+    )
+    expect(json.language).toBeUndefined()
+  })
+
+  it('uses the singular author for jsonFeedVersion 1, on both the feed and items', () => {
+    const json = JSON.parse(
+      toJSONFeed(
+        {
+          options: { title: 't', link: 'https://example.com/', author: { name: 'otnc' } },
+          items: [
+            {
+              title: 'a',
+              link: 'https://example.com/1',
+              content: '<p>b</p>',
+              author: [{ name: 'one' }, { name: 'two' }],
+            },
+          ],
+        },
+        { jsonFeedVersion: '1' },
+      ),
+    )
+    expect(json.author).toEqual({ name: 'otnc' })
+    expect(json.authors).toBeUndefined()
+    expect(json.items[0].author).toEqual({ name: 'one' })
+    expect(json.items[0].authors).toBeUndefined()
+  })
+
+  it('omits size_in_bytes when the enclosure has no length', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: { title: 't', link: 'https://example.com/' },
+        items: [
+          {
+            title: 'a',
+            link: 'https://example.com/1',
+            content: '<p>b</p>',
+            enclosure: { url: 'https://example.com/a.mp3', type: 'audio/mpeg' },
+          },
+        ],
+      }),
+    )
+    expect(json.items[0].attachments[0].size_in_bytes).toBeUndefined()
+  })
+
+  it('pretty-prints with 2-space indentation', () => {
+    const out = toJSONFeed(
+      { options: { title: 't', link: 'https://example.com/' }, items: [] },
+      { pretty: true },
+    )
+    expect(out).toContain('\n  "title"')
+  })
+
+  it('falls back to content_text from description when content is absent', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: { title: 't', link: 'https://example.com/' },
+        items: [{ title: 'a', link: 'https://example.com/1', description: 'a summary' }],
+      }),
+    )
+    expect(json.items[0].content_text).toBe('a summary')
+    expect(json.items[0].content_html).toBeUndefined()
+  })
+
+  it('throws when a JSON Feed item has neither id nor link', () => {
+    expect(() =>
+      toJSONFeed({
+        options: { title: 't', link: 'https://example.com/' },
+        items: [{ title: 'a', content: '<p>b</p>' }],
+      }),
+    ).toThrow(/requires "id"/)
+  })
 })

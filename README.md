@@ -450,6 +450,29 @@ const { toRSS, toAtom, toJSONFeed } = require('hono-feed')
 const xml = toRSS({ options, items }, { baseUrl: 'https://example.com' })
 ```
 
+## Contributing
+
+Contributions Welcome! You can contribute in the following ways.
+
+- Create an Issue - Propose a new feature. Report a bug.
+- Pull Request - Fix a bug or typo. Refactor the code.
+- Share - Share your thoughts on the Blog, Twitter, and others.
+- Make your application - Please try to use hono-feed.
+
+For more details, see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## Contributors
+
+Thanks to [all contributors](https://github.com/otnc/hono-feed/graphs/contributors)!
+
+<a href="https://github.com/otnc/hono-feed/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=otnc/hono-feed" />
+</a>
+
+## Authors
+
+otoneko. https://github.com/otnc
+
 ## License
 
-[Apache-2.0](./LICENSE) © otoneko.
+Distributed under the Apache-2.0. See [LICENSE](./LICENSE) for more information.

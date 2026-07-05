@@ -63,6 +63,45 @@ describe('validateInput', () => {
     expect(() => validateInput(noId, 'rss')).not.toThrow()
   })
 
+  it('requires the feed-level Atom id to be an absolute IRI (RFC 4287 §4.2.6)', () => {
+    const slugFeedId: FeedInput = {
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        id: 'not-an-iri',
+        author: { name: 'a' },
+      },
+      items: [],
+    }
+    expect(() => validateInput(slugFeedId, 'atom')).toThrow(/absolute IRI/)
+    expect(() => validateInput(slugFeedId, 'rss')).not.toThrow()
+
+    const urnFeedId = {
+      ...slugFeedId,
+      options: {
+        ...slugFeedId.options,
+        id: 'urn:uuid:1225c695-cfb8',
+        updated: new Date('2026-06-29T00:00:00Z'),
+      },
+    }
+    expect(() => validateInput(urnFeedId, 'atom')).not.toThrow()
+  })
+
+  it('requires an Atom item to carry updated or published', () => {
+    const noDate: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', author: { name: 'a' } },
+      items: [{ title: 'a', id: 'https://example.com/1', link: 'https://example.com/1' }],
+    }
+    expect(() => validateInput(noDate, 'atom')).toThrow(/requires "updated" \(or "published"\)/)
+    expect(() => validateInput(noDate, 'rss')).not.toThrow()
+
+    const withPublished = {
+      ...noDate,
+      items: [{ ...noDate.items[0], published: new Date('2026-06-29T00:00:00Z') }],
+    }
+    expect(() => validateInput(withPublished, 'atom')).not.toThrow()
+  })
+
   it('requires an Atom author on the feed or on every item (RFC 4287 §4.1.1)', () => {
     const noAuthor: FeedInput = {
       options: { title: 't', link: 'https://example.com/' },
@@ -78,6 +117,18 @@ describe('validateInput', () => {
       items: [{ ...noAuthor.items[0], author: { name: 'a' } }],
     }
     expect(() => validateInput(itemAuthor, 'atom')).not.toThrow()
+
+    const emptyAuthorArray = {
+      ...noAuthor,
+      items: [{ ...noAuthor.items[0], author: [] }],
+    }
+    expect(() => validateInput(emptyAuthorArray, 'atom')).toThrow(/requires an "author"/)
+
+    const nonEmptyAuthorArray = {
+      ...noAuthor,
+      items: [{ ...noAuthor.items[0], author: [{ name: 'a' }] }],
+    }
+    expect(() => validateInput(nonEmptyAuthorArray, 'atom')).not.toThrow()
   })
 
   it('requires Atom ids to be absolute IRIs (RFC 4287 §4.2.6)', () => {

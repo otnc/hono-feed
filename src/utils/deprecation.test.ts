@@ -31,4 +31,26 @@ describe('warnDeprecated', () => {
     expect(spy).not.toHaveBeenCalled()
     spy.mockRestore()
   })
+
+  it('is suppressed by process.noDeprecation', () => {
+    const spy = vi.spyOn(proc, 'emitWarning').mockImplementation(() => {})
+    ;(proc as unknown as { noDeprecation: boolean }).noDeprecation = true
+    warnDeprecated('test:noDeprecation', 'x', 'HONOFEED_TEST3')
+    ;(proc as unknown as { noDeprecation: boolean }).noDeprecation = false
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
+  it('falls back to console.warn when process.emitWarning is unavailable (edge runtimes)', () => {
+    const original = proc.emitWarning
+    // @ts-expect-error simulating an edge runtime without process.emitWarning
+    proc.emitWarning = undefined
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    warnDeprecated('test:noEmitWarning', 'use the new thing', 'HONOFEED_TEST4')
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining('[HONOFEED_TEST4] DeprecationWarning: hono-feed: use the new thing'),
+    )
+    spy.mockRestore()
+    proc.emitWarning = original
+  })
 })
