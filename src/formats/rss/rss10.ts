@@ -1,4 +1,5 @@
 import type { FeedInput, SerializeOptions } from '../../types'
+import { firstAuthor } from '../../utils/author'
 import { rfc3339 } from '../../utils/date'
 import { absolutize } from '../../utils/url'
 import { cdata, el, type Node, raw, xmlDocument } from '../../utils/xml'
@@ -28,7 +29,7 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
     ch.push(el('link', undefined, link))
     if (item.description) ch.push(el('description', undefined, item.description))
     if (item.published) ch.push(el('dc:date', undefined, rfc3339(item.published)))
-    const author = Array.isArray(item.author) ? item.author[0] : item.author
+    const author = firstAuthor(item.author)
     if (author?.name) ch.push(el('dc:creator', undefined, author.name))
     if (item.content) ch.push(el('content:encoded', undefined, raw(cdata(item.content))))
     if (item.categories) {

@@ -1,4 +1,5 @@
 import type { Author, FeedInput, FeedItem, SerializeOptions } from '../../types'
+import { authorList } from '../../utils/author'
 import { latestDate, rfc3339 } from '../../utils/date'
 import { absolutize } from '../../utils/url'
 import { el, type Node, xmlDocument } from '../../utils/xml'
@@ -52,8 +53,7 @@ function atomEntry03(item: FeedItem, base?: string): Node {
   if (item.description) ch.push(el('summary', undefined, item.description))
   if (item.content) ch.push(el('content', { type: 'text/html', mode: 'escaped' }, item.content))
 
-  const authors = item.author ? (Array.isArray(item.author) ? item.author : [item.author]) : []
-  for (const a of authors) ch.push(authorEl03(a))
+  for (const a of authorList(item.author)) ch.push(authorEl03(a))
 
   return el('entry', undefined, ch)
 }

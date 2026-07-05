@@ -1,4 +1,5 @@
 import type { Author, FeedInput, FeedItem, SerializeOptions } from '../../types'
+import { authorList } from '../../utils/author'
 import { rfc3339 } from '../../utils/date'
 import { warnDeprecated } from '../../utils/deprecation'
 import { absolutize } from '../../utils/url'
@@ -63,7 +64,7 @@ function jsonItem(item: FeedItem, v1: boolean, base?: string): Record<string, un
   if (item.published) o.date_published = rfc3339(item.published)
   if (item.updated) o.date_modified = rfc3339(item.updated)
 
-  const authors = item.author ? (Array.isArray(item.author) ? item.author : [item.author]) : []
+  const authors = authorList(item.author)
   if (authors.length) {
     if (v1) o.author = jsonAuthor(authors[0])
     else o.authors = authors.map(jsonAuthor)

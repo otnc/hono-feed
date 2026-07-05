@@ -1,4 +1,5 @@
 import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
+import { firstAuthor } from '../../utils/author'
 import { rfc822 } from '../../utils/date'
 import { absolutize, isUrl } from '../../utils/url'
 import { cdata, el, type Node, raw, xmlDocument } from '../../utils/xml'
@@ -99,7 +100,7 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
 
   // RSS author requires an email; skip when absent.
   if (caps.rss20) {
-    const author = Array.isArray(item.author) ? item.author[0] : item.author
+    const author = firstAuthor(item.author)
     if (author?.email) {
       ch.push(
         el('author', undefined, author.name ? `${author.email} (${author.name})` : author.email),
