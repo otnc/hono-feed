@@ -11,6 +11,7 @@ import {
   versionFromQuery,
 } from './negotiate'
 import type { FeedFormat, FeedInput, ServeFeedOptions } from './types'
+import { serializeCacheControl } from './utils/cache-control'
 import { latestDate } from './utils/date'
 import { weakEtag } from './utils/etag'
 import { validateInput } from './validate'
@@ -150,7 +151,10 @@ export function serveFeed(
   }
 
   const headers: Record<string, string> = { 'Content-Type': CONTENT_TYPE[format] }
-  if (cacheControl !== false) headers['Cache-Control'] = cacheControl
+  if (cacheControl !== false) {
+    headers['Cache-Control'] =
+      typeof cacheControl === 'string' ? cacheControl : serializeCacheControl(cacheControl)
+  }
   if (negotiated) headers.Vary = 'Accept'
 
   let etagValue: string | undefined

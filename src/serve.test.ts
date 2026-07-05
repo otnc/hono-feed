@@ -93,6 +93,17 @@ describe('serveFeed', () => {
     expect(res.headers.get('last-modified')).toBe('Mon, 29 Jun 2026 00:00:00 GMT')
   })
 
+  it('accepts a CacheControlDirectives object as well as a raw string', async () => {
+    const a = new Hono()
+    a.get('/feed', (c) =>
+      serveFeed(c, buildFeed(), {
+        cacheControl: { public: true, maxAge: 600, staleWhileRevalidate: 60 },
+      }),
+    )
+    const res = await a.request('/feed')
+    expect(res.headers.get('cache-control')).toBe('public, max-age=600, stale-while-revalidate=60')
+  })
+
   it('serves a title-only feed: the request URL satisfies the channel <link> fallback', async () => {
     const a = new Hono()
     a.get('/feed', (c) => serveFeed(c, { options: { title: 'Example Blog' }, items: [] }))

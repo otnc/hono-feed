@@ -97,6 +97,32 @@ export interface FeedInput {
   items: FeedItem[]
 }
 
+/** A structured alternative to hand-writing a `Cache-Control` value. */
+export interface CacheControlDirectives {
+  /** `public` — cacheable by shared caches even if the response would normally be private. */
+  public?: boolean
+  /** `private` — cacheable only by the end user's own cache. */
+  private?: boolean
+  /** `no-store` — must not be stored in any cache. */
+  noStore?: boolean
+  /** `no-cache` — may be stored, but must be revalidated before each reuse. */
+  noCache?: boolean
+  /** `max-age=<n>`, in seconds. */
+  maxAge?: number
+  /** `s-maxage=<n>`, in seconds (shared caches only; overrides `maxAge` for them). */
+  sMaxAge?: number
+  /** `must-revalidate` — forbid serving stale once past `max-age`. */
+  mustRevalidate?: boolean
+  /** `proxy-revalidate` — the shared-cache equivalent of `mustRevalidate`. */
+  proxyRevalidate?: boolean
+  /** `immutable` — the response body won't change while still fresh. */
+  immutable?: boolean
+  /** `stale-while-revalidate=<n>`, in seconds. */
+  staleWhileRevalidate?: number
+  /** `stale-if-error=<n>`, in seconds. */
+  staleIfError?: number
+}
+
 export interface SerializeOptions {
   pretty?: boolean
   baseUrl?: string
@@ -136,8 +162,11 @@ export interface ServeFeedOptions {
   formatQueryParam?: string
   /** Query param name used to detect the version. Default 'version'. */
   versionQueryParam?: string
-  /** Cache-Control value, or false to omit. Default 'public, max-age=3600'. */
-  cacheControl?: string | false
+  /**
+   * Cache-Control value — a raw string, a `CacheControlDirectives` object, or `false` to
+   * omit. Default 'public, max-age=3600'.
+   */
+  cacheControl?: string | CacheControlDirectives | false
   /** Emit a weak ETag and answer conditional requests with 304. Default true. */
   etag?: boolean
   /** Emit Last-Modified (from feed.updated). Default true. */
