@@ -465,6 +465,10 @@ For more details, see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 Thanks to [all contributors](https://github.com/otnc/hono-feed/graphs/contributors)!
 
+<a href="https://github.com/otnc/hono-feed/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=otnc/hono-feed" />
+</a>
+
 ## Authors
 
 otoneko. https://github.com/otnc
