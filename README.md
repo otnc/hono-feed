@@ -471,4 +471,4 @@ otoneko. https://github.com/otnc
 
 ## License
 
-[Apache-2.0](./LICENSE) © otoneko.
+Distributed under the Apache-2.0. See [LICENSE](./LICENSE) for more information.
