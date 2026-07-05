@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { formatFromExtension, formatFromQuery, negotiateFormat, parseAccept } from './negotiate'
+import {
+  formatFromExtension,
+  formatFromQuery,
+  isAtomVersion,
+  isJsonFeedVersion,
+  isRssVersion,
+  negotiateFormat,
+  parseAccept,
+  versionFromQuery,
+} from './negotiate'
 
 describe('parseAccept', () => {
   it('sorts by q desc then specificity desc, defaulting q to 1', () => {
@@ -55,5 +64,21 @@ describe('formatFromExtension', () => {
     expect(formatFromExtension('/feed.json')).toBe('json')
     expect(formatFromExtension('/feed.xml')).toBe('rss')
     expect(formatFromExtension('/feed')).toBeNull()
+  })
+})
+
+describe('versionFromQuery', () => {
+  it('returns undefined when the param is absent, the version when known, "invalid" otherwise', () => {
+    expect(versionFromQuery(null, isRssVersion)).toBeUndefined()
+    expect(versionFromQuery('0.91', isRssVersion)).toBe('0.91')
+    expect(versionFromQuery('9.9', isRssVersion)).toBe('invalid')
+
+    expect(versionFromQuery(null, isAtomVersion)).toBeUndefined()
+    expect(versionFromQuery('0.3', isAtomVersion)).toBe('0.3')
+    expect(versionFromQuery('2.0', isAtomVersion)).toBe('invalid')
+
+    expect(versionFromQuery(null, isJsonFeedVersion)).toBeUndefined()
+    expect(versionFromQuery('1', isJsonFeedVersion)).toBe('1')
+    expect(versionFromQuery('2', isJsonFeedVersion)).toBe('invalid')
   })
 })

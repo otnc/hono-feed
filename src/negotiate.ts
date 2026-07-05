@@ -1,4 +1,13 @@
-import type { FeedFormat } from './types'
+import {
+  ATOM_VERSIONS,
+  type AtomVersion,
+  FEED_FORMATS,
+  type FeedFormat,
+  JSON_FEED_VERSIONS,
+  type JsonFeedVersion,
+  RSS_VERSIONS,
+  type RssVersion,
+} from './types'
 
 export interface AcceptEntry {
   type: string
@@ -16,13 +25,34 @@ const MIME_FORMAT: Record<string, FeedFormat> = {
   'text/xml': 'rss',
 }
 
-export function isFeedFormat(v: unknown): v is FeedFormat {
-  return v === 'rss' || v === 'atom' || v === 'json'
+// Guards built from the arrays in types.ts, so the accepted literals live in exactly one place.
+function memberGuard<T extends string>(values: readonly T[]): (v: unknown) => v is T {
+  const set = new Set<string>(values)
+  return (v): v is T => typeof v === 'string' && set.has(v)
 }
 
-/** Resolve a format from `?format=`. */
+export const isFeedFormat: (v: unknown) => v is FeedFormat = memberGuard(FEED_FORMATS)
+export const isRssVersion: (v: unknown) => v is RssVersion = memberGuard(RSS_VERSIONS)
+export const isAtomVersion: (v: unknown) => v is AtomVersion = memberGuard(ATOM_VERSIONS)
+export const isJsonFeedVersion: (v: unknown) => v is JsonFeedVersion =
+  memberGuard(JSON_FEED_VERSIONS)
+
+/** Resolve a format from the query. */
 export function formatFromQuery(value: string | null | undefined): FeedFormat | null {
   return isFeedFormat(value) ? value : null
+}
+
+/**
+ * Resolve a version from a query value against a type guard (`isRssVersion` and friends).
+ * `undefined` means the query didn't carry the param at all; `'invalid'` means it did, but
+ * with a value the guard rejects.
+ */
+export function versionFromQuery<T extends string>(
+  value: string | null,
+  isValid: (v: unknown) => v is T,
+): T | 'invalid' | undefined {
+  if (value === null) return undefined
+  return isValid(value) ? value : 'invalid'
 }
 
 /** Resolve a format from the path extension. Bare `.xml` is treated as RSS. */
@@ -45,9 +75,8 @@ function specificity(e: AcceptEntry): number {
 /** Parse an Accept header, sorted by q desc then specificity desc (stable). */
 export function parseAccept(header: string | null | undefined): AcceptEntry[] {
   if (!header) return []
-  const entries: { e: AcceptEntry; i: number }[] = []
+  const entries: AcceptEntry[] = []
 
-  let index = 0
   for (const part of header.split(',')) {
     const trimmed = part.trim()
     if (!trimmed) continue
@@ -69,16 +98,15 @@ export function parseAccept(header: string | null | undefined): AcceptEntry[] {
         params[key] = val
       }
     }
-    entries.push({ e: { type, subtype, q, params }, i: index++ })
+    entries.push({ type, subtype, q, params })
   }
 
-  return entries
-    .sort((a, b) => {
-      if (b.e.q !== a.e.q) return b.e.q - a.e.q
-      const s = specificity(b.e) - specificity(a.e)
-      return s !== 0 ? s : a.i - b.i
-    })
-    .map(({ e }) => e)
+  // `Array.prototype.sort` has been a stable sort since ES2019, so entries with equal
+  // q and specificity naturally keep their original header order without an explicit tiebreak.
+  return entries.sort((a, b) => {
+    if (b.q !== a.q) return b.q - a.q
+    return specificity(b) - specificity(a)
+  })
 }
 
 // `'all'` means a wildcard (defer to defaultFormat).

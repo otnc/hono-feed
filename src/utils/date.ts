@@ -14,9 +14,14 @@ export function rfc3339(date: Date): string {
 export function latestDate(items: FeedItem[]): Date | undefined {
   let max: Date | undefined
   for (const item of items) {
-    for (const d of [item.updated, item.published]) {
-      if (d instanceof Date && !Number.isNaN(d.getTime()) && (!max || d > max)) max = d
-    }
+    max = laterOf(max, item.updated)
+    max = laterOf(max, item.published)
   }
   return max
+}
+
+// The candidate wins only when it's a valid Date newer than the current best.
+function laterOf(best: Date | undefined, candidate: Date | undefined): Date | undefined {
+  if (!(candidate instanceof Date) || Number.isNaN(candidate.getTime())) return best
+  return !best || candidate > best ? candidate : best
 }

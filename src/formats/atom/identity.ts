@@ -1,0 +1,18 @@
+import type { FeedOptions, SerializeOptions } from '../../types'
+import { absolutize, selfUrl } from '../../utils/url'
+
+/**
+ * Resolve the feed-level identity trio shared by Atom 0.3 and 1.0: the self URL, the
+ * alternate link, and the mandatory feed id (explicit id, else link, else self).
+ */
+export function atomFeedIdentity(
+  options: FeedOptions,
+  opts: SerializeOptions,
+  label: string,
+): { self: string | undefined; link: string | undefined; feedId: string } {
+  const self = selfUrl(opts, options)
+  const link = absolutize(options.link, opts.baseUrl)
+  const feedId = options.id ?? link ?? self
+  if (!feedId) throw new TypeError(`hono-feed: ${label} requires an id`)
+  return { self, link, feedId }
+}

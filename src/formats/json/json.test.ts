@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { FeedInput } from '../types'
-import { toJSONFeed } from './json'
+import type { FeedInput } from '../../types'
+import { toJSONFeed } from './index'
 
 const input: FeedInput = {
   options: { title: 'example blog', link: 'https://example.com/' },
