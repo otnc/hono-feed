@@ -85,9 +85,8 @@ function specificity(e: AcceptEntry): number {
 /** Parse an Accept header, sorted by q desc then specificity desc (stable). */
 export function parseAccept(header: string | null | undefined): AcceptEntry[] {
   if (!header) return []
-  const entries: { e: AcceptEntry; i: number }[] = []
+  const entries: AcceptEntry[] = []
 
-  let index = 0
   for (const part of header.split(',')) {
     const trimmed = part.trim()
     if (!trimmed) continue
@@ -109,16 +108,15 @@ export function parseAccept(header: string | null | undefined): AcceptEntry[] {
         params[key] = val
       }
     }
-    entries.push({ e: { type, subtype, q, params }, i: index++ })
+    entries.push({ type, subtype, q, params })
   }
 
-  return entries
-    .sort((a, b) => {
-      if (b.e.q !== a.e.q) return b.e.q - a.e.q
-      const s = specificity(b.e) - specificity(a.e)
-      return s !== 0 ? s : a.i - b.i
-    })
-    .map(({ e }) => e)
+  // `Array.prototype.sort` has been a stable sort since ES2019, so entries with equal
+  // q and specificity naturally keep their original header order without an explicit tiebreak.
+  return entries.sort((a, b) => {
+    if (b.q !== a.q) return b.q - a.q
+    return specificity(b) - specificity(a)
+  })
 }
 
 // `'all'` means a wildcard (defer to defaultFormat).
