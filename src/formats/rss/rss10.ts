@@ -1,6 +1,6 @@
 import type { FeedInput, SerializeOptions } from '../../types'
 import { rfc3339 } from '../../utils/date'
-import { absolutize } from '../../utils/url'
+import { absolutize, selfUrl } from '../../utils/url'
 import { el, type Node, xmlDocument } from '../../utils/xml'
 import { rdfItem } from './rdf-item'
 
@@ -10,8 +10,7 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
   const { options, items } = input
   const base = opts.baseUrl
 
-  const feedUri =
-    opts.feedUrl ?? absolutize(options.feedUrl, base) ?? absolutize(options.link, base)
+  const feedUri = selfUrl(opts, options) ?? absolutize(options.link, base)
   if (!feedUri) throw new TypeError('hono-feed: RSS 1.0 requires "feedUrl" or "link"')
   const home = absolutize(options.link, base)
   const imageUrl = options.image ? absolutize(options.image, base) : undefined

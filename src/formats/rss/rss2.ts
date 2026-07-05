@@ -1,7 +1,7 @@
 import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { firstAuthor } from '../../utils/author'
 import { rfc822 } from '../../utils/date'
-import { absolutize, isUrl } from '../../utils/url'
+import { absolutize, isUrl, selfUrl } from '../../utils/url'
 import { cdata, el, type Node, raw, xmlDocument } from '../../utils/xml'
 
 // `<rss version="…">` structure (Netscape/UserLand lineage: 0.91 / 0.92 / 0.93 / 0.94 / 2.0).
@@ -33,7 +33,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   }
 
   // Channel <link> is mandatory in every RSS version; fall back to the self URL.
-  const self = opts.feedUrl ?? absolutize(options.feedUrl, base)
+  const self = selfUrl(opts, options)
   const link = absolutize(options.link, base) ?? self
   if (!link) throw new TypeError('hono-feed: RSS requires "link" (or "feedUrl")')
 

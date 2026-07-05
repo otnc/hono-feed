@@ -2,7 +2,7 @@ import type { Author, FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { authorList } from '../../utils/author'
 import { rfc3339 } from '../../utils/date'
 import { warnDeprecated } from '../../utils/deprecation'
-import { absolutize } from '../../utils/url'
+import { absolutize, selfUrl } from '../../utils/url'
 
 /** Serialize the neutral model to a JSON Feed 1.1 string. */
 export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): string {
@@ -26,7 +26,7 @@ export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): strin
 
   const home = absolutize(options.link, base)
   if (home) feed.home_page_url = home
-  const self = opts.feedUrl ?? absolutize(options.feedUrl, base)
+  const self = selfUrl(opts, options)
   if (self) feed.feed_url = self
   if (options.description) feed.description = options.description
   if (options.language && !v1) feed.language = options.language
