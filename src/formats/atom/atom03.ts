@@ -27,9 +27,8 @@ export function toAtom03(input: FeedInput, opts: SerializeOptions): string {
 
   for (const item of items) feed.push(atomEntry03(item, base))
 
-  const attrs = options.language
-    ? { version: '0.3', xmlns: 'http://purl.org/atom/ns#', 'xml:lang': options.language }
-    : { version: '0.3', xmlns: 'http://purl.org/atom/ns#' }
+  // renderAttrs drops undefined values, so xml:lang simply vanishes when language is unset.
+  const attrs = { version: '0.3', xmlns: 'http://purl.org/atom/ns#', 'xml:lang': options.language }
   return xmlDocument(el('feed', attrs, feed), { pretty: opts.pretty, version: opts.xmlVersion })
 }
 

@@ -110,7 +110,7 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
 
   if (caps.itemRich092 && item.categories) {
     for (const cat of item.categories) {
-      ch.push(el('category', cat.scheme ? { domain: cat.scheme } : undefined, cat.term))
+      ch.push(el('category', { domain: cat.scheme }, cat.term))
     }
   }
 

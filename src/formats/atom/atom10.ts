@@ -28,9 +28,8 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
 
   for (const item of items) feed.push(atomEntry10(item, base))
 
-  const attrs = options.language
-    ? { xmlns: 'http://www.w3.org/2005/Atom', 'xml:lang': options.language }
-    : { xmlns: 'http://www.w3.org/2005/Atom' }
+  // renderAttrs drops undefined values, so xml:lang simply vanishes when language is unset.
+  const attrs = { xmlns: 'http://www.w3.org/2005/Atom', 'xml:lang': options.language }
   return xmlDocument(el('feed', attrs, feed), { pretty: opts.pretty, version: opts.xmlVersion })
 }
 
@@ -53,9 +52,7 @@ function atomEntry10(item: FeedItem, base?: string): Node {
 
   if (item.categories) {
     for (const cat of item.categories) {
-      ch.push(
-        el('category', cat.scheme ? { term: cat.term, scheme: cat.scheme } : { term: cat.term }),
-      )
+      ch.push(el('category', { term: cat.term, scheme: cat.scheme }))
     }
   }
 
