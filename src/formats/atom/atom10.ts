@@ -1,19 +1,17 @@
 import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { authorList } from '../../utils/author'
 import { latestDate, rfc3339 } from '../../utils/date'
-import { absolutize, selfUrl } from '../../utils/url'
+import { absolutize } from '../../utils/url'
 import { el, type Node, xmlDocument } from '../../utils/xml'
 import { atomAuthorEl } from './author'
+import { atomFeedIdentity } from './identity'
 
 // Atom 1.0 (RFC 4287).
 export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
   const { options, items } = input
   const base = opts.baseUrl
 
-  const self = selfUrl(opts, options)
-  const link = absolutize(options.link, base)
-  const feedId = options.id ?? link ?? self
-  if (!feedId) throw new TypeError('hono-feed: Atom feed requires an id')
+  const { self, link, feedId } = atomFeedIdentity(options, opts, 'Atom feed')
 
   const feed: Node[] = []
   feed.push(el('id', undefined, feedId))

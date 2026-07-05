@@ -1,9 +1,10 @@
 import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { authorList } from '../../utils/author'
 import { latestDate, rfc3339 } from '../../utils/date'
-import { absolutize, selfUrl } from '../../utils/url'
+import { absolutize } from '../../utils/url'
 import { el, type Node, xmlDocument } from '../../utils/xml'
 import { atomAuthorEl } from './author'
+import { atomFeedIdentity } from './identity'
 
 // Atom 0.3 (deprecated, pre-RFC). Namespace purl.org/atom/ns#; uses tagline / modified /
 // issued / copyright and author <url>; content is escaped HTML.
@@ -11,10 +12,7 @@ export function toAtom03(input: FeedInput, opts: SerializeOptions): string {
   const { options, items } = input
   const base = opts.baseUrl
 
-  const self = selfUrl(opts, options)
-  const link = absolutize(options.link, base)
-  const feedId = options.id ?? link ?? self
-  if (!feedId) throw new TypeError('hono-feed: Atom 0.3 feed requires an id')
+  const { link, feedId } = atomFeedIdentity(options, opts, 'Atom 0.3 feed')
 
   const feed: Node[] = [el('title', undefined, options.title)]
   if (options.description) feed.push(el('tagline', undefined, options.description))
