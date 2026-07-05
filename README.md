@@ -260,6 +260,32 @@ app.get('/feed', (c) =>
 // GET /feed?f=rss&v=0.91
 ```
 
+## Cache-Control
+
+`cacheControl` takes a raw string, same as before — but hand-writing directives is easy to get subtly wrong (a missed comma, a misspelled directive), so it also accepts a `CacheControlDirectives` object:
+
+```ts
+app.get('/feed', (c) =>
+  serveFeed(c, buildFeed(), {
+    cacheControl: { public: true, maxAge: 600, staleWhileRevalidate: 60 },
+  }),
+)
+// Cache-Control: public, max-age=600, stale-while-revalidate=60
+```
+
+| Field | Directive |
+| --- | --- |
+| `public` / `private` | `public` / `private` |
+| `noStore` / `noCache` | `no-store` / `no-cache` |
+| `maxAge` / `sMaxAge` | `max-age=<n>` / `s-maxage=<n>` |
+| `mustRevalidate` / `proxyRevalidate` | `must-revalidate` / `proxy-revalidate` |
+| `immutable` | `immutable` |
+| `staleWhileRevalidate` / `staleIfError` | `stale-while-revalidate=<n>` / `stale-if-error=<n>` |
+
+`false` still omits the header entirely, same as always.
+
+The object form is recommended when the fields cover what you need — it can't typo a directive name or forget a comma. The raw string isn't deprecated, though: it's the header's own native shape, and it's still the way to reach directives (or vendor extensions) `CacheControlDirectives` doesn't model yet. Both forms are first-class and neither is going away.
+
 ## Sharing options with middleware
 
 Setting the same options on every route gets repetitive.  
@@ -372,7 +398,7 @@ All options for `serveFeed(c, input, options?)`:
 | `detectVersionFromQuery` | `boolean` | `detectFromQuery` | Read the version from `?version=` |
 | `formatQueryParam` | `string` | `'format'` | Query param name used to detect the format |
 | `versionQueryParam` | `string` | `'version'` | Query param name used to detect the version |
-| `cacheControl` | `string \| false` | `'public, max-age=3600'` | `Cache-Control` header (`false` to omit) |
+| `cacheControl` | `string \| CacheControlDirectives \| false` | `'public, max-age=3600'` | `Cache-Control` header (see [Cache-Control](#cache-control); `false` to omit) |
 | `etag` | `boolean` | `true` | Send a weak `ETag` and answer `304` on a match |
 | `lastModified` | `boolean` | `true` | Send `Last-Modified` from `feed.updated` |
 | `baseUrl` | `string` | request origin | Base used to turn relative URLs into absolute ones |

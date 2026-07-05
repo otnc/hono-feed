@@ -6,6 +6,7 @@ export { serveFeed } from './serve'
 export type {
   AtomVersion,
   Author,
+  CacheControlDirectives,
   Category,
   Enclosure,
   FeedFormat,
