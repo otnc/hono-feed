@@ -222,12 +222,43 @@ app.get('/feed.json', (c) => serveFeed(c, buildFeed(), { format: 'json' }))
 
 When `format` isn't set, `serveFeed` works through these in order until one matches:
 
-1. `?format=rss|atom|json` in the query — only if you opt in with `detectFromQuery: true`
+1. `?format=rss|atom|json` in the query — only if you opt in with `detectFromQuery: true` (or just `detectFormatFromQuery: true`)
 2. A URL extension like `.rss` / `.atom` / `.json` / `.xml` — on by default
 3. The `Accept` header, honouring q-values
 4. `defaultFormat` (which is `'rss'`)
 
 Negotiated responses carry `Vary: Accept` so caches behave; pinned ones don't, since they never change with the header.
+
+### Choosing a version from the query
+
+`detectFromQuery: true` also turns on version selection through `?version=`, interpreted against whichever version type the resolved format expects (`RssVersion` for `rss`, `AtomVersion` for `atom`, `JsonFeedVersion` for `json`). It only applies when the matching option isn't already pinned in code — `rssVersion` (etc.) set in `serveFeed(...)` always wins over the query.
+
+```ts
+app.get('/feed', (c) => serveFeed(c, buildFeed(), { detectFromQuery: true }))
+// GET /feed?format=rss&version=0.91
+```
+
+A value outside the accepted set (see [Feed versions](#feed-versions)) answers `400 Bad Request`. A value that's valid but that the feed data can't satisfy — e.g. `?version=0.91` without `language` set — answers `422 Unprocessable Entity` instead of throwing, since the request is what made that version unreachable, not the server. A version pinned in code that fails the same way still throws, since that's a bug in the route, not something a request can trigger. Both error responses carry `Cache-Control: no-store` — they're not governed by the `cacheControl` option, since whether they reproduce can change independently of the URL as the underlying feed data changes.
+
+`detectFromQuery` is a convenience switch for both `detectFormatFromQuery` and `detectVersionFromQuery` — set either one directly to turn on just format or just version detection:
+
+```ts
+// Only ?format= is honoured; ?version= (if present) is ignored.
+app.get('/feed', (c) => serveFeed(c, buildFeed(), { detectFormatFromQuery: true }))
+```
+
+Both query param names can be renamed, e.g. to keep URLs short:
+
+```ts
+app.get('/feed', (c) =>
+  serveFeed(c, buildFeed(), {
+    detectFromQuery: true,
+    formatQueryParam: 'f',
+    versionQueryParam: 'v',
+  }),
+)
+// GET /feed?f=rss&v=0.91
+```
 
 ## Sharing options with middleware
 
@@ -336,7 +367,11 @@ All options for `serveFeed(c, input, options?)`:
 | `format` | `FeedFormat` | – | Pin the format and skip negotiation |
 | `defaultFormat` | `FeedFormat` | `'rss'` | Used when negotiation finds no match |
 | `detectFromExtension` | `boolean` | `true` | Read the format from `.rss` / `.atom` / `.json` / `.xml` |
-| `detectFromQuery` | `boolean` | `false` | Read the format from `?format=` |
+| `detectFromQuery` | `boolean` | `false` | Convenience switch for both `detectFormatFromQuery` and `detectVersionFromQuery` |
+| `detectFormatFromQuery` | `boolean` | `detectFromQuery` | Read the format from `?format=` |
+| `detectVersionFromQuery` | `boolean` | `detectFromQuery` | Read the version from `?version=` |
+| `formatQueryParam` | `string` | `'format'` | Query param name used to detect the format |
+| `versionQueryParam` | `string` | `'version'` | Query param name used to detect the version |
 | `cacheControl` | `string \| false` | `'public, max-age=3600'` | `Cache-Control` header (`false` to omit) |
 | `etag` | `boolean` | `true` | Send a weak `ETag` and answer `304` on a match |
 | `lastModified` | `boolean` | `true` | Send `Last-Modified` from `feed.updated` |

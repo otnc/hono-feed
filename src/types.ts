@@ -1,4 +1,9 @@
-export type FeedFormat = 'rss' | 'atom' | 'json'
+// Each `*_VERSIONS`/`FEED_FORMATS` array is the single source of truth for its type: the
+// type is derived from the array below it, so runtime validation (see negotiate.ts) can
+// import the array instead of re-listing the literals and risking drift.
+
+export const FEED_FORMATS = ['rss', 'atom', 'json'] as const
+export type FeedFormat = (typeof FEED_FORMATS)[number]
 
 /** Supported XML declaration versions (used by RSS and Atom output). */
 export type XmlVersion = '1.0' | '1.1'
@@ -9,13 +14,16 @@ export type XmlVersion = '1.0' | '1.1'
  * - `'0.90'` / `'1.0'` — RDF (`<rdf:RDF>`): Netscape 0.90 and RSS 1.0 (RDF Site Summary)
  * - `'1.1'` — RSS 1.1 (RDF, `<Channel>` in the `purl.org/net/rss1.1#` namespace)
  */
-export type RssVersion = '2.0' | '0.94' | '0.93' | '0.92' | '0.91' | '1.1' | '1.0' | '0.90'
+export const RSS_VERSIONS = ['2.0', '0.94', '0.93', '0.92', '0.91', '1.1', '1.0', '0.90'] as const
+export type RssVersion = (typeof RSS_VERSIONS)[number]
 
 /** Supported Atom versions. `'0.3'` is the deprecated predecessor of Atom 1.0. */
-export type AtomVersion = '1.0' | '0.3'
+export const ATOM_VERSIONS = ['1.0', '0.3'] as const
+export type AtomVersion = (typeof ATOM_VERSIONS)[number]
 
 /** Supported JSON Feed versions (mapped to the canonical `version` URL). */
-export type JsonFeedVersion = '1' | '1.1'
+export const JSON_FEED_VERSIONS = ['1', '1.1'] as const
+export type JsonFeedVersion = (typeof JSON_FEED_VERSIONS)[number]
 
 export interface Author {
   name: string
@@ -115,8 +123,19 @@ export interface ServeFeedOptions {
   defaultFormat?: FeedFormat
   /** Detect format from the URL extension. Default true. */
   detectFromExtension?: boolean
-  /** Detect format from `?format=`. Default false. */
+  /**
+   * Convenience switch for both `detectFormatFromQuery` and `detectVersionFromQuery`.
+   * Default false.
+   */
   detectFromQuery?: boolean
+  /** Detect format from `?format=`. Defaults to `detectFromQuery`. */
+  detectFormatFromQuery?: boolean
+  /** Detect version (e.g. `rssVersion`) from `?version=`. Defaults to `detectFromQuery`. */
+  detectVersionFromQuery?: boolean
+  /** Query param name used to detect the format. Default 'format'. */
+  formatQueryParam?: string
+  /** Query param name used to detect the version. Default 'version'. */
+  versionQueryParam?: string
   /** Cache-Control value, or false to omit. Default 'public, max-age=3600'. */
   cacheControl?: string | false
   /** Emit a weak ETag and answer conditional requests with 304. Default true. */

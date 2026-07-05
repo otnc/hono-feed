@@ -1,4 +1,13 @@
-import type { FeedFormat } from './types'
+import {
+  ATOM_VERSIONS,
+  type AtomVersion,
+  FEED_FORMATS,
+  type FeedFormat,
+  JSON_FEED_VERSIONS,
+  type JsonFeedVersion,
+  RSS_VERSIONS,
+  type RssVersion,
+} from './types'
 
 export interface AcceptEntry {
   type: string
@@ -16,13 +25,44 @@ const MIME_FORMAT: Record<string, FeedFormat> = {
   'text/xml': 'rss',
 }
 
+// Sets built from the arrays in types.ts, so the accepted literals live in exactly one place.
+const FEED_FORMAT_SET = new Set<string>(FEED_FORMATS)
+const RSS_VERSION_SET = new Set<string>(RSS_VERSIONS)
+const ATOM_VERSION_SET = new Set<string>(ATOM_VERSIONS)
+const JSON_FEED_VERSION_SET = new Set<string>(JSON_FEED_VERSIONS)
+
 export function isFeedFormat(v: unknown): v is FeedFormat {
-  return v === 'rss' || v === 'atom' || v === 'json'
+  return typeof v === 'string' && FEED_FORMAT_SET.has(v)
 }
 
-/** Resolve a format from `?format=`. */
+export function isRssVersion(v: unknown): v is RssVersion {
+  return typeof v === 'string' && RSS_VERSION_SET.has(v)
+}
+
+export function isAtomVersion(v: unknown): v is AtomVersion {
+  return typeof v === 'string' && ATOM_VERSION_SET.has(v)
+}
+
+export function isJsonFeedVersion(v: unknown): v is JsonFeedVersion {
+  return typeof v === 'string' && JSON_FEED_VERSION_SET.has(v)
+}
+
+/** Resolve a format from the query. */
 export function formatFromQuery(value: string | null | undefined): FeedFormat | null {
   return isFeedFormat(value) ? value : null
+}
+
+/**
+ * Resolve a version from a query value against a type guard (`isRssVersion` and friends).
+ * `undefined` means the query didn't carry the param at all; `'invalid'` means it did, but
+ * with a value the guard rejects.
+ */
+export function versionFromQuery<T extends string>(
+  value: string | null,
+  isValid: (v: unknown) => v is T,
+): T | 'invalid' | undefined {
+  if (value === null) return undefined
+  return isValid(value) ? value : 'invalid'
 }
 
 /** Resolve a format from the path extension. Bare `.xml` is treated as RSS. */
