@@ -121,4 +121,109 @@ describe('serveFeed', () => {
     } as unknown as Parameters<typeof serveFeed>[0]
     expect(() => serveFeed(c, { options: { title: '' }, items: [] })).toThrow(TypeError)
   })
+
+  describe('version from the query', () => {
+    const buildFeedWithLanguage = () =>
+      new Feed({
+        title: 'example blog',
+        link: 'https://example.com/',
+        language: 'en',
+        author: { name: 'otnc' },
+        updated: new Date('2026-06-29T00:00:00Z'),
+      }).addItem({
+        title: 'post 1',
+        link: 'https://example.com/1',
+        description: 'summary',
+        published: new Date('2026-06-29T00:00:00Z'),
+      })
+
+    it('honours ?version= when detectFromQuery is enabled', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeedWithLanguage(), { detectFromQuery: true }))
+      const res = await a.request('/feed?version=0.91')
+      expect(res.status).toBe(200)
+      expect(await res.text()).toContain('<language>en</language>')
+    })
+
+    it('ignores the query when rssVersion is pinned in code', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) =>
+        serveFeed(c, buildFeedWithLanguage(), { detectFromQuery: true, rssVersion: '2.0' }),
+      )
+      const res = await a.request('/feed?version=0.91')
+      expect(await res.text()).not.toContain('rdf')
+    })
+
+    it('answers 400 for an unknown version value, marked no-store', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeedWithLanguage(), { detectFromQuery: true }))
+      const res = await a.request('/feed?version=9.9')
+      expect(res.status).toBe(400)
+      expect(res.headers.get('cache-control')).toBe('no-store')
+    })
+
+    it('answers 422 when the query-selected version cannot be generated from the data, marked no-store', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { detectFromQuery: true }))
+      const res = await a.request('/feed?version=0.91')
+      expect(res.status).toBe(422)
+      expect(res.headers.get('cache-control')).toBe('no-store')
+      expect(await res.text()).toContain('RSS 0.91 requires "language"')
+    })
+
+    it('still throws when the same failure comes from a version pinned in code', () => {
+      const c = {
+        req: { url: 'https://example.com/feed', method: 'GET', header: () => undefined },
+      } as unknown as Parameters<typeof serveFeed>[0]
+      expect(() => serveFeed(c, buildFeed(), { rssVersion: '0.91' })).toThrow(TypeError)
+    })
+
+    it('lets formatQueryParam and versionQueryParam be renamed', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) =>
+        serveFeed(c, buildFeedWithLanguage(), {
+          detectFromQuery: true,
+          formatQueryParam: 'f',
+          versionQueryParam: 'v',
+        }),
+      )
+      const res = await a.request('/feed?f=rss&v=0.91')
+      expect(res.status).toBe(200)
+      expect(await res.text()).toContain('<language>en</language>')
+
+      // The default names no longer apply once renamed.
+      const ignored = await a.request('/feed?format=json&version=0.91')
+      expect(ignored.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
+    })
+
+    it('detects the format from the query while ignoring the version query when disabled', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) =>
+        serveFeed(c, buildFeed(), { detectFormatFromQuery: true, detectVersionFromQuery: false }),
+      )
+      const res = await a.request('/feed?format=atom&version=0.91')
+      expect(res.headers.get('content-type')).toBe('application/atom+xml; charset=utf-8')
+    })
+
+    it('detects the version from the query while ignoring the format query when disabled', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) =>
+        serveFeed(c, buildFeedWithLanguage(), {
+          detectFormatFromQuery: false,
+          detectVersionFromQuery: true,
+        }),
+      )
+      const res = await a.request('/feed?format=atom&version=0.91')
+      expect(res.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
+      expect(await res.text()).toContain('<language>en</language>')
+    })
+
+    it('detectFromQuery still enables both when the granular options are unset', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeedWithLanguage(), { detectFromQuery: true }))
+      const res = await a.request('/feed?format=atom&version=0.3')
+      expect(res.status).toBe(200)
+      expect(res.headers.get('content-type')).toBe('application/atom+xml; charset=utf-8')
+    })
+  })
 })
