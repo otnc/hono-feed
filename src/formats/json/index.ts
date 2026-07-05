@@ -1,7 +1,8 @@
 import type { Author, FeedInput, FeedItem, SerializeOptions } from '../../types'
+import { authorList } from '../../utils/author'
 import { rfc3339 } from '../../utils/date'
 import { warnDeprecated } from '../../utils/deprecation'
-import { absolutize } from '../../utils/url'
+import { absolutize, selfUrl } from '../../utils/url'
 
 /** Serialize the neutral model to a JSON Feed 1.1 string. */
 export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): string {
@@ -25,12 +26,12 @@ export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): strin
 
   const home = absolutize(options.link, base)
   if (home) feed.home_page_url = home
-  const self = opts.feedUrl ?? absolutize(options.feedUrl, base)
+  const self = selfUrl(opts, options)
   if (self) feed.feed_url = self
   if (options.description) feed.description = options.description
   if (options.language && !v1) feed.language = options.language
-  if (options.image) feed.icon = absolutize(options.image, base) ?? options.image
-  if (options.favicon) feed.favicon = absolutize(options.favicon, base) ?? options.favicon
+  if (options.image) feed.icon = absolutize(options.image, base)
+  if (options.favicon) feed.favicon = absolutize(options.favicon, base)
   if (options.author) {
     if (v1) feed.author = jsonAuthor(options.author)
     else feed.authors = [jsonAuthor(options.author)]
@@ -63,17 +64,17 @@ function jsonItem(item: FeedItem, v1: boolean, base?: string): Record<string, un
   if (item.published) o.date_published = rfc3339(item.published)
   if (item.updated) o.date_modified = rfc3339(item.updated)
 
-  const authors = item.author ? (Array.isArray(item.author) ? item.author : [item.author]) : []
+  const authors = authorList(item.author)
   if (authors.length) {
     if (v1) o.author = jsonAuthor(authors[0])
     else o.authors = authors.map(jsonAuthor)
   }
   if (item.categories?.length) o.tags = item.categories.map((c) => c.term)
-  if (item.image) o.image = absolutize(item.image, base) ?? item.image
+  if (item.image) o.image = absolutize(item.image, base)
 
   if (item.enclosure) {
     const attachment: Record<string, unknown> = {
-      url: absolutize(item.enclosure.url, base) ?? item.enclosure.url,
+      url: absolutize(item.enclosure.url, base),
       mime_type: item.enclosure.type,
     }
     if (item.enclosure.length !== undefined) attachment.size_in_bytes = item.enclosure.length

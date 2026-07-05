@@ -25,27 +25,17 @@ const MIME_FORMAT: Record<string, FeedFormat> = {
   'text/xml': 'rss',
 }
 
-// Sets built from the arrays in types.ts, so the accepted literals live in exactly one place.
-const FEED_FORMAT_SET = new Set<string>(FEED_FORMATS)
-const RSS_VERSION_SET = new Set<string>(RSS_VERSIONS)
-const ATOM_VERSION_SET = new Set<string>(ATOM_VERSIONS)
-const JSON_FEED_VERSION_SET = new Set<string>(JSON_FEED_VERSIONS)
-
-export function isFeedFormat(v: unknown): v is FeedFormat {
-  return typeof v === 'string' && FEED_FORMAT_SET.has(v)
+// Guards built from the arrays in types.ts, so the accepted literals live in exactly one place.
+function memberGuard<T extends string>(values: readonly T[]): (v: unknown) => v is T {
+  const set = new Set<string>(values)
+  return (v): v is T => typeof v === 'string' && set.has(v)
 }
 
-export function isRssVersion(v: unknown): v is RssVersion {
-  return typeof v === 'string' && RSS_VERSION_SET.has(v)
-}
-
-export function isAtomVersion(v: unknown): v is AtomVersion {
-  return typeof v === 'string' && ATOM_VERSION_SET.has(v)
-}
-
-export function isJsonFeedVersion(v: unknown): v is JsonFeedVersion {
-  return typeof v === 'string' && JSON_FEED_VERSION_SET.has(v)
-}
+export const isFeedFormat: (v: unknown) => v is FeedFormat = memberGuard(FEED_FORMATS)
+export const isRssVersion: (v: unknown) => v is RssVersion = memberGuard(RSS_VERSIONS)
+export const isAtomVersion: (v: unknown) => v is AtomVersion = memberGuard(ATOM_VERSIONS)
+export const isJsonFeedVersion: (v: unknown) => v is JsonFeedVersion =
+  memberGuard(JSON_FEED_VERSIONS)
 
 /** Resolve a format from the query. */
 export function formatFromQuery(value: string | null | undefined): FeedFormat | null {
@@ -85,9 +75,8 @@ function specificity(e: AcceptEntry): number {
 /** Parse an Accept header, sorted by q desc then specificity desc (stable). */
 export function parseAccept(header: string | null | undefined): AcceptEntry[] {
   if (!header) return []
-  const entries: { e: AcceptEntry; i: number }[] = []
+  const entries: AcceptEntry[] = []
 
-  let index = 0
   for (const part of header.split(',')) {
     const trimmed = part.trim()
     if (!trimmed) continue
@@ -109,16 +98,15 @@ export function parseAccept(header: string | null | undefined): AcceptEntry[] {
         params[key] = val
       }
     }
-    entries.push({ e: { type, subtype, q, params }, i: index++ })
+    entries.push({ type, subtype, q, params })
   }
 
-  return entries
-    .sort((a, b) => {
-      if (b.e.q !== a.e.q) return b.e.q - a.e.q
-      const s = specificity(b.e) - specificity(a.e)
-      return s !== 0 ? s : a.i - b.i
-    })
-    .map(({ e }) => e)
+  // `Array.prototype.sort` has been a stable sort since ES2019, so entries with equal
+  // q and specificity naturally keep their original header order without an explicit tiebreak.
+  return entries.sort((a, b) => {
+    if (b.q !== a.q) return b.q - a.q
+    return specificity(b) - specificity(a)
+  })
 }
 
 // `'all'` means a wildcard (defer to defaultFormat).

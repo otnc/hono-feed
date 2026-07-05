@@ -1,6 +1,7 @@
 import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
+import { firstAuthor } from '../../utils/author'
 import { rfc822 } from '../../utils/date'
-import { absolutize, isUrl } from '../../utils/url'
+import { absolutize, isUrl, selfUrl } from '../../utils/url'
 import { cdata, el, type Node, raw, xmlDocument } from '../../utils/xml'
 
 // `<rss version="…">` structure (Netscape/UserLand lineage: 0.91 / 0.92 / 0.93 / 0.94 / 2.0).
@@ -32,7 +33,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   }
 
   // Channel <link> is mandatory in every RSS version; fall back to the self URL.
-  const self = opts.feedUrl ?? absolutize(options.feedUrl, base)
+  const self = selfUrl(opts, options)
   const link = absolutize(options.link, base) ?? self
   if (!link) throw new TypeError('hono-feed: RSS requires "link" (or "feedUrl")')
 
@@ -52,7 +53,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   }
 
   if (options.image) {
-    const img: Node[] = [el('url', undefined, absolutize(options.image, base) ?? options.image)]
+    const img: Node[] = [el('url', undefined, absolutize(options.image, base))]
     img.push(el('title', undefined, options.title))
     // <image> requires url/title/link all three.
     img.push(el('link', undefined, link))
@@ -99,7 +100,7 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
 
   // RSS author requires an email; skip when absent.
   if (caps.rss20) {
-    const author = Array.isArray(item.author) ? item.author[0] : item.author
+    const author = firstAuthor(item.author)
     if (author?.email) {
       ch.push(
         el('author', undefined, author.name ? `${author.email} (${author.name})` : author.email),
@@ -109,14 +110,14 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
 
   if (caps.itemRich092 && item.categories) {
     for (const cat of item.categories) {
-      ch.push(el('category', cat.scheme ? { domain: cat.scheme } : undefined, cat.term))
+      ch.push(el('category', { domain: cat.scheme }, cat.term))
     }
   }
 
   if (caps.itemRich092 && item.enclosure) {
     ch.push(
       el('enclosure', {
-        url: absolutize(item.enclosure.url, base) ?? item.enclosure.url,
+        url: absolutize(item.enclosure.url, base),
         type: item.enclosure.type,
         length: String(item.enclosure.length ?? 0),
       }),

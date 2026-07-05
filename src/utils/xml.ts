@@ -39,18 +39,20 @@ export function escapeText(s: string): string {
   return stripInvalidXmlChars(s).replace(/[&<>]/g, (ch) => TEXT_ESCAPES[ch])
 }
 
-/**
- * Escape an attribute value. Beyond `& < > " '`, the whitespace characters tab/LF/CR are
- * emitted as numeric references: a parser normalizes literal ones to spaces on read, so this
- * is what preserves them round-trip.
- */
+// Beyond `& < > " '`, the whitespace characters tab/LF/CR are emitted as numeric references:
+// a parser normalizes literal ones to spaces on read, so this is what preserves them round-trip.
+const ATTR_ESCAPES: Record<string, string> = {
+  ...TEXT_ESCAPES,
+  '"': '&quot;',
+  "'": '&apos;',
+  '\t': '&#x9;',
+  '\n': '&#xA;',
+  '\r': '&#xD;',
+}
+
+/** Escape an attribute value: `& < > " '` plus tab/LF/CR as numeric references. */
 export function escapeAttr(s: string): string {
-  return escapeText(s)
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
-    .replace(/\t/g, '&#x9;')
-    .replace(/\n/g, '&#xA;')
-    .replace(/\r/g, '&#xD;')
+  return stripInvalidXmlChars(s).replace(/[&<>"'\t\n\r]/g, (ch) => ATTR_ESCAPES[ch])
 }
 
 /**
