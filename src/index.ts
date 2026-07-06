@@ -19,3 +19,4 @@ export type {
   ServeFeedOptions,
   XmlVersion,
 } from './types'
+export { validateInput } from './validate'

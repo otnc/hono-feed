@@ -453,6 +453,15 @@ const { toRSS, toAtom, toJSONFeed } = require('hono-feed')
 const xml = toRSS({ options, items }, { baseUrl: 'https://example.com' })
 ```
 
+`serveFeed` runs the same per-format spec validation (Atom author coverage, absolute-IRI ids, required dates, …) before serializing — those checks aren't otherwise run on this low-level path, so if you want them, call `validateInput` yourself first:
+
+```ts
+import { toAtom, validateInput } from 'hono-feed'
+
+validateInput({ options, items }, 'atom') // throws TypeError with the same messages serveFeed gives
+const xml = toAtom({ options, items }, { baseUrl: 'https://example.com' })
+```
+
 ## Contributing
 
 Contributions Welcome! You can contribute in the following ways.
