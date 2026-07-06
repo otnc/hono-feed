@@ -1,6 +1,7 @@
 import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { firstAuthor } from '../../utils/author'
 import { rfc822 } from '../../utils/date'
+import { firstEnclosure } from '../../utils/enclosure'
 import { absolutize, isUrl, selfUrl } from '../../utils/url'
 import { cdata, el, type Node, raw, xmlDocument } from '../../utils/xml'
 
@@ -114,12 +115,14 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
     }
   }
 
-  if (caps.itemRich092 && item.enclosure) {
+  // RSS supports at most one <enclosure> per item (Best Practices Profile); keep only the first.
+  const enclosure = caps.itemRich092 ? firstEnclosure(item.enclosure) : undefined
+  if (enclosure) {
     ch.push(
       el('enclosure', {
-        url: absolutize(item.enclosure.url, base),
-        type: item.enclosure.type,
-        length: String(item.enclosure.length ?? 0),
+        url: absolutize(enclosure.url, base),
+        type: enclosure.type,
+        length: String(enclosure.length ?? 0),
       }),
     )
   }

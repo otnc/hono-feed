@@ -69,6 +69,8 @@ export interface FeedOptions {
   generator?: string
   /** RSS ttl in minutes. */
   ttl?: number
+  /** JSON Feed `expired` — true tells readers the feed will never update again. */
+  expired?: boolean
 }
 
 export interface FeedItem {
@@ -86,10 +88,16 @@ export interface FeedItem {
   /** Atom updated / JSON date_modified. */
   updated?: Date
   categories?: Category[]
-  /** RSS enclosure / JSON attachments[0]. */
-  enclosure?: Enclosure
+  /** RSS enclosure (first only) / JSON attachments — RSS/Atom keep only the first. */
+  enclosure?: Enclosure | Enclosure[]
   /** JSON image. */
   image?: string
+  /** JSON `external_url` — the linkblog pattern: `link` is your post, this is what it links to. */
+  externalUrl?: string
+  /** JSON `banner_image`. */
+  bannerImage?: string
+  /** Per-item language override (JSON Feed 1.1 only). */
+  language?: string
 }
 
 export interface FeedInput {
