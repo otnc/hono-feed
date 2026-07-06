@@ -37,6 +37,8 @@ export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): strin
     else feed.authors = [jsonAuthor(options.author)]
   }
 
+  if (options.customJson) mergeCustomJson(feed, options.customJson)
+
   feed.items = items.map((item) => jsonItem(item, v1, base))
 
   return JSON.stringify(feed, null, opts.pretty ? 2 : undefined)
@@ -46,6 +48,13 @@ function jsonAuthor(a: Author): Record<string, string> {
   const o: Record<string, string> = { name: a.name }
   if (a.url) o.url = a.url
   return o
+}
+
+// A built-in key always wins on collision — customJson can only add keys, not override them.
+function mergeCustomJson(target: Record<string, unknown>, custom: Record<string, unknown>): void {
+  for (const [key, value] of Object.entries(custom)) {
+    if (!(key in target)) target[key] = value
+  }
 }
 
 function jsonItem(item: FeedItem, v1: boolean, base?: string): Record<string, unknown> {
@@ -80,6 +89,8 @@ function jsonItem(item: FeedItem, v1: boolean, base?: string): Record<string, un
     if (item.enclosure.length !== undefined) attachment.size_in_bytes = item.enclosure.length
     o.attachments = [attachment]
   }
+
+  if (item.customJson) mergeCustomJson(o, item.customJson)
 
   return o
 }
