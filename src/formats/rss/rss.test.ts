@@ -33,6 +33,34 @@ describe('toRSS', () => {
     expect(xml).toContain('<guid isPermaLink="true">https://example.com/1</guid>')
   })
 
+  it('appends customXml after built-in channel/item elements and merges customNamespaces', () => {
+    const out = toRSS({
+      options: {
+        ...input.options,
+        customNamespaces: { 'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd' },
+        customXml: [{ name: 'itunes:author', text: 'Ada' }],
+      },
+      items: [{ ...input.items[0], customXml: [{ name: 'itunes:duration', text: '3:45' }] }],
+    })
+    expect(out).toContain('xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"')
+    expect(out).toContain('<itunes:author>Ada</itunes:author>')
+    expect(out).toContain('<itunes:duration>3:45</itunes:duration>')
+    // channel-level custom element comes after built-ins, before the item.
+    expect(out.indexOf('<itunes:author>')).toBeLessThan(out.indexOf('<item>'))
+  })
+
+  it('emits customXml unconditionally even on RSS 0.91 (no built-in gating to opt out of)', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, customXml: [{ name: 'x:extra', text: 'v' }] } },
+      { rssVersion: '0.91' },
+    )
+    expect(out).toContain('<x:extra>v</x:extra>')
+  })
+
+  it('has no custom fields → output unaffected', () => {
+    expect(toRSS(input, { feedUrl: 'https://example.com/feed' })).not.toContain('itunes')
+  })
+
   it('maps ttl, enclosure, email author and category domain', () => {
     const out = toRSS({
       options: { title: 't', link: 'https://example.com/', ttl: 60 },
@@ -167,6 +195,24 @@ describe('toRSS', () => {
     expect(out).toContain('rdf:about="https://example.com/feed"')
     expect(out).toContain('<item rdf:about="https://example.com/1">')
     expect(out).not.toContain('rdf:Seq')
+  })
+
+  it('RDF (1.0/1.1): feed-level customXml/customNamespaces are supported, no item-level', () => {
+    const withCustom: FeedInput = {
+      ...input,
+      options: {
+        ...input.options,
+        customNamespaces: { 'xmlns:x': 'urn:x' },
+        customXml: [{ name: 'x:extra', text: 'v' }],
+      },
+    }
+    const rss10 = toRSS(withCustom, { rssVersion: '1.0', feedUrl: 'https://example.com/feed' })
+    expect(rss10).toContain('xmlns:x="urn:x"')
+    expect(rss10).toContain('<x:extra>v</x:extra>')
+
+    const rss11 = toRSS(withCustom, { rssVersion: '1.1', feedUrl: 'https://example.com/feed' })
+    expect(rss11).toContain('xmlns:x="urn:x"')
+    expect(rss11).toContain('<x:extra>v</x:extra>')
   })
 
   it('0.91 requires a per-item <link>, even though later 0.9x/2.0 versions do not', () => {
