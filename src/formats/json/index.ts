@@ -32,6 +32,8 @@ export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): strin
   if (options.language && !v1) feed.language = options.language
   if (options.image) feed.icon = absolutize(options.image, base)
   if (options.favicon) feed.favicon = absolutize(options.favicon, base)
+  // JSON Feed only has next_url; there's no equivalent for prev/first/last.
+  if (options.paging?.next) feed.next_url = absolutize(options.paging.next, base)
   if (options.author) {
     if (v1) feed.author = jsonAuthor(options.author)
     else feed.authors = [jsonAuthor(options.author)]

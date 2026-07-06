@@ -69,6 +69,20 @@ export interface FeedOptions {
   generator?: string
   /** RSS ttl in minutes. */
   ttl?: number
+  /**
+   * Pagination links for a paged feed (RFC 5005 §3 via `link rel`; JSON Feed `next_url`).
+   * RSS/Atom emit one `link`/`atom:link` per set field; JSON Feed only maps `next`.
+   */
+  paging?: {
+    /** `rel="next"` (RSS/Atom) / JSON `next_url`. */
+    next?: string
+    /** `rel="previous"` (RFC 5005's term, not "prev"). No JSON Feed equivalent. */
+    prev?: string
+    /** `rel="first"`. No JSON Feed equivalent. */
+    first?: string
+    /** `rel="last"`. No JSON Feed equivalent. */
+    last?: string
+  }
 }
 
 export interface FeedItem {
