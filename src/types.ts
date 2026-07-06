@@ -61,9 +61,9 @@ export interface FeedOptions {
   updated?: Date
   author?: Author
   copyright?: string
-  /** RSS image.url / JSON icon. */
+  /** RSS image.url / Atom logo / JSON icon. */
   image?: string
-  /** JSON favicon. */
+  /** Atom icon / JSON favicon. */
   favicon?: string
   /** Defaults to 'hono-feed'. */
   generator?: string
