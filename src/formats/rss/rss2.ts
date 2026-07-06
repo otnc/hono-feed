@@ -1,6 +1,7 @@
 import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { firstAuthor } from '../../utils/author'
 import { rfc822 } from '../../utils/date'
+import { hubList } from '../../utils/hub'
 import { absolutize, isUrl, selfUrl } from '../../utils/url'
 import { cdata, el, type Node, raw, xmlDocument } from '../../utils/xml'
 
@@ -49,6 +50,9 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
     if (options.ttl !== undefined) channel.push(el('ttl', undefined, String(options.ttl)))
     if (self) {
       channel.push(el('atom:link', { href: self, rel: 'self', type: 'application/rss+xml' }))
+    }
+    for (const hub of hubList(options.hub)) {
+      channel.push(el('atom:link', { href: absolutize(hub, base), rel: 'hub' }))
     }
   }
 
