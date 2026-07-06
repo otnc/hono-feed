@@ -434,6 +434,26 @@ RSS 1.0 and 1.1 are fully **supported, not deprecated** — reach for them when 
 > They still produce valid output, but each logs a one-time, coded `DeprecationWarning` (`HONOFEED_DEP000N`, see [HONOFEED_DEP.md](HONOFEED_DEP.md) for the full list) — through `process.emitWarning` on Node, or `console.warn` on edge runtimes.  
 > To silence it, set `suppressDeprecationWarnings: true`, the `HONO_FEED_NO_DEPRECATION` env var, or run Node with `--no-deprecation`.
 
+## Extending with custom fields
+
+The neutral model is deliberately small — anything outside it (iTunes/Apple Podcasts tags, Media RSS, Dublin Core extras, a namespaced module, custom JSON Feed keys) needs an escape hatch. `customXml` / `customNamespaces` (XML formats) and `customJson` (JSON Feed) are that hatch, on both `FeedOptions` (feed-level) and `FeedItem` (item-level):
+
+```ts
+const feed = new Feed({
+  title: 'My Show',
+  link: 'https://example.com/',
+  customNamespaces: { 'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd' },
+  customXml: [
+    { name: 'itunes:author', text: 'Ada' },
+    { name: 'itunes:image', attrs: { href: 'https://example.com/cover.jpg' } },
+  ],
+})
+```
+
+`customXml` is a JSON-shaped element tree (`{ name, attrs?, children?, text? }`), not a raw string — `text`/`attrs` are escaped exactly like every built-in element, so this stays correct by construction. Elements are appended after the format's built-in ones (`<channel>`/`<feed>` or `<item>`/`<entry>`); RDF (RSS 1.0/1.1) and legacy RSS 0.9x accept them unconditionally, since there's no built-in gating to opt out of once you've reached for this. `customNamespaces` adds `xmlns:*` declarations to the root element.
+
+`customJson` merges extra keys into the JSON Feed object (feed-level and/or per item) — per the [JSON Feed spec](https://www.jsonfeed.org/version/1.1/#extensions), custom keys should start with `_`. A built-in key always wins on collision, so this can only add fields, never override one hono-feed already sets.
+
 ## Low-level serializers
 
 Sometimes you just want the string — for a snapshot test, a queue, or a non-Hono transport.  
