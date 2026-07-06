@@ -13,7 +13,7 @@ import {
 import type { FeedFormat, FeedInput, ServeFeedOptions } from './types'
 import { serializeCacheControl } from './utils/cache-control'
 import { latestDate } from './utils/date'
-import { weakEtag } from './utils/etag'
+import { resolveEtag } from './utils/etag'
 import { absolutize } from './utils/url'
 import { validateInput } from './validate'
 
@@ -163,7 +163,7 @@ export function serveFeed(
 
   let etagValue: string | undefined
   if (etag) {
-    etagValue = weakEtag(body)
+    etagValue = resolveEtag(body, typeof etag === 'function' ? etag : undefined)
     headers.ETag = etagValue
   }
 
