@@ -42,7 +42,7 @@ export interface Enclosure {
   url: string
   /** MIME type. */
   type: string
-  /** Size in bytes (required by RSS; behaviour on omission is configurable). */
+  /** Size in bytes. RSS requires the attribute; emitted as 0 when unset, per the RSS Best Practices Profile. */
   length?: number
 }
 

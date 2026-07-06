@@ -379,6 +379,8 @@ Rather than emit a document that violates its spec, `serveFeed` checks these per
 
 (Deprecated versions add a couple more — e.g. RSS 0.91 requires `language` — with equally explicit error messages.)
 
+`Enclosure.length` is optional in the neutral model, but RSS's `<enclosure>` requires the attribute — when it's unset, RSS emits `length="0"`, per the RSS Best Practices Profile ("If the length of an enclosure cannot be determined, a publisher SHOULD use a length of zero"). JSON Feed omits `size_in_bytes` instead, since it's optional there.
+
 > [!TIP]
 >   
 > hono-feed does the XML escaping for you, but it doesn't HTML-encode entities.  
