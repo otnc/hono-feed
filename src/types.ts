@@ -86,7 +86,7 @@ export interface FeedItem {
   /** Atom updated / JSON date_modified. */
   updated?: Date
   categories?: Category[]
-  /** RSS enclosure / JSON attachments[0]. */
+  /** RSS enclosure / Atom link rel="enclosure" / JSON attachments[0]. */
   enclosure?: Enclosure
   /** JSON image. */
   image?: string
