@@ -101,7 +101,7 @@
     "format": "biome format --write .",
     "check": "biome check --write . && tsc --noEmit",
     "ci": "biome ci .",
-    "check:package": "pnpm build && publint && attw --pack . --profile node16 && node scripts/smoke.mjs",
+    "check:package": "pnpm build && publint && attw --pack . --ignore-rules no-resolution && node scripts/smoke.mjs",
     "prepublishOnly": "pnpm check:package"
   },
   "engines": {

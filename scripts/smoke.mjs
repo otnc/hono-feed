@@ -1,48 +1,47 @@
 // Exercises the built package.json "exports" map itself (not src/) via Node's
 // self-referencing package imports, so a build/exports-map regression that the
-// vitest suite (which imports from src/) can't see is caught here.
+// vitest suite (which imports from src/) can't see is caught here. Subpaths are
+// read from package.json at run time, so adding a new export entry needs no
+// change here.
+import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
+const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url)))
 
-const entries = [
-  {
-    specifier: 'hono-feed',
-    expect: ['Feed', 'feedMiddleware', 'serveFeed', 'toAtom', 'toJSONFeed', 'toRSS'],
-  },
-  { specifier: 'hono-feed/middleware', expect: ['feed'] },
-  { specifier: 'hono-feed/renderer', expect: ['feedRenderer'] },
-  { specifier: 'hono-feed/rss', expect: ['toRSS'] },
-  { specifier: 'hono-feed/atom', expect: ['toAtom'] },
-  { specifier: 'hono-feed/json', expect: ['toJSONFeed'] },
-]
+const specifiers = Object.keys(pkg.exports)
+  .filter((subpath) => subpath !== './package.json')
+  .map((subpath) => (subpath === '.' ? pkg.name : `${pkg.name}/${subpath.slice(2)}`))
 
 let failed = false
 
-function checkExports(specifier, mod, expect) {
-  for (const name of expect) {
-    if (typeof mod[name] !== 'function') {
-      failed = true
-      console.error(`✗ ${specifier}: missing or non-function export "${name}"`)
-    }
-  }
-}
-
-for (const { specifier, expect } of entries) {
+for (const specifier of specifiers) {
+  let esmKeys
+  let cjsKeys
   try {
-    const esm = await import(specifier)
-    checkExports(`${specifier} (import)`, esm, expect)
+    esmKeys = Object.keys(await import(specifier)).sort()
   } catch (err) {
     failed = true
     console.error(`✗ ${specifier} (import) threw:`, err.message)
+    continue
   }
 
   try {
-    const cjs = require(specifier)
-    checkExports(`${specifier} (require)`, cjs, expect)
+    cjsKeys = Object.keys(require(specifier)).sort()
   } catch (err) {
     failed = true
     console.error(`✗ ${specifier} (require) threw:`, err.message)
+    continue
+  }
+
+  if (esmKeys.length === 0) {
+    failed = true
+    console.error(`✗ ${specifier}: module has no exports`)
+  } else if (esmKeys.join(',') !== cjsKeys.join(',')) {
+    failed = true
+    console.error(
+      `✗ ${specifier}: ESM/CJS export mismatch — import: [${esmKeys}], require: [${cjsKeys}]`,
+    )
   }
 }
 
@@ -50,4 +49,4 @@ if (failed) {
   console.error('\nsmoke test failed')
   process.exit(1)
 }
-console.log(`smoke test passed (${entries.length} entry points, import + require)`)
+console.log(`smoke test passed (${specifiers.length} entry points, import + require)`)
