@@ -14,6 +14,7 @@ import type { FeedFormat, FeedInput, ServeFeedOptions } from './types'
 import { serializeCacheControl } from './utils/cache-control'
 import { latestDate } from './utils/date'
 import { weakEtag } from './utils/etag'
+import { absolutize } from './utils/url'
 import { validateInput } from './validate'
 
 const CONTENT_TYPE: Record<FeedFormat, string> = {
@@ -123,8 +124,11 @@ export function serveFeed(
 
   // Validate with the request-derived feedUrl folded in: rules that accept feedUrl as a
   // fallback (RSS channel <link>, Atom feed id) are satisfiable here even when the caller
-  // set neither, because serving always yields a self URL.
-  const feedUrl = resolved.options.feedUrl ?? url.origin + url.pathname
+  // set neither, because serving always yields a self URL. Absolutizing against `base`
+  // (rather than the request's own origin) keeps an explicit relative `feedUrl` — and the
+  // request-derived fallback itself — from leaking a relative or internal-only URL into the
+  // document when `baseUrl` is set (e.g. behind a reverse proxy).
+  const feedUrl = absolutize(resolved.options.feedUrl, base) ?? new URL(url.pathname, base).href
   validateInput({ options: { ...resolved.options, feedUrl }, items: resolved.items }, format)
   const serializeOpts = {
     pretty,
