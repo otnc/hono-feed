@@ -2,8 +2,9 @@ name: pr-labeler
 
 # Labels PRs from two sources: the PR template's checkboxes (bug/enhancement/others) and the
 # base branch (to main/to others), plus a conflict label from the PR's mergeable state.
-# Uses pull_request_target (not pull_request) so labeling also works for PRs opened from forks —
-# safe here since we only read event/API data via github-script, never check out or run PR code.
+# Uses pull_request_target (not pull_request) so labeling also works for PRs opened from forks.
+# actions/checkout here defaults to github.sha, i.e. the base branch's own code — never the PR's
+# (possibly untrusted) head — so running scripts/pr-labeler/*.cjs from it is safe.
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, edited]
@@ -16,73 +17,19 @@ jobs:
   checkbox-and-branch-labels:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/github-script@v7
         with:
           script: |
-            const { owner, repo } = context.repo
-            const pr = context.payload.pull_request
-            const issue_number = pr.number
-            const body = pr.body || ''
-
-            // Matches "- [x] Fix bug(s)" (any case/whitespace) per PULL_REQUEST_TEMPLATE.md.
-            const isChecked = (label) => {
-              const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-              return new RegExp(`-\\s*\\[[xX]\\]\\s*${escaped}`).test(body)
-            }
-
-            const desired = new Set()
-            if (isChecked('Fix bug\\(s\\)')) desired.add('bug')
-            if (isChecked('New feature\\(s\\)')) desired.add('enhancement')
-            if (isChecked('Others')) desired.add('others')
-            desired.add(pr.base.ref === 'main' ? 'to main' : 'to others')
-
-            // Only these labels are owned by this job; anything else on the PR is left alone.
-            const managed = ['bug', 'enhancement', 'others', 'to main', 'to others']
-
-            const current = await github.rest.issues.listLabelsOnIssue({ owner, repo, issue_number })
-            const currentNames = current.data.map((l) => l.name)
-
-            const toAdd = [...desired].filter((l) => !currentNames.includes(l))
-            const toRemove = managed.filter((l) => currentNames.includes(l) && !desired.has(l))
-
-            if (toAdd.length) {
-              await github.rest.issues.addLabels({ owner, repo, issue_number, labels: toAdd })
-            }
-            for (const name of toRemove) {
-              await github.rest.issues.removeLabel({ owner, repo, issue_number, name }).catch(() => {})
-            }
+            const run = require('./scripts/pr-labeler/checkbox-and-branch-labels.cjs')
+            await run({ github, context })
 
   conflict-label:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/github-script@v7
         with:
           script: |
-            const { owner, repo } = context.repo
-            const pull_number = context.payload.pull_request.number
-
-            // GitHub computes `mergeable` asynchronously; it can briefly be null right after
-            // the triggering event, so poll a few times before treating "no conflict" as final.
-            let mergeable = null
-            for (let attempt = 0; attempt < 5; attempt++) {
-              const { data } = await github.rest.pulls.get({ owner, repo, pull_number })
-              mergeable = data.mergeable
-              if (mergeable !== null) break
-              await new Promise((resolve) => setTimeout(resolve, 3000))
-            }
-
-            const hasConflict = mergeable === false
-            const current = await github.rest.issues.listLabelsOnIssue({
-              owner, repo, issue_number: pull_number,
-            })
-            const hasLabel = current.data.some((l) => l.name === 'conflict')
-
-            if (hasConflict && !hasLabel) {
-              await github.rest.issues.addLabels({
-                owner, repo, issue_number: pull_number, labels: ['conflict'],
-              })
-            } else if (!hasConflict && hasLabel) {
-              await github.rest.issues
-                .removeLabel({ owner, repo, issue_number: pull_number, name: 'conflict' })
-                .catch(() => {})
-            }
+            const run = require('./scripts/pr-labeler/conflict-label.cjs')
+            await run({ github, context })
