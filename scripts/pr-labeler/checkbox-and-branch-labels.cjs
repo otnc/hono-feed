@@ -27,8 +27,8 @@ module.exports = async ({ github, context }) => {
   const body = pr.body || ''
 
   const desired = new Set()
-  if (isChecked(body, 'Fix bug\\(s\\)')) desired.add('bug')
-  if (isChecked(body, 'New feature\\(s\\)')) desired.add('enhancement')
+  if (isChecked(body, 'Fix bug(s)')) desired.add('bug')
+  if (isChecked(body, 'New feature(s)')) desired.add('enhancement')
   if (isChecked(body, 'Others')) desired.add('others')
   desired.add(pr.base.ref === 'main' ? 'to main' : 'to others')
 
