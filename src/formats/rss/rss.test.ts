@@ -113,6 +113,26 @@ describe('toRSS', () => {
     expect(out).toContain('<author>otnc@example.com</author>')
   })
 
+  it('emits only the first enclosure when given an array (RSS supports at most one)', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [
+        {
+          title: 'a',
+          link: 'https://example.com/1',
+          enclosure: [
+            { url: 'https://example.com/a.mp3', type: 'audio/mpeg', length: 123 },
+            { url: 'https://example.com/a.ogg', type: 'audio/ogg' },
+          ],
+        },
+      ],
+    })
+    expect(out).toContain(
+      '<enclosure url="https://example.com/a.mp3" type="audio/mpeg" length="123"/>',
+    )
+    expect(out).not.toContain('audio/ogg')
+  })
+
   it('defaults enclosure length to 0 when omitted', () => {
     const out = toRSS({
       options: { title: 't', link: 'https://example.com/' },
