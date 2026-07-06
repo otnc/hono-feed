@@ -1,7 +1,7 @@
 import type { FeedInput, SerializeOptions } from '../../types'
 import { rfc3339 } from '../../utils/date'
 import { absolutize, selfUrl } from '../../utils/url'
-import { el, type Node, xmlDocument } from '../../utils/xml'
+import { el, type Node, specToNode, xmlDocument } from '../../utils/xml'
 import { rdfItem } from './rdf-item'
 
 // RSS 1.1: `<Channel>` root in the rss1.1# namespace. Items nest directly under
@@ -27,6 +27,8 @@ export function toRSS11(input: FeedInput, opts: SerializeOptions): string {
   if (options.copyright) channel.push(el('dc:rights', undefined, options.copyright))
   // The spec makes rdf:parseType="Collection" mandatory on <items> (it replaces 1.0's rdf:Seq).
   channel.push(el('items', { 'rdf:parseType': 'Collection' }, itemNodes))
+  // Escape hatch: appended unconditionally — RDF has no per-element gating to opt out of.
+  if (options.customXml) channel.push(...options.customXml.map(specToNode))
 
   const hasContent = items.some((item) => item.content != null)
   const root = el(
@@ -38,6 +40,7 @@ export function toRSS11(input: FeedInput, opts: SerializeOptions): string {
       'xmlns:content': hasContent ? 'http://purl.org/rss/1.0/modules/content/' : undefined,
       'xml:lang': options.language,
       'rdf:about': feedUri,
+      ...options.customNamespaces,
     },
     channel,
   )

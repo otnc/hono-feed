@@ -2,7 +2,7 @@ import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { firstAuthor } from '../../utils/author'
 import { rfc822 } from '../../utils/date'
 import { absolutize, isUrl, selfUrl } from '../../utils/url'
-import { cdata, el, type Node, raw, xmlDocument } from '../../utils/xml'
+import { cdata, el, type Node, raw, specToNode, xmlDocument } from '../../utils/xml'
 
 // `<rss version="…">` structure (Netscape/UserLand lineage: 0.91 / 0.92 / 0.93 / 0.94 / 2.0).
 //
@@ -60,6 +60,9 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
     channel.push(el('image', undefined, img))
   }
 
+  // Escape hatch: appended unconditionally (no caps gating) — the caller opted in explicitly.
+  if (options.customXml) channel.push(...options.customXml.map(specToNode))
+
   for (const item of items) channel.push(rssItem(item, caps, base))
 
   const hasContent = caps.rss20 && items.some((item) => item.content != null)
@@ -69,6 +72,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
       version,
       'xmlns:atom': caps.rss20 ? 'http://www.w3.org/2005/Atom' : undefined,
       'xmlns:content': hasContent ? 'http://purl.org/rss/1.0/modules/content/' : undefined,
+      ...options.customNamespaces,
     },
     [el('channel', undefined, channel)],
   )
@@ -123,6 +127,8 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
       }),
     )
   }
+
+  if (item.customXml) ch.push(...item.customXml.map(specToNode))
 
   return el('item', undefined, ch)
 }
