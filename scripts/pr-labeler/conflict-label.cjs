@@ -1,9 +1,17 @@
 // Run by .github/workflows/pr-labeler.yml via actions/github-script.
 // Adds/removes the "conflict" label to match the PR's current mergeable state.
+//
+// Triggered by pull_request_target and by issue_comment on a PR; get-pull-request resolves the
+// PR number from whichever event shape fired (and returns null for a comment on a plain issue).
+
+const getPullRequest = require('./get-pull-request.cjs')
 
 module.exports = async ({ github, context }) => {
-  const { owner, repo } = context.repo
-  const pull_number = context.payload.pull_request.number
+  const resolved = await getPullRequest({ github, context })
+  if (!resolved) return // issue_comment on a plain issue, not a PR
+
+  const { owner, repo, pr } = resolved
+  const pull_number = pr.number
 
   // GitHub computes `mergeable` asynchronously; it can briefly be null right after the
   // triggering event, so poll a few times before treating "no conflict" as final.

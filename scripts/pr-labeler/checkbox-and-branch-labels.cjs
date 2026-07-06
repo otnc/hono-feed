@@ -4,6 +4,11 @@
 //  - to main / to others, from the PR's base branch
 // Each run reconciles the PR's labels against the desired set below, adding what's missing and
 // removing any of these owned labels that no longer apply. Labels outside this set are untouched.
+//
+// Triggered by pull_request_target (PR body carried directly on the payload) and by
+// issue_comment on a PR (only the PR number is available, so get-pull-request fetches it).
+
+const getPullRequest = require('./get-pull-request.cjs')
 
 // Matches "- [x] Fix bug(s)" (any case/whitespace) against the raw PR body.
 function isChecked(body, label) {
@@ -14,8 +19,10 @@ function isChecked(body, label) {
 const MANAGED_LABELS = ['bug', 'enhancement', 'others', 'to main', 'to others']
 
 module.exports = async ({ github, context }) => {
-  const { owner, repo } = context.repo
-  const pr = context.payload.pull_request
+  const resolved = await getPullRequest({ github, context })
+  if (!resolved) return // issue_comment on a plain issue, not a PR
+
+  const { owner, repo, pr } = resolved
   const issue_number = pr.number
   const body = pr.body || ''
 
