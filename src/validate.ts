@@ -1,6 +1,13 @@
 import type { FeedFormat, FeedInput, FeedItem } from './types'
 
-/** Minimal validation after the format is decided. Invalid input throws `TypeError`. */
+/**
+ * Minimal validation after the format is decided. Invalid input throws `TypeError`.
+ *
+ * `serveFeed` calls this with a request-derived `options.feedUrl` fallback already folded in
+ * (the RSS channel `<link>` and Atom feed `id` rules accept it in place of `link`/`id`). Callers
+ * validating input for the low-level serializers directly must set `options.feedUrl` themselves
+ * first if they're relying on that fallback — same as they already must for serialization.
+ */
 export function validateInput(input: FeedInput, format: FeedFormat): void {
   const { options, items } = input
 
