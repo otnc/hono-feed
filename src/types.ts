@@ -61,6 +61,8 @@ export interface FeedOptions {
   updated?: Date
   author?: Author
   copyright?: string
+  /** RSS channel category / Atom feed category / RDF dc:subject. No JSON Feed equivalent. */
+  categories?: Category[]
   /** RSS image.url / JSON icon. */
   image?: string
   /** JSON favicon. */

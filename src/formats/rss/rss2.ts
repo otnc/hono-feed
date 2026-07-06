@@ -43,6 +43,12 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   channel.push(el('description', undefined, options.description ?? ''))
   if (options.language) channel.push(el('language', undefined, options.language))
   if (options.copyright) channel.push(el('copyright', undefined, options.copyright))
+  // Channel <category> arrived in 0.92 alongside the item-level element (same rules apply).
+  if (caps.itemRich092 && options.categories) {
+    for (const cat of options.categories) {
+      channel.push(el('category', { domain: cat.scheme }, cat.term))
+    }
+  }
   if (options.updated) channel.push(el('lastBuildDate', undefined, rfc822(options.updated)))
   if (caps.rss20) {
     channel.push(el('generator', undefined, options.generator ?? 'hono-feed'))

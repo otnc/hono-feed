@@ -23,6 +23,11 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
   if (options.author) feed.push(atomAuthorEl(options.author, 'uri'))
   feed.push(el('generator', undefined, options.generator ?? 'hono-feed'))
   if (options.copyright) feed.push(el('rights', undefined, options.copyright))
+  if (options.categories) {
+    for (const cat of options.categories) {
+      feed.push(el('category', { term: cat.term, scheme: cat.scheme }))
+    }
+  }
 
   for (const item of items) feed.push(atomEntry10(item, base))
 
