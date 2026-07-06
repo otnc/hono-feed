@@ -29,6 +29,28 @@ describe('toJSONFeed', () => {
     )
   })
 
+  it('maps hub to hubs: [{ type: "WebSub", url }], absolutized; single URL also accepted', () => {
+    const withHubs = JSON.parse(
+      toJSONFeed(
+        { ...input, options: { ...input.options, hub: ['/hub1', 'https://hub.example.com/'] } },
+        { baseUrl: 'https://example.com' },
+      ),
+    )
+    expect(withHubs.hubs).toEqual([
+      { type: 'WebSub', url: 'https://example.com/hub1' },
+      { type: 'WebSub', url: 'https://hub.example.com/' },
+    ])
+
+    const withSingleHub = JSON.parse(
+      toJSONFeed({ ...input, options: { ...input.options, hub: 'https://hub.example.com/' } }),
+    )
+    expect(withSingleHub.hubs).toEqual([{ type: 'WebSub', url: 'https://hub.example.com/' }])
+  })
+
+  it('omits hubs when unset', () => {
+    expect(JSON.parse(toJSONFeed(input)).hubs).toBeUndefined()
+  })
+
   it('escapes JSON string content and stays valid (control chars need no stripping here)', () => {
     // Unlike XML, JSON has no forbidden characters: quotes, backslashes and control chars are
     // all representable via escapes, so JSON.stringify keeps them and the output round-trips.
