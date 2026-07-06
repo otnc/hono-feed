@@ -372,5 +372,26 @@ describe('serveFeed', () => {
       const res = await a.request('/feed')
       expect(res.headers.get('last-modified')).toBeNull()
     })
+
+    it('uses a custom etag function, wrapping a bare tag as weak', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { etag: () => 'rev-42' }))
+      const res = await a.request('/feed')
+      expect(res.headers.get('etag')).toBe('W/"rev-42"')
+    })
+
+    it('matches If-None-Match against a custom etag function for 304', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { etag: () => 'rev-42' }))
+      const res = await a.request('/feed', { headers: { 'if-none-match': 'W/"rev-42"' } })
+      expect(res.status).toBe(304)
+    })
+
+    it('passes an already-quoted custom tag through verbatim', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { etag: () => '"strong-rev"' }))
+      const res = await a.request('/feed')
+      expect(res.headers.get('etag')).toBe('"strong-rev"')
+    })
   })
 })

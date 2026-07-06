@@ -167,8 +167,14 @@ export interface ServeFeedOptions {
    * omit. Default 'public, max-age=3600'.
    */
   cacheControl?: string | CacheControlDirectives | false
-  /** Emit a weak ETag and answer conditional requests with 304. Default true. */
-  etag?: boolean
+  /**
+   * Emit an ETag and answer conditional requests with 304.
+   * - `true` (default): a weak FNV-1a-64 hash of the body.
+   * - a function: return your own tag for the body (e.g. from a revision you already track).
+   *   Used verbatim if it looks like an ETag (`"…"` / `W/"…"`), otherwise wrapped as `W/"…"`.
+   * - `false`: no ETag.
+   */
+  etag?: boolean | ((body: string) => string)
   /** Emit Last-Modified (from feed.updated). Default true. */
   lastModified?: boolean
   /** Base URL for absolutizing relative URLs. Defaults to the request origin. */

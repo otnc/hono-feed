@@ -401,7 +401,7 @@ All options for `serveFeed(c, input, options?)`:
 | `formatQueryParam` | `string` | `'format'` | Query param name used to detect the format |
 | `versionQueryParam` | `string` | `'version'` | Query param name used to detect the version |
 | `cacheControl` | `string \| CacheControlDirectives \| false` | `'public, max-age=3600'` | `Cache-Control` header (see [Cache-Control](#cache-control); `false` to omit) |
-| `etag` | `boolean` | `true` | Send a weak `ETag` and answer `304` on a match |
+| `etag` | `boolean \| ((body: string) => string)` | `true` | Send an `ETag` and answer `304` on a match — `true` for the built-in weak FNV-1a-64 hash, a function for your own tag (e.g. from a revision you already track), or `false` to omit |
 | `lastModified` | `boolean` | `true` | Send `Last-Modified` from `feed.updated` |
 | `baseUrl` | `string` | request origin | Base used to turn relative URLs into absolute ones |
 | `pretty` | `boolean` | `false` | Indent the output for readability |
