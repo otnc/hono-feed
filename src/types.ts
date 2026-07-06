@@ -59,6 +59,7 @@ export interface FeedOptions {
   language?: string
   /** RSS lastBuildDate / Atom updated. JSON derives it from items. */
   updated?: Date
+  /** RSS managingEditor (email required) / Atom author / JSON authors. */
   author?: Author
   copyright?: string
   /** RSS image.url / JSON icon. */
@@ -88,6 +89,8 @@ export interface FeedItem {
   categories?: Category[]
   /** RSS enclosure / JSON attachments[0]. */
   enclosure?: Enclosure
+  /** URL of the item's comments page. RSS `<comments>` only; no Atom/JSON mapping. */
+  comments?: string
   /** JSON image. */
   image?: string
 }
