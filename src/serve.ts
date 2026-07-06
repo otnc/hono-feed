@@ -8,6 +8,7 @@ import {
   isJsonFeedVersion,
   isRssVersion,
   negotiateFormat,
+  rejectsAllFormats,
   versionFromQuery,
 } from './negotiate'
 import type { FeedFormat, FeedInput, ServeFeedOptions } from './types'
@@ -54,6 +55,7 @@ export function serveFeed(
     detectVersionFromQuery = detectFromQuery,
     formatQueryParam = 'format',
     versionQueryParam = 'version',
+    strictAccept = false,
     cacheControl = 'public, max-age=3600',
     etag = true,
     lastModified = true,
@@ -80,8 +82,14 @@ export function serveFeed(
     if (detectFormatFromQuery) f = formatFromQuery(url.searchParams.get(formatQueryParam))
     if (!f && detectFromExtension) f = formatFromExtension(url.pathname)
     if (!f) {
-      f = negotiateFormat(c.req.header('accept'), defaultFormat)
+      const acceptHeader = c.req.header('accept')
+      f = negotiateFormat(acceptHeader, defaultFormat)
       negotiated = true
+      // Only an Accept header that actively rejects every format (q=0) triggers this — an
+      // absent header, or one that simply doesn't match anything, still falls through below.
+      if (!f && strictAccept && rejectsAllFormats(acceptHeader)) {
+        return c.text('hono-feed: no acceptable feed format', 406, NO_STORE)
+      }
     }
     format = f ?? defaultFormat
   }

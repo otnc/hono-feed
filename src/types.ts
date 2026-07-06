@@ -163,6 +163,13 @@ export interface ServeFeedOptions {
   /** Query param name used to detect the version. Default 'version'. */
   versionQueryParam?: string
   /**
+   * When the Accept header explicitly rejects every supported format (every candidate at
+   * `q=0`), answer 406 Not Acceptable instead of falling back to `defaultFormat`. An absent
+   * Accept header, or one that simply doesn't match any format, still falls through to
+   * `defaultFormat` regardless of this option. Default false.
+   */
+  strictAccept?: boolean
+  /**
    * Cache-Control value — a raw string, a `CacheControlDirectives` object, or `false` to
    * omit. Default 'public, max-age=3600'.
    */
