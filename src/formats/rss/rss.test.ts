@@ -54,6 +54,26 @@ describe('toRSS', () => {
     )
   })
 
+  it('emits channel <category> per feed-level category, gated like item categories (0.92+)', () => {
+    const withFeedCategories: FeedInput = {
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        categories: [{ term: 'tech', scheme: 'https://example.com/cats' }, { term: 'news' }],
+      },
+      items: [],
+    }
+    const out = toRSS(withFeedCategories)
+    expect(out).toContain('<category domain="https://example.com/cats">tech</category>')
+    expect(out).toContain('<category>news</category>')
+
+    const out091 = toRSS(
+      { ...withFeedCategories, options: { ...withFeedCategories.options, language: 'en' } },
+      { rssVersion: '0.91' },
+    )
+    expect(out091).not.toContain('<category')
+  })
+
   it('honours xmlVersion and rssVersion', () => {
     const out = toRSS(input, { xmlVersion: '1.1', rssVersion: '0.92' })
     expect(out.startsWith('<?xml version="1.1" encoding="utf-8"?>')).toBe(true)
@@ -319,6 +339,31 @@ describe('toRSS', () => {
     expect(rss10).toContain('<dc:subject>news</dc:subject>')
 
     const rss11 = toRSS(withCategory, { rssVersion: '1.1', feedUrl: 'https://example.com/feed' })
+    expect(rss11).toContain('<dc:subject>tech</dc:subject>')
+    expect(rss11).toContain('<dc:subject>news</dc:subject>')
+  })
+
+  it('emits feed-level dc:subject per category in RSS 1.0/1.1 channels', () => {
+    const feedWithCategories: FeedInput = {
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        feedUrl: 'https://example.com/feed',
+        categories: [{ term: 'tech' }, { term: 'news' }],
+      },
+      items: [],
+    }
+    const rss10 = toRSS(feedWithCategories, {
+      rssVersion: '1.0',
+      feedUrl: 'https://example.com/feed',
+    })
+    expect(rss10).toContain('<dc:subject>tech</dc:subject>')
+    expect(rss10).toContain('<dc:subject>news</dc:subject>')
+
+    const rss11 = toRSS(feedWithCategories, {
+      rssVersion: '1.1',
+      feedUrl: 'https://example.com/feed',
+    })
     expect(rss11).toContain('<dc:subject>tech</dc:subject>')
     expect(rss11).toContain('<dc:subject>news</dc:subject>')
   })
