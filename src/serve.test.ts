@@ -126,6 +126,58 @@ describe('serveFeed', () => {
     expect(await res.text()).toContain('<id>https://example.com/feed</id>')
   })
 
+  it('absolutizes a relative options.feedUrl against baseUrl instead of emitting it as-is', async () => {
+    const a = new Hono()
+    a.get('/feed', (c) =>
+      serveFeed(c, {
+        options: { title: 't', link: 'https://example.com/', feedUrl: '/feed.xml' },
+        items: [],
+      }),
+    )
+    const res = await a.request('http://localhost/feed')
+    const text = await res.text()
+    expect(text).toContain('href="http://localhost/feed.xml"')
+  })
+
+  it('resolves a relative options.feedUrl into an absolute Atom feed id', async () => {
+    const a = new Hono()
+    a.get('/atom', (c) =>
+      serveFeed(
+        c,
+        {
+          options: {
+            title: 't',
+            feedUrl: '/feed.atom',
+            updated: new Date('2026-01-01'),
+            author: { name: 'A' },
+          },
+          items: [],
+        },
+        { format: 'atom' },
+      ),
+    )
+    const res = await a.request('http://localhost/atom')
+    const text = await res.text()
+    expect(text).toContain('<id>http://localhost/feed.atom</id>')
+  })
+
+  it('derives the self URL from baseUrl rather than the request origin', async () => {
+    const a = new Hono()
+    a.get('/feed', (c) =>
+      serveFeed(
+        c,
+        { options: { title: 't', link: 'https://example.com/' }, items: [] },
+        {
+          baseUrl: 'https://public.example.com',
+        },
+      ),
+    )
+    const res = await a.request('http://internal-host/feed')
+    const text = await res.text()
+    expect(text).toContain('href="https://public.example.com/feed"')
+    expect(text).not.toContain('internal-host')
+  })
+
   it('throws TypeError on a missing title', () => {
     const c = {
       req: { url: 'https://example.com/feed', method: 'GET', header: () => undefined },
