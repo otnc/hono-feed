@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FeedInput } from '../../types'
-import { toRSS } from './index'
+import { toRSS, validateInput } from './index'
 
 const input: FeedInput = {
   options: {
@@ -334,5 +334,13 @@ describe('toRSS', () => {
     expect(() =>
       toRSS(noItemUri, { rssVersion: '1.1', feedUrl: 'https://example.com/feed' }),
     ).toThrow(/RSS 1.1 item requires "link" or "id"/)
+  })
+})
+
+describe('validateInput (re-exported for this subpath)', () => {
+  it('is importable alongside toRSS', () => {
+    expect(() => validateInput({ options: { title: '' }, items: [] }, 'rss')).toThrow(
+      /feed "title" is required/,
+    )
   })
 })
