@@ -39,6 +39,48 @@ describe('serveFeed', () => {
     expect(fixed.headers.get('vary')).toBeNull()
   })
 
+  describe('strictAccept', () => {
+    it('answers 406, marked no-store, when Accept rejects every format', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { strictAccept: true }))
+      const res = await a.request('/feed', { headers: { accept: '*/*;q=0' } })
+      expect(res.status).toBe(406)
+      expect(res.headers.get('cache-control')).toBe('no-store')
+    })
+
+    it('406 also when each format is individually rejected at q=0', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { strictAccept: true }))
+      const res = await a.request('/feed', {
+        headers: {
+          accept:
+            'application/rss+xml;q=0, application/atom+xml;q=0, application/feed+json;q=0, application/json;q=0',
+        },
+      })
+      expect(res.status).toBe(406)
+    })
+
+    it('falls through to defaultFormat when Accept merely fails to match (not a rejection)', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { strictAccept: true }))
+      const res = await a.request('/feed', { headers: { accept: 'text/html' } })
+      expect(res.status).toBe(200)
+      expect(res.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
+    })
+
+    it('keeps the default (non-strict) 200 behaviour when strictAccept is unset', async () => {
+      const res = await app().request('/feed', { headers: { accept: '*/*;q=0' } })
+      expect(res.status).toBe(200)
+    })
+
+    it('is not consulted when the format is explicit or query/extension-detected', async () => {
+      const a = new Hono()
+      a.get('/rss.xml', (c) => serveFeed(c, buildFeed(), { format: 'rss', strictAccept: true }))
+      const res = await a.request('/rss.xml', { headers: { accept: '*/*;q=0' } })
+      expect(res.status).toBe(200)
+    })
+  })
+
   it('answers If-None-Match with an empty 304', async () => {
     const first = await app().request('/feed')
     const etag = first.headers.get('etag') as string

@@ -400,6 +400,7 @@ All options for `serveFeed(c, input, options?)`:
 | `detectVersionFromQuery` | `boolean` | `detectFromQuery` | Read the version from `?version=` |
 | `formatQueryParam` | `string` | `'format'` | Query param name used to detect the format |
 | `versionQueryParam` | `string` | `'version'` | Query param name used to detect the version |
+| `strictAccept` | `boolean` | `false` | Answer `406 Not Acceptable` when the Accept header explicitly rejects every format (`q=0`), instead of falling back to `defaultFormat` |
 | `cacheControl` | `string \| CacheControlDirectives \| false` | `'public, max-age=3600'` | `Cache-Control` header (see [Cache-Control](#cache-control); `false` to omit) |
 | `etag` | `boolean \| ((body: string) => string)` | `true` | Send an `ETag` and answer `304` on a match — `true` for the built-in weak FNV-1a-64 hash, a function for your own tag (e.g. from a revision you already track), or `false` to omit |
 | `lastModified` | `boolean` | `true` | Send `Last-Modified` from `feed.updated` |
