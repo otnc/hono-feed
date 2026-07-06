@@ -125,3 +125,52 @@ describe('Atom XML serialization (RFC 4287 §2)', () => {
     expect(() => toAtom(complete, { xmlVersion: '1.1' })).toThrow(/XML 1\.0/)
   })
 })
+
+describe('Atom enclosure mapping (RFC 4287 §4.2.7.2)', () => {
+  const withEnclosure: FeedInput = {
+    ...complete,
+    items: [
+      {
+        ...complete.items[0],
+        enclosure: { url: '/ep1.mp3', type: 'audio/mpeg', length: 12345 },
+      },
+    ],
+  }
+
+  it('Atom 1.0 emits <link rel="enclosure"> with type and length, absolutized', () => {
+    const xml = toAtom(withEnclosure, { baseUrl: 'https://example.com' })
+    expect(xml).toContain(
+      '<link rel="enclosure" href="https://example.com/ep1.mp3" type="audio/mpeg" length="12345"/>',
+    )
+  })
+
+  it('Atom 1.0 omits the length attribute when unset', () => {
+    const xml = toAtom({
+      ...withEnclosure,
+      items: [
+        {
+          ...withEnclosure.items[0],
+          enclosure: { url: 'https://example.com/ep1.mp3', type: 'audio/mpeg' },
+        },
+      ],
+    })
+    expect(xml).toContain(
+      '<link rel="enclosure" href="https://example.com/ep1.mp3" type="audio/mpeg"/>',
+    )
+  })
+
+  it('Atom 0.3 emits <link rel="enclosure"> the same way', () => {
+    const xml = toAtom(withEnclosure, {
+      atomVersion: '0.3',
+      baseUrl: 'https://example.com',
+      suppressDeprecationWarnings: true,
+    })
+    expect(xml).toContain(
+      '<link rel="enclosure" href="https://example.com/ep1.mp3" type="audio/mpeg" length="12345"/>',
+    )
+  })
+
+  it('no enclosure → no rel="enclosure" link', () => {
+    expect(toAtom(complete)).not.toContain('rel="enclosure"')
+  })
+})
