@@ -54,6 +54,38 @@ describe('toRSS', () => {
     )
   })
 
+  it('emits channel managingEditor from options.author when email is present', () => {
+    const out = toRSS({
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        author: { name: 'otnc', email: 'otnc@example.com' },
+      },
+      items: [],
+    })
+    expect(out).toContain('<managingEditor>otnc@example.com (otnc)</managingEditor>')
+  })
+
+  it('omits channel managingEditor when the feed author has no email', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/', author: { name: 'otnc' } },
+      items: [],
+    })
+    expect(out).not.toContain('<managingEditor>')
+  })
+
+  it('emits item <comments>, absolutized, gated the same as category/enclosure (0.92+)', () => {
+    const withComments: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', language: 'en' },
+      items: [{ title: 'a', link: 'https://example.com/1', comments: '/1#comments' }],
+    }
+    const out = toRSS(withComments, { baseUrl: 'https://example.com' })
+    expect(out).toContain('<comments>https://example.com/1#comments</comments>')
+
+    const out091 = toRSS(withComments, { rssVersion: '0.91' })
+    expect(out091).not.toContain('<comments>')
+  })
+
   it('honours xmlVersion and rssVersion', () => {
     const out = toRSS(input, { xmlVersion: '1.1', rssVersion: '0.92' })
     expect(out.startsWith('<?xml version="1.1" encoding="utf-8"?>')).toBe(true)
