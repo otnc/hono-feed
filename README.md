@@ -532,6 +532,36 @@ const results = await notifyHub(
 
 `notifyHub` never throws — a non-2xx response, a network error, and an aborted request (pass `{ signal }` to time one out) are all reported as a result rather than a rejection, so one unreachable hub can't fail your publish flow. Subscribers still get the update on their next poll either way.
 
+## Pagination
+
+`paging` on `FeedOptions` covers [RFC 5005](https://www.rfc-editor.org/rfc/rfc5005) (Feed Paging and Archiving) end to end — for a feed too large to send in one document:
+
+```ts
+const feed = new Feed({
+  title: 'My Blog',
+  link: 'https://example.com/',
+  paging: {
+    next: '/feed?page=3', // rel="next"
+    prev: '/feed?page=1', // rel="previous" — RFC 5005's own term, not "prev"
+    first: '/feed?page=1', // rel="first"
+    last: '/feed?page=10', // rel="last"
+  },
+})
+```
+
+RSS 2.0 and Atom 1.0 emit one `atom:link`/`link` per set field; JSON Feed only maps `next` (to `next_url` — the spec has no equivalent for the others).
+
+Two more fields complete the RFC: `complete` (§2) marks a document as containing the *entire* feed, and `archive` (§4) marks an archive page whose content never changes — pairs naturally with `cacheControl: { immutable: true }`. They emit `<fh:complete/>` / `<fh:archive/>` (the `xmlns:fh` namespace is declared automatically, only when one is set), and are mutually exclusive — setting both throws:
+
+```ts
+paging: {
+  archive: true, // this page never changes; safe to cache forever
+  current: '/feed', // rel="current" — where the always-up-to-date document lives
+}
+```
+
+Like the rest of `paging`, `complete`/`archive`/`current` are RSS 2.0 / Atom 1.0 only; JSON Feed has no mapping for any of them.
+
 ## Extending with custom fields
 
 The neutral model is deliberately small — anything outside it (Media RSS, Dublin Core extras, a namespaced module hono-feed doesn't model, custom JSON Feed keys) needs an escape hatch. `customXml` / `customNamespaces` (XML formats) and `customJson` (JSON Feed) are that hatch, on both `FeedOptions` (feed-level) and `FeedItem` (item-level):
