@@ -3,7 +3,7 @@ import { authorList } from '../../utils/author'
 import { latestDate, rfc3339 } from '../../utils/date'
 import { pagingRels } from '../../utils/paging'
 import { absolutize } from '../../utils/url'
-import { el, type Node, xmlDocument } from '../../utils/xml'
+import { el, type Node, specToNode, xmlDocument } from '../../utils/xml'
 import { atomAuthorEl } from './author'
 import { atomFeedIdentity } from './identity'
 
@@ -29,11 +29,25 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
   if (options.author) feed.push(atomAuthorEl(options.author, 'uri'))
   feed.push(el('generator', undefined, options.generator ?? 'hono-feed'))
   if (options.copyright) feed.push(el('rights', undefined, options.copyright))
+  if (options.categories) {
+    for (const cat of options.categories) {
+      feed.push(el('category', { term: cat.term, scheme: cat.scheme }))
+    }
+  }
+  // RFC 4287 §4.2.8: icon is a small square, logo a 2:1 image — same roles as RSS <image>
+  // and JSON Feed icon/favicon.
+  if (options.favicon) feed.push(el('icon', undefined, absolutize(options.favicon, base)))
+  if (options.image) feed.push(el('logo', undefined, absolutize(options.image, base)))
+  if (options.customXml) feed.push(...options.customXml.map(specToNode))
 
   for (const item of items) feed.push(atomEntry10(item, base))
 
   // renderAttrs drops undefined values, so xml:lang simply vanishes when language is unset.
-  const attrs = { xmlns: 'http://www.w3.org/2005/Atom', 'xml:lang': options.language }
+  const attrs = {
+    xmlns: 'http://www.w3.org/2005/Atom',
+    'xml:lang': options.language,
+    ...options.customNamespaces,
+  }
   return xmlDocument(el('feed', attrs, feed), { pretty: opts.pretty, version: opts.xmlVersion })
 }
 
@@ -59,6 +73,20 @@ function atomEntry10(item: FeedItem, base?: string): Node {
       ch.push(el('category', { term: cat.term, scheme: cat.scheme }))
     }
   }
+
+  // RFC 4287 §4.2.7.2: rel="enclosure" identifies a related, potentially large resource.
+  if (item.enclosure) {
+    ch.push(
+      el('link', {
+        rel: 'enclosure',
+        href: absolutize(item.enclosure.url, base),
+        type: item.enclosure.type,
+        length: item.enclosure.length !== undefined ? String(item.enclosure.length) : undefined,
+      }),
+    )
+  }
+
+  if (item.customXml) ch.push(...item.customXml.map(specToNode))
 
   return el('entry', undefined, ch)
 }

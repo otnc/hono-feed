@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { cdata, el, escapeAttr, escapeText, raw, stripInvalidXmlChars, xmlDocument } from './xml'
+import {
+  cdata,
+  el,
+  escapeAttr,
+  escapeText,
+  raw,
+  specToNode,
+  stripInvalidXmlChars,
+  xmlDocument,
+} from './xml'
 
 // Returns true if the string contains any character forbidden by the XML 1.0 Char production.
 function hasInvalidXmlChar(s: string): boolean {
@@ -142,5 +151,38 @@ describe('invalid characters cannot escape through any path', () => {
   it('produces a document with no invalid characters anywhere', () => {
     const doc = xmlDocument(el('item', { title: dirty }, [el('body', undefined, dirty)]))
     expect(hasInvalidXmlChar(doc)).toBe(false)
+  })
+})
+
+describe('specToNode', () => {
+  it('renders a leaf spec with attrs and text, escaped like a built-in element', () => {
+    const node = specToNode({ name: 'itunes:image', attrs: { href: 'a & b' }, text: '<x>' })
+    expect(xmlDocument(node)).toBe(
+      '<?xml version="1.0" encoding="utf-8"?><itunes:image href="a &amp; b">&lt;x&gt;</itunes:image>',
+    )
+  })
+
+  it('renders nested children recursively', () => {
+    const node = specToNode({
+      name: 'parent',
+      children: [
+        { name: 'child', text: 'a' },
+        { name: 'child', text: 'b' },
+      ],
+    })
+    expect(xmlDocument(node)).toBe(
+      '<?xml version="1.0" encoding="utf-8"?><parent><child>a</child><child>b</child></parent>',
+    )
+  })
+
+  it('ignores text when children is set', () => {
+    const node = specToNode({ name: 'x', children: [{ name: 'y' }], text: 'ignored' })
+    expect(xmlDocument(node)).not.toContain('ignored')
+  })
+
+  it('renders a self-closing element when neither children nor text is set', () => {
+    expect(xmlDocument(specToNode({ name: 'x' }))).toBe(
+      '<?xml version="1.0" encoding="utf-8"?><x/>',
+    )
   })
 })

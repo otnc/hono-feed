@@ -400,8 +400,9 @@ All options for `serveFeed(c, input, options?)`:
 | `detectVersionFromQuery` | `boolean` | `detectFromQuery` | Read the version from `?version=` |
 | `formatQueryParam` | `string` | `'format'` | Query param name used to detect the format |
 | `versionQueryParam` | `string` | `'version'` | Query param name used to detect the version |
+| `strictAccept` | `boolean` | `false` | Answer `406 Not Acceptable` when the Accept header explicitly rejects every format (`q=0`), instead of falling back to `defaultFormat` |
 | `cacheControl` | `string \| CacheControlDirectives \| false` | `'public, max-age=3600'` | `Cache-Control` header (see [Cache-Control](#cache-control); `false` to omit) |
-| `etag` | `boolean` | `true` | Send a weak `ETag` and answer `304` on a match |
+| `etag` | `boolean \| ((body: string) => string)` | `true` | Send an `ETag` and answer `304` on a match — `true` for the built-in weak FNV-1a-64 hash, a function for your own tag (e.g. from a revision you already track), or `false` to omit |
 | `lastModified` | `boolean` | `true` | Send `Last-Modified` from `feed.updated` |
 | `baseUrl` | `string` | request origin | Base used to turn relative URLs into absolute ones |
 | `pretty` | `boolean` | `false` | Indent the output for readability |
@@ -434,6 +435,26 @@ RSS 1.0 and 1.1 are fully **supported, not deprecated** — reach for them when 
 > They still produce valid output, but each logs a one-time, coded `DeprecationWarning` (`HONOFEED_DEP000N`, see [HONOFEED_DEP.md](HONOFEED_DEP.md) for the full list) — through `process.emitWarning` on Node, or `console.warn` on edge runtimes.  
 > To silence it, set `suppressDeprecationWarnings: true`, the `HONO_FEED_NO_DEPRECATION` env var, or run Node with `--no-deprecation`.
 
+## Extending with custom fields
+
+The neutral model is deliberately small — anything outside it (iTunes/Apple Podcasts tags, Media RSS, Dublin Core extras, a namespaced module, custom JSON Feed keys) needs an escape hatch. `customXml` / `customNamespaces` (XML formats) and `customJson` (JSON Feed) are that hatch, on both `FeedOptions` (feed-level) and `FeedItem` (item-level):
+
+```ts
+const feed = new Feed({
+  title: 'My Show',
+  link: 'https://example.com/',
+  customNamespaces: { 'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd' },
+  customXml: [
+    { name: 'itunes:author', text: 'Ada' },
+    { name: 'itunes:image', attrs: { href: 'https://example.com/cover.jpg' } },
+  ],
+})
+```
+
+`customXml` is a JSON-shaped element tree (`{ name, attrs?, children?, text? }`), not a raw string — `text`/`attrs` are escaped exactly like every built-in element, so this stays correct by construction. Elements are appended after the format's built-in ones (`<channel>`/`<feed>` or `<item>`/`<entry>`); RDF (RSS 1.0/1.1) and legacy RSS 0.9x accept them unconditionally, since there's no built-in gating to opt out of once you've reached for this. `customNamespaces` adds `xmlns:*` declarations to the root element.
+
+`customJson` merges extra keys into the JSON Feed object (feed-level and/or per item) — per the [JSON Feed spec](https://www.jsonfeed.org/version/1.1/#extensions), custom keys should start with `_`. A built-in key always wins on collision, so this can only add fields, never override one hono-feed already sets.
+
 ## Low-level serializers
 
 Sometimes you just want the string — for a snapshot test, a queue, or a non-Hono transport.  
@@ -450,6 +471,15 @@ const { toRSS, toAtom, toJSONFeed } = require('hono-feed')
 // 'hono-feed/rss', 'hono-feed/atom', 'hono-feed/json', 'hono-feed/middleware'
 
 const xml = toRSS({ options, items }, { baseUrl: 'https://example.com' })
+```
+
+`serveFeed` runs the same per-format spec validation (Atom author coverage, absolute-IRI ids, required dates, …) before serializing — those checks aren't otherwise run on this low-level path, so if you want them, call `validateInput` yourself first:
+
+```ts
+import { toAtom, validateInput } from 'hono-feed'
+
+validateInput({ options, items }, 'atom') // throws TypeError with the same messages serveFeed gives
+const xml = toAtom({ options, items }, { baseUrl: 'https://example.com' })
 ```
 
 ## Contributing

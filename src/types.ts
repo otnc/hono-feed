@@ -46,6 +46,19 @@ export interface Enclosure {
   length?: number
 }
 
+/**
+ * A JSON-shaped XML element tree for the `customXml` escape hatch. Attribute values and
+ * `text` are escaped exactly like built-in elements — this isn't raw string injection.
+ */
+export interface XmlElementSpec {
+  /** Element name, e.g. `'itunes:author'`. */
+  name: string
+  attrs?: Record<string, string | number | boolean | undefined>
+  /** Nested elements. When set, `text` is ignored. */
+  children?: XmlElementSpec[]
+  text?: string
+}
+
 export interface FeedOptions {
   title: string
   /** Homepage URL (RSS link / Atom alternate / JSON home_page_url). */
@@ -59,11 +72,14 @@ export interface FeedOptions {
   language?: string
   /** RSS lastBuildDate / Atom updated. JSON derives it from items. */
   updated?: Date
+  /** RSS managingEditor (email required) / Atom author / JSON authors. */
   author?: Author
   copyright?: string
-  /** RSS image.url / JSON icon. */
+  /** RSS channel category / Atom feed category / RDF dc:subject. No JSON Feed equivalent. */
+  categories?: Category[]
+  /** RSS image.url / Atom logo / JSON icon. */
   image?: string
-  /** JSON favicon. */
+  /** Atom icon / JSON favicon. */
   favicon?: string
   /** Defaults to 'hono-feed'. */
   generator?: string
@@ -83,6 +99,19 @@ export interface FeedOptions {
     /** `rel="last"`. No JSON Feed equivalent. */
     last?: string
   }
+  /**
+   * Extra elements appended after the built-in channel/feed elements (XML formats only) —
+   * escape hatch for namespaced modules (iTunes, Media RSS, Dublin Core, …). RDF (RSS 1.0/1.1)
+   * and legacy RSS 0.9x accept these unconditionally; there's no built-in gating to opt out of.
+   */
+  customXml?: XmlElementSpec[]
+  /** Extra `xmlns:*` declarations for the root element, e.g. `{ 'xmlns:itunes': '...' }`. */
+  customNamespaces?: Record<string, string>
+  /**
+   * Extra keys merged into the JSON Feed object. Per the JSON Feed spec, custom keys should
+   * start with `_`. A built-in key always wins on collision — this can only add, not override.
+   */
+  customJson?: Record<string, unknown>
 }
 
 export interface FeedItem {
@@ -100,10 +129,16 @@ export interface FeedItem {
   /** Atom updated / JSON date_modified. */
   updated?: Date
   categories?: Category[]
-  /** RSS enclosure / JSON attachments[0]. */
+  /** RSS enclosure / Atom link rel="enclosure" / JSON attachments[0]. */
   enclosure?: Enclosure
+  /** URL of the item's comments page. RSS `<comments>` only; no Atom/JSON mapping. */
+  comments?: string
   /** JSON image. */
   image?: string
+  /** Extra elements appended after the built-in item/entry elements (XML formats only). */
+  customXml?: XmlElementSpec[]
+  /** Extra keys merged into the JSON Feed item object. A built-in key always wins on collision. */
+  customJson?: Record<string, unknown>
 }
 
 export interface FeedInput {
@@ -177,12 +212,25 @@ export interface ServeFeedOptions {
   /** Query param name used to detect the version. Default 'version'. */
   versionQueryParam?: string
   /**
+   * When the Accept header explicitly rejects every supported format (every candidate at
+   * `q=0`), answer 406 Not Acceptable instead of falling back to `defaultFormat`. An absent
+   * Accept header, or one that simply doesn't match any format, still falls through to
+   * `defaultFormat` regardless of this option. Default false.
+   */
+  strictAccept?: boolean
+  /**
    * Cache-Control value — a raw string, a `CacheControlDirectives` object, or `false` to
    * omit. Default 'public, max-age=3600'.
    */
   cacheControl?: string | CacheControlDirectives | false
-  /** Emit a weak ETag and answer conditional requests with 304. Default true. */
-  etag?: boolean
+  /**
+   * Emit an ETag and answer conditional requests with 304.
+   * - `true` (default): a weak FNV-1a-64 hash of the body.
+   * - a function: return your own tag for the body (e.g. from a revision you already track).
+   *   Used verbatim if it looks like an ETag (`"…"` / `W/"…"`), otherwise wrapped as `W/"…"`.
+   * - `false`: no ETag.
+   */
+  etag?: boolean | ((body: string) => string)
   /** Emit Last-Modified (from feed.updated). Default true. */
   lastModified?: boolean
   /** Base URL for absolutizing relative URLs. Defaults to the request origin. */
