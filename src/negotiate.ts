@@ -116,14 +116,9 @@ function resolveEntry(e: AcceptEntry): FeedFormat | 'all' | null {
   return MIME_FORMAT[`${e.type}/${e.subtype}`] ?? null
 }
 
-/** Negotiate a format from the Accept header, honouring `q=0` rejections. */
-export function negotiateFormat(
-  header: string | null | undefined,
-  defaultFormat: FeedFormat,
-): FeedFormat | null {
-  const entries = parseAccept(header)
-  if (entries.length === 0) return null
-
+// Formats explicitly rejected (q=0) by the Accept header's entries. `'all'` (a `*/*` or
+// `application/*` wildcard at q=0) rejects every format at once.
+function rejectedFormats(entries: AcceptEntry[]): Set<FeedFormat> {
   const rejected = new Set<FeedFormat>()
   for (const e of entries) {
     if (e.q !== 0) continue
@@ -136,7 +131,18 @@ export function negotiateFormat(
       rejected.add(r)
     }
   }
+  return rejected
+}
 
+/** Negotiate a format from the Accept header, honouring `q=0` rejections. */
+export function negotiateFormat(
+  header: string | null | undefined,
+  defaultFormat: FeedFormat,
+): FeedFormat | null {
+  const entries = parseAccept(header)
+  if (entries.length === 0) return null
+
+  const rejected = rejectedFormats(entries)
   for (const e of entries) {
     if (e.q === 0) continue
     const r = resolveEntry(e)
@@ -146,4 +152,16 @@ export function negotiateFormat(
   }
 
   return null
+}
+
+/**
+ * True when the Accept header explicitly rejects (q=0) every known feed format — as opposed
+ * to simply not matching any of them (an absent header, or one that only mentions unrelated
+ * types). Used to distinguish "nothing acceptable was found" from "the client actively
+ * refused everything we can serve" (see `strictAccept` in `ServeFeedOptions`).
+ */
+export function rejectsAllFormats(header: string | null | undefined): boolean {
+  const entries = parseAccept(header)
+  if (entries.length === 0) return false
+  return rejectedFormats(entries).size === FEED_FORMATS.length
 }

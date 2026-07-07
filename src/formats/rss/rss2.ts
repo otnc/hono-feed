@@ -43,12 +43,29 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   channel.push(el('description', undefined, options.description ?? ''))
   if (options.language) channel.push(el('language', undefined, options.language))
   if (options.copyright) channel.push(el('copyright', undefined, options.copyright))
+  // Channel <category> arrived in 0.92 alongside the item-level element (same rules apply).
+  if (caps.itemRich092 && options.categories) {
+    for (const cat of options.categories) {
+      channel.push(el('category', { domain: cat.scheme }, cat.term))
+    }
+  }
   if (options.updated) channel.push(el('lastBuildDate', undefined, rfc822(options.updated)))
   if (caps.rss20) {
     channel.push(el('generator', undefined, options.generator ?? 'hono-feed'))
     if (options.ttl !== undefined) channel.push(el('ttl', undefined, String(options.ttl)))
     if (self) {
       channel.push(el('atom:link', { href: self, rel: 'self', type: 'application/rss+xml' }))
+    }
+    // <managingEditor> requires an email, same rule as the item-level <author> (below).
+    const feedAuthor = firstAuthor(options.author)
+    if (feedAuthor?.email) {
+      channel.push(
+        el(
+          'managingEditor',
+          undefined,
+          feedAuthor.name ? `${feedAuthor.email} (${feedAuthor.name})` : feedAuthor.email,
+        ),
+      )
     }
   }
 
@@ -101,6 +118,9 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
   if (item.description) ch.push(el('description', undefined, raw(cdata(item.description))))
   if (caps.rss20 && item.content)
     ch.push(el('content:encoded', undefined, raw(cdata(item.content))))
+  if (caps.itemRich092 && item.comments) {
+    ch.push(el('comments', undefined, absolutize(item.comments, base)))
+  }
 
   // RSS author requires an email; skip when absent.
   if (caps.rss20) {

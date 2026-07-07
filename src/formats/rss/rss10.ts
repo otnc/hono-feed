@@ -30,6 +30,9 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
   if (options.language) channel.push(el('dc:language', undefined, options.language))
   if (options.updated) channel.push(el('dc:date', undefined, rfc3339(options.updated)))
   if (options.copyright) channel.push(el('dc:rights', undefined, options.copyright))
+  if (options.categories) {
+    for (const cat of options.categories) channel.push(el('dc:subject', undefined, cat.term))
+  }
   channel.push(el('items', undefined, [el('rdf:Seq', undefined, seq)]))
   if (imageUrl) channel.push(el('image', { 'rdf:resource': imageUrl }))
   // Escape hatch: appended unconditionally — RDF has no per-element gating to opt out of.

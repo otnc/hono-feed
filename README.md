@@ -400,8 +400,9 @@ All options for `serveFeed(c, input, options?)`:
 | `detectVersionFromQuery` | `boolean` | `detectFromQuery` | Read the version from `?version=` |
 | `formatQueryParam` | `string` | `'format'` | Query param name used to detect the format |
 | `versionQueryParam` | `string` | `'version'` | Query param name used to detect the version |
+| `strictAccept` | `boolean` | `false` | Answer `406 Not Acceptable` when the Accept header explicitly rejects every format (`q=0`), instead of falling back to `defaultFormat` |
 | `cacheControl` | `string \| CacheControlDirectives \| false` | `'public, max-age=3600'` | `Cache-Control` header (see [Cache-Control](#cache-control); `false` to omit) |
-| `etag` | `boolean` | `true` | Send a weak `ETag` and answer `304` on a match |
+| `etag` | `boolean \| ((body: string) => string)` | `true` | Send an `ETag` and answer `304` on a match — `true` for the built-in weak FNV-1a-64 hash, a function for your own tag (e.g. from a revision you already track), or `false` to omit |
 | `lastModified` | `boolean` | `true` | Send `Last-Modified` from `feed.updated` |
 | `baseUrl` | `string` | request origin | Base used to turn relative URLs into absolute ones |
 | `pretty` | `boolean` | `false` | Indent the output for readability |
@@ -470,6 +471,15 @@ const { toRSS, toAtom, toJSONFeed } = require('hono-feed')
 // 'hono-feed/rss', 'hono-feed/atom', 'hono-feed/json', 'hono-feed/middleware'
 
 const xml = toRSS({ options, items }, { baseUrl: 'https://example.com' })
+```
+
+`serveFeed` runs the same per-format spec validation (Atom author coverage, absolute-IRI ids, required dates, …) before serializing — those checks aren't otherwise run on this low-level path, so if you want them, call `validateInput` yourself first:
+
+```ts
+import { toAtom, validateInput } from 'hono-feed'
+
+validateInput({ options, items }, 'atom') // throws TypeError with the same messages serveFeed gives
+const xml = toAtom({ options, items }, { baseUrl: 'https://example.com' })
 ```
 
 ## Contributing

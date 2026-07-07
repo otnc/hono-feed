@@ -20,3 +20,4 @@ export type {
   XmlElementSpec,
   XmlVersion,
 } from './types'
+export { validateInput } from './validate'

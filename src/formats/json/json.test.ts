@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FeedInput } from '../../types'
-import { toJSONFeed } from './index'
+import { toJSONFeed, validateInput } from './index'
 
 const input: FeedInput = {
   options: { title: 'example blog', link: 'https://example.com/' },
@@ -204,5 +204,13 @@ describe('toJSONFeed', () => {
         items: [{ title: 'a', content: '<p>b</p>' }],
       }),
     ).toThrow(/requires "id"/)
+  })
+})
+
+describe('validateInput (re-exported for this subpath)', () => {
+  it('is importable alongside toJSONFeed', () => {
+    expect(() => validateInput({ options: { title: '' }, items: [] }, 'json')).toThrow(
+      /feed "title" is required/,
+    )
   })
 })

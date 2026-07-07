@@ -4,6 +4,8 @@ import { rfc3339 } from '../../utils/date'
 import { warnDeprecated } from '../../utils/deprecation'
 import { absolutize, selfUrl } from '../../utils/url'
 
+export { validateInput } from '../../validate'
+
 /** Serialize the neutral model to a JSON Feed 1.1 string. */
 export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): string {
   const { options, items } = input
