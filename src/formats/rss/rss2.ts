@@ -56,6 +56,17 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
     if (self) {
       channel.push(el('atom:link', { href: self, rel: 'self', type: 'application/rss+xml' }))
     }
+    // <managingEditor> requires an email, same rule as the item-level <author> (below).
+    const feedAuthor = firstAuthor(options.author)
+    if (feedAuthor?.email) {
+      channel.push(
+        el(
+          'managingEditor',
+          undefined,
+          feedAuthor.name ? `${feedAuthor.email} (${feedAuthor.name})` : feedAuthor.email,
+        ),
+      )
+    }
   }
 
   if (options.image) {
@@ -103,6 +114,9 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
   if (item.description) ch.push(el('description', undefined, raw(cdata(item.description))))
   if (caps.rss20 && item.content)
     ch.push(el('content:encoded', undefined, raw(cdata(item.content))))
+  if (caps.itemRich092 && item.comments) {
+    ch.push(el('comments', undefined, absolutize(item.comments, base)))
+  }
 
   // RSS author requires an email; skip when absent.
   if (caps.rss20) {

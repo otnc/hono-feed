@@ -28,6 +28,10 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
       feed.push(el('category', { term: cat.term, scheme: cat.scheme }))
     }
   }
+  // RFC 4287 §4.2.8: icon is a small square, logo a 2:1 image — same roles as RSS <image>
+  // and JSON Feed icon/favicon.
+  if (options.favicon) feed.push(el('icon', undefined, absolutize(options.favicon, base)))
+  if (options.image) feed.push(el('logo', undefined, absolutize(options.image, base)))
 
   for (const item of items) feed.push(atomEntry10(item, base))
 
@@ -57,6 +61,18 @@ function atomEntry10(item: FeedItem, base?: string): Node {
     for (const cat of item.categories) {
       ch.push(el('category', { term: cat.term, scheme: cat.scheme }))
     }
+  }
+
+  // RFC 4287 §4.2.7.2: rel="enclosure" identifies a related, potentially large resource.
+  if (item.enclosure) {
+    ch.push(
+      el('link', {
+        rel: 'enclosure',
+        href: absolutize(item.enclosure.url, base),
+        type: item.enclosure.type,
+        length: item.enclosure.length !== undefined ? String(item.enclosure.length) : undefined,
+      }),
+    )
   }
 
   return el('entry', undefined, ch)
