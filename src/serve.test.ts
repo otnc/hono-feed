@@ -411,6 +411,18 @@ describe('serveFeed', () => {
       })
       expect(res.status).toBe(200)
     })
+
+    it('ignores If-Modified-Since when If-None-Match is present, even with no ETag to compare (RFC 9110 §13.1.3)', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { etag: false }))
+      const res = await a.request('/feed', {
+        headers: {
+          'if-none-match': '"stale-etag"',
+          'if-modified-since': 'Wed, 01 Jul 2026 00:00:00 GMT', // would satisfy IMS alone
+        },
+      })
+      expect(res.status).toBe(200)
+    })
   })
 
   describe('etag / lastModified toggles', () => {
@@ -459,6 +471,36 @@ describe('serveFeed', () => {
       a.get('/feed', (c) => serveFeed(c, buildFeed(), { etag: () => '"strong-rev"' }))
       const res = await a.request('/feed')
       expect(res.headers.get('etag')).toBe('"strong-rev"')
+    })
+
+    it('matches an If-None-Match tag containing a comma (a legal etagc character)', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { etag: () => '"rev-1,2"' }))
+      const res = await a.request('/feed', { headers: { 'if-none-match': '"rev-1,2"' } })
+      expect(res.status).toBe(304)
+    })
+
+    it('matches a comma-containing tag among a comma-separated list of candidates', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { etag: () => '"rev-1,2"' }))
+      const res = await a.request('/feed', {
+        headers: { 'if-none-match': '"something-else", "rev-1,2"' },
+      })
+      expect(res.status).toBe(304)
+    })
+
+    it('does not match when no candidate equals a comma-containing tag', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { etag: () => '"rev-1,2"' }))
+      const res = await a.request('/feed', { headers: { 'if-none-match': '"rev-1", "2"' } })
+      expect(res.status).toBe(200)
+    })
+
+    it('treats an If-None-Match value with no quoted entity-tags as a non-match', async () => {
+      const res = await app().request('/feed', {
+        headers: { 'if-none-match': 'garbage-no-quotes' },
+      })
+      expect(res.status).toBe(200)
     })
   })
 })

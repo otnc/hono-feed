@@ -214,8 +214,9 @@ function isNotModified(
   updatedDate: Date | undefined,
 ): boolean {
   const inm = c.req.header('if-none-match')
-  // If-None-Match takes precedence over If-Modified-Since (RFC 9110).
-  if (etagValue && inm !== undefined) return etagMatches(inm, etagValue)
+  // RFC 9110 §13.1.3: a recipient MUST ignore If-Modified-Since when the request contains
+  // If-None-Match — even if there's no ETag on our side to compare it against.
+  if (inm !== undefined) return etagValue !== undefined && etagMatches(inm, etagValue)
 
   if (updatedDate) {
     const ims = c.req.header('if-modified-since')
@@ -229,13 +230,17 @@ function isNotModified(
   return false
 }
 
-// Weak comparison for If-None-Match (ignore the W/ prefix; `*` always matches).
+// An entity-tag per RFC 9110 §8.8.3: `[ "W/" ] DQUOTE *etagc DQUOTE`. `etagc` legally includes
+// a comma, so a list of tags must be tokenized by matching whole quoted tags — splitting on
+// "," would break on a tag that itself contains one.
+const ENTITY_TAG = /(?:W\/)?"[^"]*"/g
+
+// Weak comparison for If-None-Match (ignore the W/ prefix; a bare `*` always matches).
 function etagMatches(headerValue: string, etag: string): boolean {
-  const normalize = (t: string) => t.trim().replace(/^W\//, '')
-  const target = normalize(etag)
-  for (const candidate of headerValue.split(',')) {
-    const normalized = candidate.trim()
-    if (normalized === '*' || normalize(normalized) === target) return true
+  if (headerValue.trim() === '*') return true
+  const target = etag.replace(/^W\//, '')
+  for (const tag of headerValue.match(ENTITY_TAG) ?? []) {
+    if (tag.replace(/^W\//, '') === target) return true
   }
   return false
 }
