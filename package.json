@@ -117,11 +117,11 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.4",
     "@biomejs/biome": "2.5.1",
-    "@vitest/coverage-v8": "^4.1.9",
-    "hono": "^4.12.27",
+    "@vitest/coverage-v8": "^4.1.10",
+    "hono": "^4.12.28",
     "publint": "^0.3.21",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.10"
   }
 }
