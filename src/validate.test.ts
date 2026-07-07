@@ -194,4 +194,30 @@ describe('validateInput', () => {
       ),
     ).not.toThrow()
   })
+
+  it('rejects paging.complete and paging.archive both set (RFC 5005 §2/§4 are mutually exclusive)', () => {
+    const bothSet: FeedInput = {
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        paging: { complete: true, archive: true },
+      },
+      items: [],
+    }
+    expect(() => validateInput(bothSet, 'rss')).toThrow(/mutually exclusive/)
+  })
+
+  it('allows paging.complete or paging.archive set alone', () => {
+    const completeOnly: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', paging: { complete: true } },
+      items: [],
+    }
+    expect(() => validateInput(completeOnly, 'rss')).not.toThrow()
+
+    const archiveOnly: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', paging: { archive: true } },
+      items: [],
+    }
+    expect(() => validateInput(archiveOnly, 'rss')).not.toThrow()
+  })
 })
