@@ -220,4 +220,32 @@ describe('validateInput', () => {
     }
     expect(() => validateInput(archiveOnly, 'rss')).not.toThrow()
   })
+
+  it('rejects skipHours values outside 0-23', () => {
+    const tooHigh: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', skipHours: [24] },
+      items: [],
+    }
+    expect(() => validateInput(tooHigh, 'rss')).toThrow(/skipHours/)
+
+    const negative: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', skipHours: [-1] },
+      items: [],
+    }
+    expect(() => validateInput(negative, 'rss')).toThrow(/skipHours/)
+
+    const nonInteger: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', skipHours: [1.5] },
+      items: [],
+    }
+    expect(() => validateInput(nonInteger, 'rss')).toThrow(/skipHours/)
+  })
+
+  it('allows skipHours values within 0-23, including the boundaries', () => {
+    const valid: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', skipHours: [0, 23] },
+      items: [],
+    }
+    expect(() => validateInput(valid, 'rss')).not.toThrow()
+  })
 })
