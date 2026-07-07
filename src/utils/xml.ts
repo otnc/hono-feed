@@ -1,6 +1,8 @@
 // Minimal XML builder: build a node tree, then serialize with optional pretty-printing.
 // Text nodes are auto-escaped; raw XML (e.g. CDATA) is inserted via `raw()`.
 
+import type { XmlElementSpec } from '../types'
+
 export type AttrValue = string | number | boolean | null | undefined
 
 export type Attrs = Record<string, AttrValue>
@@ -70,6 +72,17 @@ export function raw(value: string): RawNode {
 export function el(name: string, attrs?: Attrs, children?: Node[] | Node): ElNode {
   const ch = children === undefined ? undefined : Array.isArray(children) ? children : [children]
   return { kind: 'el', name, attrs, children: ch }
+}
+
+/**
+ * Convert a public, JSON-shaped `XmlElementSpec` (the `customXml` escape hatch) into a `Node`.
+ * Goes through `el()` like every built-in element, so attrs/text are escaped the same way.
+ */
+export function specToNode(spec: XmlElementSpec): Node {
+  if (spec.children?.length) {
+    return el(spec.name, spec.attrs, spec.children.map(specToNode))
+  }
+  return el(spec.name, spec.attrs, spec.text)
 }
 
 function renderAttrs(attrs?: Attrs): string {

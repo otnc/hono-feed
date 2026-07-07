@@ -2,7 +2,7 @@ import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { authorList } from '../../utils/author'
 import { latestDate, rfc3339 } from '../../utils/date'
 import { absolutize } from '../../utils/url'
-import { el, type Node, xmlDocument } from '../../utils/xml'
+import { el, type Node, specToNode, xmlDocument } from '../../utils/xml'
 import { atomAuthorEl } from './author'
 import { atomFeedIdentity } from './identity'
 
@@ -32,11 +32,16 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
   // and JSON Feed icon/favicon.
   if (options.favicon) feed.push(el('icon', undefined, absolutize(options.favicon, base)))
   if (options.image) feed.push(el('logo', undefined, absolutize(options.image, base)))
+  if (options.customXml) feed.push(...options.customXml.map(specToNode))
 
   for (const item of items) feed.push(atomEntry10(item, base))
 
   // renderAttrs drops undefined values, so xml:lang simply vanishes when language is unset.
-  const attrs = { xmlns: 'http://www.w3.org/2005/Atom', 'xml:lang': options.language }
+  const attrs = {
+    xmlns: 'http://www.w3.org/2005/Atom',
+    'xml:lang': options.language,
+    ...options.customNamespaces,
+  }
   return xmlDocument(el('feed', attrs, feed), { pretty: opts.pretty, version: opts.xmlVersion })
 }
 
@@ -74,6 +79,8 @@ function atomEntry10(item: FeedItem, base?: string): Node {
       }),
     )
   }
+
+  if (item.customXml) ch.push(...item.customXml.map(specToNode))
 
   return el('entry', undefined, ch)
 }

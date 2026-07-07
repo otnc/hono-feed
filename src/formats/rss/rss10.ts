@@ -1,7 +1,7 @@
 import type { FeedInput, SerializeOptions } from '../../types'
 import { rfc3339 } from '../../utils/date'
 import { absolutize, selfUrl } from '../../utils/url'
-import { el, type Node, xmlDocument } from '../../utils/xml'
+import { el, type Node, specToNode, xmlDocument } from '../../utils/xml'
 import { rdfItem } from './rdf-item'
 
 // RSS 1.0 (RDF Site Summary): `<rdf:RDF>` root with an `<items>`/`rdf:Seq` table of
@@ -35,6 +35,8 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
   }
   channel.push(el('items', undefined, [el('rdf:Seq', undefined, seq)]))
   if (imageUrl) channel.push(el('image', { 'rdf:resource': imageUrl }))
+  // Escape hatch: appended unconditionally — RDF has no per-element gating to opt out of.
+  if (options.customXml) channel.push(...options.customXml.map(specToNode))
 
   const nodes: Node[] = [el('channel', { 'rdf:about': feedUri }, channel)]
   if (imageUrl) {
@@ -52,6 +54,7 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
       xmlns: 'http://purl.org/rss/1.0/',
       'xmlns:dc': 'http://purl.org/dc/elements/1.1/',
       'xmlns:content': hasContent ? 'http://purl.org/rss/1.0/modules/content/' : undefined,
+      ...options.customNamespaces,
     },
     nodes,
   )

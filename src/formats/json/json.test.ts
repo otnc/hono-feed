@@ -15,6 +15,32 @@ const input: FeedInput = {
 }
 
 describe('toJSONFeed', () => {
+  it('merges customJson (feed and item level), and a built-in key always wins on collision', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: {
+          ...input.options,
+          customJson: { _custom: 'feed-value', title: 'should not win' },
+        },
+        items: [
+          {
+            ...input.items[0],
+            customJson: { _custom: 'item-value', title: 'should not win either' },
+          },
+        ],
+      }),
+    )
+    expect(json._custom).toBe('feed-value')
+    expect(json.title).toBe('example blog')
+    expect(json.items[0]._custom).toBe('item-value')
+    expect(json.items[0].title).toBe('post 1')
+  })
+
+  it('has no customJson → output unaffected', () => {
+    const json = JSON.parse(toJSONFeed(input))
+    expect(Object.keys(json)).not.toContain('_custom')
+  })
+
   it('emits version 1.1 and array items', () => {
     const json = JSON.parse(toJSONFeed(input))
     expect(json.version).toBe('https://jsonfeed.org/version/1.1')

@@ -126,6 +126,29 @@ describe('Atom XML serialization (RFC 4287 §2)', () => {
   })
 })
 
+describe('Atom customXml/customNamespaces escape hatch', () => {
+  it('appends customXml after built-in feed/entry elements and merges customNamespaces', () => {
+    const withCustom: FeedInput = {
+      ...complete,
+      options: {
+        ...complete.options,
+        customNamespaces: { 'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd' },
+        customXml: [{ name: 'itunes:author', text: 'Ada' }],
+      },
+      items: [{ ...complete.items[0], customXml: [{ name: 'itunes:duration', text: '3:45' }] }],
+    }
+    const xml = toAtom(withCustom)
+    expect(xml).toContain('xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"')
+    expect(xml).toContain('<itunes:author>Ada</itunes:author>')
+    expect(xml).toContain('<itunes:duration>3:45</itunes:duration>')
+    expect(xml.indexOf('<itunes:author>')).toBeLessThan(xml.indexOf('<entry>'))
+  })
+
+  it('has no custom fields → no custom elements/namespaces present', () => {
+    expect(toAtom(complete)).not.toContain('itunes')
+  })
+})
+
 describe('Atom feed-level category (RFC 4287 §4.1.1, same element as §4.2.2)', () => {
   it('emits one <category> per feed-level category', () => {
     const withFeedCategories: FeedInput = {
