@@ -33,6 +33,33 @@ describe('toRSS', () => {
     expect(xml).toContain('<guid isPermaLink="true">https://example.com/1</guid>')
   })
 
+  it('emits atom:link rel="next"/"previous"/"first"/"last" for paging, absolutized', () => {
+    const out = toRSS(
+      {
+        ...input,
+        options: {
+          ...input.options,
+          paging: {
+            next: '/feed?page=3',
+            prev: '/feed?page=1',
+            first: '/feed?page=1',
+            last: '/feed?page=10',
+          },
+        },
+      },
+      { baseUrl: 'https://example.com', feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('<atom:link href="https://example.com/feed?page=3" rel="next"/>')
+    expect(out).toContain('<atom:link href="https://example.com/feed?page=1" rel="previous"/>')
+    expect(out).toContain('<atom:link href="https://example.com/feed?page=1" rel="first"/>')
+    expect(out).toContain('<atom:link href="https://example.com/feed?page=10" rel="last"/>')
+  })
+
+  it('omits paging links when unset', () => {
+    expect(input.options.paging).toBeUndefined()
+    expect(toRSS(input, { feedUrl: 'https://example.com/feed' })).not.toContain('rel="next"')
+  })
+
   it('appends customXml after built-in channel/item elements and merges customNamespaces', () => {
     const out = toRSS({
       options: {

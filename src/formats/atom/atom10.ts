@@ -1,6 +1,7 @@
 import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { authorList } from '../../utils/author'
 import { latestDate, rfc3339 } from '../../utils/date'
+import { pagingRels } from '../../utils/paging'
 import { absolutize } from '../../utils/url'
 import { el, type Node, specToNode, xmlDocument } from '../../utils/xml'
 import { atomAuthorEl } from './author'
@@ -20,6 +21,11 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
   feed.push(el('updated', undefined, rfc3339(options.updated ?? latestDate(items) ?? new Date())))
   if (link) feed.push(el('link', { rel: 'alternate', href: link }))
   if (self) feed.push(el('link', { rel: 'self', type: 'application/atom+xml', href: self }))
+  if (options.paging) {
+    for (const { rel, href } of pagingRels(options.paging, base)) {
+      feed.push(el('link', { rel, href }))
+    }
+  }
   if (options.author) feed.push(atomAuthorEl(options.author, 'uri'))
   feed.push(el('generator', undefined, options.generator ?? 'hono-feed'))
   if (options.copyright) feed.push(el('rights', undefined, options.copyright))

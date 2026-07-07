@@ -126,6 +126,32 @@ describe('Atom XML serialization (RFC 4287 §2)', () => {
   })
 })
 
+describe('Atom pagination links (RFC 5005 §3)', () => {
+  it('emits link rel="next"/"previous"/"first"/"last" for paging, absolutized', () => {
+    const withPaging: FeedInput = {
+      ...complete,
+      options: {
+        ...complete.options,
+        paging: {
+          next: '/feed?page=3',
+          prev: '/feed?page=1',
+          first: '/feed?page=1',
+          last: '/feed?page=10',
+        },
+      },
+    }
+    const xml = toAtom(withPaging, { baseUrl: 'https://example.com' })
+    expect(xml).toContain('<link rel="next" href="https://example.com/feed?page=3"/>')
+    expect(xml).toContain('<link rel="previous" href="https://example.com/feed?page=1"/>')
+    expect(xml).toContain('<link rel="first" href="https://example.com/feed?page=1"/>')
+    expect(xml).toContain('<link rel="last" href="https://example.com/feed?page=10"/>')
+  })
+
+  it('omits paging links when unset', () => {
+    expect(toAtom(complete)).not.toContain('rel="next"')
+  })
+})
+
 describe('Atom customXml/customNamespaces escape hatch', () => {
   it('appends customXml after built-in feed/entry elements and merges customNamespaces', () => {
     const withCustom: FeedInput = {
