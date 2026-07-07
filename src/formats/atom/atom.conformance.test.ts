@@ -126,6 +126,27 @@ describe('Atom XML serialization (RFC 4287 §2)', () => {
   })
 })
 
+describe('Atom icon/logo mapping (RFC 4287 §4.2.8)', () => {
+  const branded: FeedInput = {
+    ...complete,
+    options: {
+      ...complete.options,
+      image: '/logo.png',
+      favicon: '/favicon.ico',
+    },
+  }
+
+  it('maps image to <logo> and favicon to <icon>, absolutized', () => {
+    const xml = toAtom(branded, { baseUrl: 'https://example.com' })
+    expect(xml).toContain('<logo>https://example.com/logo.png</logo>')
+    expect(xml).toContain('<icon>https://example.com/favicon.ico</icon>')
+  })
+
+  it('omits <logo>/<icon> when unset', () => {
+    expect(toAtom(complete)).not.toMatch(/<logo>|<icon>/)
+  })
+})
+
 describe('Atom enclosure mapping (RFC 4287 §4.2.7.2)', () => {
   const withEnclosure: FeedInput = {
     ...complete,
