@@ -1,6 +1,6 @@
 {
   "name": "hono-feed",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "RSS 2.0 / Atom 1.0 / JSON Feed 1.1 response helper for Hono",
   "keywords": [
     "hono",
