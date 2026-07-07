@@ -462,19 +462,58 @@ RSS 1.0 and 1.1 are fully **supported, not deprecated** — reach for them when 
 > They still produce valid output, but each logs a one-time, coded `DeprecationWarning` (`HONOFEED_DEP000N`, see [HONOFEED_DEP.md](HONOFEED_DEP.md) for the full list) — through `process.emitWarning` on Node, or `console.warn` on edge runtimes.  
 > To silence it, set `suppressDeprecationWarnings: true`, the `HONO_FEED_NO_DEPRECATION` env var, or run Node with `--no-deprecation`.
 
-## Extending with custom fields
+## Podcasts
 
-The neutral model is deliberately small — anything outside it (iTunes/Apple Podcasts tags, Media RSS, Dublin Core extras, a namespaced module, custom JSON Feed keys) needs an escape hatch. `customXml` / `customNamespaces` (XML formats) and `customJson` (JSON Feed) are that hatch, on both `FeedOptions` (feed-level) and `FeedItem` (item-level):
+RSS 2.0 gets typed podcast metadata — the iTunes namespace (what Apple Podcasts, Spotify, and most directories require) and the Podcasting 2.0 namespace — via a `podcast` field on `FeedOptions` (feed-level) and `FeedItem` (episode-level). `xmlns:itunes` / `xmlns:podcast` are declared automatically, only when a field from that namespace is actually used somewhere in the feed:
 
 ```ts
 const feed = new Feed({
   title: 'My Show',
   link: 'https://example.com/',
-  customNamespaces: { 'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd' },
-  customXml: [
-    { name: 'itunes:author', text: 'Ada' },
-    { name: 'itunes:image', attrs: { href: 'https://example.com/cover.jpg' } },
-  ],
+  podcast: {
+    author: 'Ada',
+    category: ['Technology'],
+    explicit: false,
+    image: 'https://example.com/cover.jpg',
+    owner: { name: 'Ada', email: 'ada@example.com' },
+    type: 'episodic',
+    // Podcasting 2.0:
+    guid: '917393e3-1b1e-5cef-ace4-edaa54e1f810',
+    locked: true,
+    funding: [{ url: 'https://example.com/support', text: 'Support the show' }],
+  },
+})
+
+feed.addItem({
+  title: 'Episode 1',
+  link: 'https://example.com/1',
+  enclosure: { url: 'https://example.com/1.mp3', type: 'audio/mpeg' },
+  podcast: {
+    duration: 1800, // itunes:duration, in seconds
+    episode: 1,
+    season: 1,
+    episodeType: 'full',
+    // Podcasting 2.0:
+    transcript: [{ url: 'https://example.com/1.vtt', type: 'text/vtt' }],
+    chapters: { url: 'https://example.com/1-chapters.json' },
+  },
+})
+```
+
+`item.podcast.duration` is optional — when unset, `itunes:duration` falls back to the item's `enclosure.duration` ([above](#what-goes-in-a-feed)), so a plain `Enclosure` with a `duration` still reaches podcast directories without repeating it under `podcast`.
+
+`podcast` is ignored outside RSS 2.0 (every other RSS version, Atom, and JSON Feed) — there's no equivalent to map it to. An explicit `customNamespaces` entry for `xmlns:itunes` / `xmlns:podcast` always wins over the automatic declaration.
+
+## Extending with custom fields
+
+The neutral model is deliberately small — anything outside it (Media RSS, Dublin Core extras, a namespaced module hono-feed doesn't model, custom JSON Feed keys) needs an escape hatch. `customXml` / `customNamespaces` (XML formats) and `customJson` (JSON Feed) are that hatch, on both `FeedOptions` (feed-level) and `FeedItem` (item-level):
+
+```ts
+const feed = new Feed({
+  title: 'My Show',
+  link: 'https://example.com/',
+  customNamespaces: { 'xmlns:media': 'http://search.yahoo.com/mrss/' },
+  customXml: [{ name: 'media:rating', text: 'nonadult' }],
 })
 ```
 

@@ -286,7 +286,7 @@ describe('toRSS', () => {
     )
   })
 
-  it('ignores enclosure.duration (no RSS <enclosure> attribute for it)', () => {
+  it('has no <enclosure> attribute for duration (it surfaces via itunes:duration instead — see podcast tests)', () => {
     const out = toRSS({
       options: { title: 't', link: 'https://example.com/' },
       items: [
@@ -300,7 +300,7 @@ describe('toRSS', () => {
     expect(out).toContain(
       '<enclosure url="https://example.com/a.mp3" type="audio/mpeg" length="0"/>',
     )
-    expect(out).not.toContain('1800')
+    expect(out).not.toContain('duration="1800"')
   })
 
   it('omits xmlns:content when no item has content', () => {
