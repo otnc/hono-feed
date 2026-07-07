@@ -504,6 +504,45 @@ feed.addItem({
 
 `podcast` is ignored outside RSS 2.0 (every other RSS version, Atom, and JSON Feed) — there's no equivalent to map it to. An explicit `customNamespaces` entry for `xmlns:itunes` / `xmlns:podcast` always wins over the automatic declaration.
 
+## Feed discovery
+
+Serving a feed is half the story — it also has to be *findable*. `hono-feed/discovery` generates the `<link rel="alternate">` tags browsers and feed readers look for, and an HTTP `Link` header equivalent, from the same MIME-type table `serveFeed` itself uses (so they can never drift apart).
+
+For an HTML `<head>`:
+
+```ts
+// ESM
+import { feedLinksHtml } from 'hono-feed/discovery'
+
+// CJS
+const { feedLinksHtml } = require('hono-feed/discovery')
+
+app.get('/', (c) =>
+  c.html(`
+    <head>
+      ${feedLinksHtml({ title: 'My Blog', rss: '/feed.rss', atom: '/feed.atom' })}
+    </head>
+  `),
+)
+// <link rel="alternate" type="application/rss+xml" title="My Blog" href="/feed.rss">
+// <link rel="alternate" type="application/atom+xml" title="My Blog" href="/feed.atom">
+```
+
+`feedLinks(options)` returns the same data as a plain array (`{ rel, type, href, title? }[]`) instead of a string, for JSX or any other templating you already use. Both accept `baseUrl` to absolutize relative feed URLs; left unset, hrefs stay exactly as given (relative, resolved by the browser against the current page — which is usually what you want).
+
+For the HTTP-header equivalent ([RFC 8288](https://www.rfc-editor.org/rfc/rfc8288)), `feedLinkHeader` is middleware that appends one `Link` header per configured format, but only to responses whose `Content-Type` is HTML — a feed response has no use for advertising its own alternates:
+
+```ts
+// ESM
+import { feedLinkHeader } from 'hono-feed/discovery'
+
+// CJS
+const { feedLinkHeader } = require('hono-feed/discovery')
+
+app.use('*', feedLinkHeader({ rss: '/feed.rss' }))
+// Link: </feed.rss>; rel="alternate"; type="application/rss+xml"
+```
+
 ## WebSub
 
 Two independent halves make up [WebSub](https://www.w3.org/TR/websub/) (formerly PubSubHubbub) support — subscribing readers can discover a hub, and you can tell that hub about new content.
