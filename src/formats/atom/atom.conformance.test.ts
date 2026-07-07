@@ -174,6 +174,48 @@ describe('Atom pagination links (RFC 5005 §3)', () => {
   it('omits paging links when unset', () => {
     expect(toAtom(complete)).not.toContain('rel="next"')
   })
+
+  it('emits link rel="current" for paging.current, absolutized', () => {
+    const withCurrent: FeedInput = {
+      ...complete,
+      options: { ...complete.options, paging: { current: '/feed' } },
+    }
+    const xml = toAtom(withCurrent, { baseUrl: 'https://example.com' })
+    expect(xml).toContain('<link rel="current" href="https://example.com/feed"/>')
+  })
+
+  it('emits <fh:complete/> and declares xmlns:fh for paging.complete', () => {
+    const withComplete: FeedInput = {
+      ...complete,
+      options: { ...complete.options, paging: { complete: true } },
+    }
+    const xml = toAtom(withComplete)
+    expect(xml).toContain('xmlns:fh="http://purl.org/syndication/history/1.0"')
+    expect(xml).toContain('<fh:complete/>')
+    expect(xml).not.toContain('<fh:archive/>')
+  })
+
+  it('emits <fh:archive/> and declares xmlns:fh for paging.archive', () => {
+    const withArchive: FeedInput = {
+      ...complete,
+      options: { ...complete.options, paging: { archive: true } },
+    }
+    const xml = toAtom(withArchive)
+    expect(xml).toContain('xmlns:fh="http://purl.org/syndication/history/1.0"')
+    expect(xml).toContain('<fh:archive/>')
+    expect(xml).not.toContain('<fh:complete/>')
+  })
+
+  it('omits xmlns:fh and any fh:* element when paging has no complete/archive', () => {
+    const withNext: FeedInput = {
+      ...complete,
+      options: { ...complete.options, paging: { next: '/feed?page=2' } },
+    }
+    const xml = toAtom(withNext)
+    expect(xml).not.toContain('xmlns:fh')
+    expect(xml).not.toContain('fh:complete')
+    expect(xml).not.toContain('fh:archive')
+  })
 })
 
 describe('Atom customXml/customNamespaces escape hatch', () => {
