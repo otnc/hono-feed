@@ -1,6 +1,7 @@
 import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { authorList } from '../../utils/author'
 import { latestDate, rfc3339 } from '../../utils/date'
+import { firstEnclosure } from '../../utils/enclosure'
 import { absolutize } from '../../utils/url'
 import { el, type Node, xmlDocument } from '../../utils/xml'
 import { atomAuthorEl } from './author'
@@ -47,13 +48,15 @@ function atomEntry03(item: FeedItem, base?: string): Node {
   for (const a of authorList(item.author)) ch.push(atomAuthorEl(a, 'url'))
 
   // Atom 0.3's link draft defines rel="enclosure" the same way 1.0 (RFC 4287 §4.2.7.2) does.
-  if (item.enclosure) {
+  // Like 1.0, at most one is supported; keep only the first.
+  const enclosure = firstEnclosure(item.enclosure)
+  if (enclosure) {
     ch.push(
       el('link', {
         rel: 'enclosure',
-        href: absolutize(item.enclosure.url, base),
-        type: item.enclosure.type,
-        length: item.enclosure.length !== undefined ? String(item.enclosure.length) : undefined,
+        href: absolutize(enclosure.url, base),
+        type: enclosure.type,
+        length: enclosure.length !== undefined ? String(enclosure.length) : undefined,
       }),
     )
   }

@@ -85,6 +85,8 @@ export interface FeedOptions {
   generator?: string
   /** RSS ttl in minutes. */
   ttl?: number
+  /** JSON Feed `expired` — true tells readers the feed will never update again. */
+  expired?: boolean
   /**
    * Pagination links for a paged feed (RFC 5005 §3 via `link rel`; JSON Feed `next_url`).
    * RSS/Atom emit one `link`/`atom:link` per set field; JSON Feed only maps `next`.
@@ -129,12 +131,18 @@ export interface FeedItem {
   /** Atom updated / JSON date_modified. */
   updated?: Date
   categories?: Category[]
-  /** RSS enclosure / Atom link rel="enclosure" / JSON attachments[0]. */
-  enclosure?: Enclosure
+  /** RSS enclosure (first only) / Atom link rel="enclosure" (first only) / JSON attachments. */
+  enclosure?: Enclosure | Enclosure[]
   /** URL of the item's comments page. RSS `<comments>` only; no Atom/JSON mapping. */
   comments?: string
   /** JSON image. */
   image?: string
+  /** JSON `external_url` — the linkblog pattern: `link` is your post, this is what it links to. */
+  externalUrl?: string
+  /** JSON `banner_image`. */
+  bannerImage?: string
+  /** Per-item language override (JSON Feed 1.1 only). */
+  language?: string
   /** Extra elements appended after the built-in item/entry elements (XML formats only). */
   customXml?: XmlElementSpec[]
   /** Extra keys merged into the JSON Feed item object. A built-in key always wins on collision. */

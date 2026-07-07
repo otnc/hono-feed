@@ -2,6 +2,7 @@ import type { Author, FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { authorList } from '../../utils/author'
 import { rfc3339 } from '../../utils/date'
 import { warnDeprecated } from '../../utils/deprecation'
+import { enclosureList } from '../../utils/enclosure'
 import { absolutize, selfUrl } from '../../utils/url'
 
 export { validateInput } from '../../validate'
@@ -40,6 +41,7 @@ export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): strin
     if (v1) feed.author = jsonAuthor(options.author)
     else feed.authors = [jsonAuthor(options.author)]
   }
+  if (options.expired !== undefined) feed.expired = options.expired
 
   if (options.customJson) mergeCustomJson(feed, options.customJson)
 
@@ -69,6 +71,7 @@ function jsonItem(item: FeedItem, v1: boolean, base?: string): Record<string, un
 
   const url = absolutize(item.link, base)
   if (url) o.url = url
+  if (item.externalUrl) o.external_url = absolutize(item.externalUrl, base)
   o.title = item.title
   if (item.description) o.summary = item.description
   // At least one of content_html / content_text must be present; fall back to the summary text.
@@ -84,15 +87,19 @@ function jsonItem(item: FeedItem, v1: boolean, base?: string): Record<string, un
   }
   if (item.categories?.length) o.tags = item.categories.map((c) => c.term)
   if (item.image) o.image = absolutize(item.image, base)
+  if (item.bannerImage) o.banner_image = absolutize(item.bannerImage, base)
+  // Per-item language is 1.1-only, gated the same way the feed-level language already is.
+  if (item.language && !v1) o.language = item.language
 
-  if (item.enclosure) {
+  const attachments = enclosureList(item.enclosure).map((enclosure) => {
     const attachment: Record<string, unknown> = {
-      url: absolutize(item.enclosure.url, base),
-      mime_type: item.enclosure.type,
+      url: absolutize(enclosure.url, base),
+      mime_type: enclosure.type,
     }
-    if (item.enclosure.length !== undefined) attachment.size_in_bytes = item.enclosure.length
-    o.attachments = [attachment]
-  }
+    if (enclosure.length !== undefined) attachment.size_in_bytes = enclosure.length
+    return attachment
+  })
+  if (attachments.length) o.attachments = attachments
 
   if (item.customJson) mergeCustomJson(o, item.customJson)
 

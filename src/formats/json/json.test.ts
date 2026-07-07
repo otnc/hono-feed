@@ -124,6 +124,78 @@ describe('toJSONFeed', () => {
     ])
   })
 
+  it('maps multiple attachments from an enclosure array; RSS-style single object still works', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: { title: 't', link: 'https://example.com/' },
+        items: [
+          {
+            title: 'a',
+            link: 'https://example.com/1',
+            enclosure: [
+              { url: 'https://example.com/a.mp3', type: 'audio/mpeg', length: 123 },
+              { url: 'https://example.com/a.ogg', type: 'audio/ogg' },
+            ],
+          },
+        ],
+      }),
+    )
+    expect(json.items[0].attachments).toEqual([
+      { url: 'https://example.com/a.mp3', mime_type: 'audio/mpeg', size_in_bytes: 123 },
+      { url: 'https://example.com/a.ogg', mime_type: 'audio/ogg' },
+    ])
+  })
+
+  it('maps external_url, banner_image and expired', () => {
+    const json = JSON.parse(
+      toJSONFeed(
+        {
+          options: { title: 't', link: 'https://example.com/', expired: true },
+          items: [
+            {
+              title: 'a',
+              link: 'https://example.com/1',
+              content: '<p>b</p>',
+              externalUrl: 'https://other.example.com/post',
+              bannerImage: '/banner.png',
+            },
+          ],
+        },
+        { baseUrl: 'https://example.com' },
+      ),
+    )
+    expect(json.expired).toBe(true)
+    expect(json.items[0].external_url).toBe('https://other.example.com/post')
+    expect(json.items[0].banner_image).toBe('https://example.com/banner.png')
+  })
+
+  it('includes per-item language for the default (1.1) version, omits it for 1.0', () => {
+    const build = (jsonFeedVersion?: '1' | '1.1') =>
+      JSON.parse(
+        toJSONFeed(
+          {
+            options: { title: 't', link: 'https://example.com/' },
+            items: [{ title: 'a', link: 'https://example.com/1', content: 'b', language: 'fr' }],
+          },
+          { jsonFeedVersion, suppressDeprecationWarnings: true },
+        ),
+      )
+    expect(build('1.1').items[0].language).toBe('fr')
+    expect(build('1').items[0].language).toBeUndefined()
+  })
+
+  it('omits expired, external_url and banner_image when unset', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: { title: 't', link: 'https://example.com/' },
+        items: [{ title: 'a', link: 'https://example.com/1', content: 'b' }],
+      }),
+    )
+    expect(json.expired).toBeUndefined()
+    expect(json.items[0].external_url).toBeUndefined()
+    expect(json.items[0].banner_image).toBeUndefined()
+  })
+
   it('omits home_page_url and item url when link is absent', () => {
     const json = JSON.parse(
       toJSONFeed({
