@@ -62,6 +62,8 @@ export interface FeedOptions {
   /** RSS managingEditor (email required) / Atom author / JSON authors. */
   author?: Author
   copyright?: string
+  /** RSS channel category / Atom feed category / RDF dc:subject. No JSON Feed equivalent. */
+  categories?: Category[]
   /** RSS image.url / Atom logo / JSON icon. */
   image?: string
   /** Atom icon / JSON favicon. */

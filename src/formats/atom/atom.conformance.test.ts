@@ -126,6 +126,26 @@ describe('Atom XML serialization (RFC 4287 §2)', () => {
   })
 })
 
+describe('Atom feed-level category (RFC 4287 §4.1.1, same element as §4.2.2)', () => {
+  it('emits one <category> per feed-level category', () => {
+    const withFeedCategories: FeedInput = {
+      ...complete,
+      options: {
+        ...complete.options,
+        categories: [{ term: 'tech', scheme: 'https://example.com/cats' }, { term: 'news' }],
+      },
+    }
+    const xml = toAtom(withFeedCategories)
+    expect(xml).toContain('<category term="tech" scheme="https://example.com/cats"/>')
+    expect(xml).toContain('<category term="news"/>')
+  })
+
+  it('omits <category> when unset (the fixture entry has its own, unaffected)', () => {
+    const feedLevel = toAtom(complete).split('<entry>')[0]
+    expect(feedLevel).not.toContain('<category')
+  })
+})
+
 describe('Atom icon/logo mapping (RFC 4287 §4.2.8)', () => {
   const branded: FeedInput = {
     ...complete,
