@@ -95,6 +95,21 @@ describe('toJSONFeed', () => {
     expect(JSON.parse(toJSONFeed(input)).next_url).toBeUndefined()
   })
 
+  it('has no mapping for paging.complete/archive/current (JSON Feed defines none)', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        ...input,
+        options: {
+          ...input.options,
+          paging: { complete: true, current: '/feed' },
+        },
+      }),
+    )
+    expect(json).not.toHaveProperty('complete')
+    expect(json).not.toHaveProperty('current_url')
+    expect(JSON.stringify(json)).not.toContain('fh:')
+  })
+
   it('escapes JSON string content and stays valid (control chars need no stripping here)', () => {
     // Unlike XML, JSON has no forbidden characters: quotes, backslashes and control chars are
     // all representable via escapes, so JSON.stringify keeps them and the output round-trips.

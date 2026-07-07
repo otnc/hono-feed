@@ -78,6 +78,53 @@ describe('toRSS', () => {
     expect(toRSS(input, { feedUrl: 'https://example.com/feed' })).not.toContain('rel="next"')
   })
 
+  it('emits atom:link rel="current" for paging.current, absolutized', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, paging: { current: '/feed' } } },
+      { baseUrl: 'https://example.com', feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('<atom:link href="https://example.com/feed" rel="current"/>')
+  })
+
+  it('emits <fh:complete/> and declares xmlns:fh for paging.complete', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, paging: { complete: true } } },
+      { feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('xmlns:fh="http://purl.org/syndication/history/1.0"')
+    expect(out).toContain('<fh:complete/>')
+    expect(out).not.toContain('<fh:archive/>')
+  })
+
+  it('emits <fh:archive/> and declares xmlns:fh for paging.archive', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, paging: { archive: true } } },
+      { feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('xmlns:fh="http://purl.org/syndication/history/1.0"')
+    expect(out).toContain('<fh:archive/>')
+    expect(out).not.toContain('<fh:complete/>')
+  })
+
+  it('omits xmlns:fh and any fh:* element when paging has no complete/archive', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, paging: { next: '/feed?page=2' } } },
+      { feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).not.toContain('xmlns:fh')
+    expect(out).not.toContain('fh:complete')
+    expect(out).not.toContain('fh:archive')
+  })
+
+  it('does not emit fh:* or xmlns:fh outside RSS 2.0 (gated like the rest of paging)', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, language: 'en', paging: { complete: true } } },
+      { rssVersion: '0.91' },
+    )
+    expect(out).not.toContain('xmlns:fh')
+    expect(out).not.toContain('fh:complete')
+  })
+
   it('appends customXml after built-in channel/item elements and merges customNamespaces', () => {
     const out = toRSS({
       options: {

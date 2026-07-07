@@ -3,7 +3,7 @@ import { firstAuthor } from '../../utils/author'
 import { rfc822 } from '../../utils/date'
 import { firstEnclosure } from '../../utils/enclosure'
 import { hubList } from '../../utils/hub'
-import { pagingRels } from '../../utils/paging'
+import { pagingMarker, pagingRels } from '../../utils/paging'
 import { absolutize, isUrl, selfUrl } from '../../utils/url'
 import { cdata, el, type Node, raw, specToNode, xmlDocument } from '../../utils/xml'
 import {
@@ -73,6 +73,9 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
       for (const { rel, href } of pagingRels(options.paging, base)) {
         channel.push(el('atom:link', { href, rel }))
       }
+      // RFC 5005 §2/§4 — <fh:complete/> or <fh:archive/>; validateInput rejects setting both.
+      const marker = pagingMarker(options.paging)
+      if (marker) channel.push(el(`fh:${marker}`))
     }
     // <managingEditor> requires an email, same rule as the item-level <author> (below).
     const feedAuthor = firstAuthor(options.author)
@@ -107,6 +110,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   const podcastNs = caps.rss20
     ? podcastNamespacesUsed(options, items)
     : { itunes: false, podcast: false }
+  const hasFh = caps.rss20 && options.paging !== undefined && pagingMarker(options.paging)
   const root = el(
     'rss',
     {
@@ -115,6 +119,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
       'xmlns:content': hasContent ? 'http://purl.org/rss/1.0/modules/content/' : undefined,
       'xmlns:itunes': podcastNs.itunes ? ITUNES_NS : undefined,
       'xmlns:podcast': podcastNs.podcast ? PODCAST_NS : undefined,
+      'xmlns:fh': hasFh ? 'http://purl.org/syndication/history/1.0' : undefined,
       ...options.customNamespaces,
     },
     [el('channel', undefined, channel)],

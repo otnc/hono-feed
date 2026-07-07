@@ -16,6 +16,14 @@ export function validateInput(input: FeedInput, format: FeedFormat): void {
   }
   assertValidDate(options.updated, 'feed.updated')
 
+  // RFC 5005 defines <fh:complete/> (§2, "this is the whole feed") and <fh:archive/> (§4,
+  // "this page never changes") for different document types — a page can't be both at once.
+  if (options.paging?.complete && options.paging?.archive) {
+    throw new TypeError(
+      'hono-feed: paging "complete" and "archive" are mutually exclusive (RFC 5005 §2/§4)',
+    )
+  }
+
   if (format === 'atom') {
     if (!options.id && !options.link && !options.feedUrl) {
       throw new TypeError('hono-feed: Atom feed requires "id" (or "link" / "feedUrl")')

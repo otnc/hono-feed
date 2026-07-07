@@ -3,7 +3,7 @@ import { authorList } from '../../utils/author'
 import { latestDate, rfc3339 } from '../../utils/date'
 import { firstEnclosure } from '../../utils/enclosure'
 import { hubList } from '../../utils/hub'
-import { pagingRels } from '../../utils/paging'
+import { pagingMarker, pagingRels } from '../../utils/paging'
 import { absolutize } from '../../utils/url'
 import { el, type Node, specToNode, xmlDocument } from '../../utils/xml'
 import { atomAuthorEl } from './author'
@@ -30,6 +30,9 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
     for (const { rel, href } of pagingRels(options.paging, base)) {
       feed.push(el('link', { rel, href }))
     }
+    // RFC 5005 §2/§4 — <fh:complete/> or <fh:archive/>; validateInput rejects setting both.
+    const marker = pagingMarker(options.paging)
+    if (marker) feed.push(el(`fh:${marker}`))
   }
   if (options.author) feed.push(atomAuthorEl(options.author, 'uri'))
   feed.push(el('generator', undefined, options.generator ?? 'hono-feed'))
@@ -47,10 +50,12 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
 
   for (const item of items) feed.push(atomEntry10(item, base))
 
+  const hasFh = options.paging !== undefined && pagingMarker(options.paging)
   // renderAttrs drops undefined values, so xml:lang simply vanishes when language is unset.
   const attrs = {
     xmlns: 'http://www.w3.org/2005/Atom',
     'xml:lang': options.language,
+    'xmlns:fh': hasFh ? 'http://purl.org/syndication/history/1.0' : undefined,
     ...options.customNamespaces,
   }
   return xmlDocument(el('feed', attrs, feed), { pretty: opts.pretty, version: opts.xmlVersion })
