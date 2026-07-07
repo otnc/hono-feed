@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { FeedInput } from '../types'
 import { feedRenderer } from './index'
 
@@ -21,5 +21,26 @@ describe('feedRenderer', () => {
 
     const over = await app.request('/override')
     expect(over.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
+  })
+
+  it('accepts a lazy async input through c.render', async () => {
+    const app = new Hono()
+    app.use('*', feedRenderer({ format: 'rss' }))
+    app.get('/feed', (c) => c.render(async () => input))
+
+    const res = await app.request('/feed')
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
+  })
+
+  it('honours an etagFrom option through c.render: 304 without resolving input', async () => {
+    const inputFn = vi.fn(() => input)
+    const app = new Hono()
+    app.use('*', feedRenderer())
+    app.get('/feed', (c) => c.render(inputFn, { etagFrom: () => 'rev-1' }))
+
+    const res = await app.request('/feed', { headers: { 'if-none-match': 'W/"rev-1"' } })
+    expect(res.status).toBe(304)
+    expect(inputFn).not.toHaveBeenCalled()
   })
 })
