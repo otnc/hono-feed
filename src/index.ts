@@ -28,3 +28,5 @@ export type {
   XmlVersion,
 } from './types'
 export { validateInput } from './validate'
+export type { NotifyHubOptions, NotifyHubResult } from './websub'
+export { notifyHub } from './websub'
