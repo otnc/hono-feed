@@ -23,13 +23,14 @@ import type {
 import { serializeCacheControl } from './utils/cache-control'
 import { latestDate } from './utils/date'
 import { resolveEtag } from './utils/etag'
+import { FEED_MIME_TYPES } from './utils/mime'
 import { absolutize } from './utils/url'
 import { validateInput } from './validate'
 
 const CONTENT_TYPE: Record<FeedFormat, string> = {
-  rss: 'application/rss+xml; charset=utf-8',
-  atom: 'application/atom+xml; charset=utf-8',
-  json: 'application/feed+json; charset=utf-8',
+  rss: `${FEED_MIME_TYPES.rss}; charset=utf-8`,
+  atom: `${FEED_MIME_TYPES.atom}; charset=utf-8`,
+  json: `${FEED_MIME_TYPES.json}; charset=utf-8`,
 }
 
 const ENCODER = new TextEncoder()
