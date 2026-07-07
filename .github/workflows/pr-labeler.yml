@@ -4,8 +4,11 @@ name: pr-labeler
 # base branch (to main/to others), plus a conflict label from the PR's mergeable state.
 # Runs on PR open/reopen/new-commits/edit (pull_request_target), on new PR comments
 # (issue_comment — issues and PRs share comment infrastructure, so those two jobs guard on
-# github.event.issue.pull_request to skip comments on plain issues), and on push to a base
-# branch (a different PR merging in can newly conflict this one without it getting its own event).
+# github.event.issue.pull_request to skip comments on plain issues), and on push to a base branch
+# (recheck-labels-on-push reconciles every managed label for every open PR targeting that branch,
+# since a push can newly conflict a PR without it getting its own event, and PRs opened before
+# this workflow existed or whose labels drifted never got a pull_request_target/issue_comment
+# event of their own to fix that).
 # Uses pull_request_target (not pull_request) so labeling also works for PRs opened from forks.
 # actions/checkout here defaults to github.sha, i.e. the base branch's own code — never the PR's
 # (possibly untrusted) head — so running scripts/pr-labeler/*.cjs from it is safe.
@@ -48,7 +51,7 @@ jobs:
             const run = require('./scripts/pr-labeler/conflict-label.cjs')
             await run({ github, context })
 
-  recheck-conflicts-on-push:
+  recheck-labels-on-push:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
@@ -56,5 +59,5 @@ jobs:
       - uses: actions/github-script@v7
         with:
           script: |
-            const run = require('./scripts/pr-labeler/recheck-conflicts-on-push.cjs')
+            const run = require('./scripts/pr-labeler/recheck-labels-on-push.cjs')
             await run({ github, context })
