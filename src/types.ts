@@ -85,6 +85,8 @@ export interface FeedOptions {
   generator?: string
   /** RSS ttl in minutes. */
   ttl?: number
+  /** WebSub hub URL(s): RSS/Atom `link rel="hub"`, JSON Feed `hubs`. */
+  hub?: string | string[]
   /** JSON Feed `expired` — true tells readers the feed will never update again. */
   expired?: boolean
   /**

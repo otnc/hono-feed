@@ -3,6 +3,7 @@ import { authorList } from '../../utils/author'
 import { rfc3339 } from '../../utils/date'
 import { warnDeprecated } from '../../utils/deprecation'
 import { enclosureList } from '../../utils/enclosure'
+import { hubList } from '../../utils/hub'
 import { absolutize, selfUrl } from '../../utils/url'
 
 export { validateInput } from '../../validate'
@@ -40,6 +41,10 @@ export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): strin
   if (options.author) {
     if (v1) feed.author = jsonAuthor(options.author)
     else feed.authors = [jsonAuthor(options.author)]
+  }
+  const hubs = hubList(options.hub)
+  if (hubs.length) {
+    feed.hubs = hubs.map((url) => ({ type: 'WebSub', url: absolutize(url, base) }))
   }
   if (options.expired !== undefined) feed.expired = options.expired
 

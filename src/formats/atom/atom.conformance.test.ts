@@ -126,6 +126,30 @@ describe('Atom XML serialization (RFC 4287 §2)', () => {
   })
 })
 
+describe('WebSub hub discovery (W3C WebSub §4)', () => {
+  it('emits one link rel="hub" per hub URL, absolutized', () => {
+    const withHub: FeedInput = {
+      ...complete,
+      options: { ...complete.options, hub: ['/hub1', 'https://hub.example.com/'] },
+    }
+    const xml = toAtom(withHub, { baseUrl: 'https://example.com' })
+    expect(xml).toContain('<link rel="hub" href="https://example.com/hub1"/>')
+    expect(xml).toContain('<link rel="hub" href="https://hub.example.com/"/>')
+  })
+
+  it('accepts a single hub URL as well as an array', () => {
+    const xml = toAtom({
+      ...complete,
+      options: { ...complete.options, hub: 'https://hub.example.com/' },
+    })
+    expect(xml).toContain('<link rel="hub" href="https://hub.example.com/"/>')
+  })
+
+  it('omits hub links when unset', () => {
+    expect(toAtom(complete)).not.toContain('rel="hub"')
+  })
+})
+
 describe('Atom pagination links (RFC 5005 §3)', () => {
   it('emits link rel="next"/"previous"/"first"/"last" for paging, absolutized', () => {
     const withPaging: FeedInput = {

@@ -33,6 +33,24 @@ describe('toRSS', () => {
     expect(xml).toContain('<guid isPermaLink="true">https://example.com/1</guid>')
   })
 
+  it('emits one atom:link rel="hub" per hub URL, absolutized', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, hub: ['/hub1', 'https://hub.example.com/'] } },
+      { baseUrl: 'https://example.com', feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('<atom:link href="https://example.com/hub1" rel="hub"/>')
+    expect(out).toContain('<atom:link href="https://hub.example.com/" rel="hub"/>')
+  })
+
+  it('accepts a single hub URL as well as an array', () => {
+    const out = toRSS({ ...input, options: { ...input.options, hub: 'https://hub.example.com/' } })
+    expect(out).toContain('<atom:link href="https://hub.example.com/" rel="hub"/>')
+  })
+
+  it('omits hub links when unset', () => {
+    expect(toRSS(input)).not.toContain('rel="hub"')
+  })
+
   it('emits atom:link rel="next"/"previous"/"first"/"last" for paging, absolutized', () => {
     const out = toRSS(
       {
