@@ -70,6 +70,30 @@ describe('parseAccept', () => {
   it('defaults q to 1 when the q value is not a number', () => {
     expect(parseAccept('application/json;q=abc')[0].q).toBe(1)
   })
+
+  it('does not split a quoted parameter value on an internal comma', () => {
+    const entries = parseAccept('application/feed+json;profile="a,b";q=0.9, application/atom+xml')
+    expect(entries).toHaveLength(2)
+    const json = entries.find((e) => e.subtype === 'feed+json')
+    expect(json?.params).toEqual({ profile: 'a,b' })
+    expect(json?.q).toBe(0.9)
+    expect(entries.find((e) => e.subtype === 'atom+xml')?.q).toBe(1)
+  })
+
+  it('does not split a quoted parameter value on an internal semicolon', () => {
+    const entries = parseAccept('application/json;profile="a;b";q=0.7')
+    expect(entries[0].params).toEqual({ profile: 'a;b' })
+    expect(entries[0].q).toBe(0.7)
+  })
+
+  it('unescapes a backslash-escaped quote inside a quoted parameter value', () => {
+    const entries = parseAccept(String.raw`application/json;profile="a\"b"`)
+    expect(entries[0].params).toEqual({ profile: 'a"b' })
+  })
+
+  it('leaves an unquoted parameter value untouched', () => {
+    expect(parseAccept('text/html;charset=utf-8')[0].params).toEqual({ charset: 'utf-8' })
+  })
 })
 
 describe('formatFromQuery', () => {
