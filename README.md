@@ -504,6 +504,34 @@ feed.addItem({
 
 `podcast` is ignored outside RSS 2.0 (every other RSS version, Atom, and JSON Feed) — there's no equivalent to map it to. An explicit `customNamespaces` entry for `xmlns:itunes` / `xmlns:podcast` always wins over the automatic declaration.
 
+## WebSub
+
+Two independent halves make up [WebSub](https://www.w3.org/TR/websub/) (formerly PubSubHubbub) support — subscribing readers can discover a hub, and you can tell that hub about new content.
+
+**Discovery** — `hub` on `FeedOptions` emits `rel="hub"` links so readers know where to subscribe (RSS/Atom `<atom:link rel="hub">`, JSON Feed `hubs`):
+
+```ts
+const feed = new Feed({
+  title: 'My Blog',
+  link: 'https://example.com/',
+  hub: 'https://pubsubhubbub.appspot.com/', // or string[] for more than one hub
+})
+```
+
+**Notification** — `notifyHub()` sends the hub the WebSub §5 "publish" ping after you publish or update content, so subscribers get it in real time instead of waiting for their next poll:
+
+```ts
+import { notifyHub } from 'hono-feed'
+
+const results = await notifyHub(
+  'https://pubsubhubbub.appspot.com/', // hub(s) — string or string[]
+  'https://example.com/feed.rss', // feed URL(s) that changed — string or string[]
+)
+// [{ hub: 'https://pubsubhubbub.appspot.com/', ok: true, status: 204 }]
+```
+
+`notifyHub` never throws — a non-2xx response, a network error, and an aborted request (pass `{ signal }` to time one out) are all reported as a result rather than a rejection, so one unreachable hub can't fail your publish flow. Subscribers still get the update on their next poll either way.
+
 ## Extending with custom fields
 
 The neutral model is deliberately small — anything outside it (Media RSS, Dublin Core extras, a namespaced module hono-feed doesn't model, custom JSON Feed keys) needs an escape hatch. `customXml` / `customNamespaces` (XML formats) and `customJson` (JSON Feed) are that hatch, on both `FeedOptions` (feed-level) and `FeedItem` (item-level):
