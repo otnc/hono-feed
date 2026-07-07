@@ -46,5 +46,17 @@ function atomEntry03(item: FeedItem, base?: string): Node {
 
   for (const a of authorList(item.author)) ch.push(atomAuthorEl(a, 'url'))
 
+  // Atom 0.3's link draft defines rel="enclosure" the same way 1.0 (RFC 4287 §4.2.7.2) does.
+  if (item.enclosure) {
+    ch.push(
+      el('link', {
+        rel: 'enclosure',
+        href: absolutize(item.enclosure.url, base),
+        type: item.enclosure.type,
+        length: item.enclosure.length !== undefined ? String(item.enclosure.length) : undefined,
+      }),
+    )
+  }
+
   return el('entry', undefined, ch)
 }

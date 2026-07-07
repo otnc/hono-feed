@@ -58,5 +58,17 @@ function atomEntry10(item: FeedItem, base?: string): Node {
     }
   }
 
+  // RFC 4287 §4.2.7.2: rel="enclosure" identifies a related, potentially large resource.
+  if (item.enclosure) {
+    ch.push(
+      el('link', {
+        rel: 'enclosure',
+        href: absolutize(item.enclosure.url, base),
+        type: item.enclosure.type,
+        length: item.enclosure.length !== undefined ? String(item.enclosure.length) : undefined,
+      }),
+    )
+  }
+
   return el('entry', undefined, ch)
 }

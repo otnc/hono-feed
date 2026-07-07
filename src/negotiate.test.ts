@@ -7,6 +7,7 @@ import {
   isRssVersion,
   negotiateFormat,
   parseAccept,
+  rejectsAllFormats,
   versionFromQuery,
 } from './negotiate'
 
@@ -110,6 +111,34 @@ describe('negotiateFormat', () => {
 
   it('a q=0 entry for an unmapped type is a no-op (does not reject anything)', () => {
     expect(negotiateFormat('text/plain;q=0, application/json', 'rss')).toBe('json')
+  })
+})
+
+describe('rejectsAllFormats', () => {
+  it('true for a q=0 wildcard', () => {
+    expect(rejectsAllFormats('*/*;q=0')).toBe(true)
+    expect(rejectsAllFormats('application/*;q=0')).toBe(true)
+  })
+
+  it('true when every known format is individually rejected at q=0', () => {
+    expect(
+      rejectsAllFormats(
+        'application/rss+xml;q=0, application/atom+xml;q=0, application/feed+json;q=0, application/json;q=0',
+      ),
+    ).toBe(true)
+  })
+
+  it('false when at least one format is still acceptable', () => {
+    expect(rejectsAllFormats('application/rss+xml;q=0, application/atom+xml')).toBe(false)
+  })
+
+  it('false for an absent or empty header — that is "no match", not a rejection', () => {
+    expect(rejectsAllFormats(undefined)).toBe(false)
+    expect(rejectsAllFormats(null)).toBe(false)
+  })
+
+  it('false when the header simply mentions unrelated types', () => {
+    expect(rejectsAllFormats('text/html')).toBe(false)
   })
 })
 
