@@ -5,6 +5,8 @@ import { warnDeprecated } from '../../utils/deprecation'
 import { enclosureList } from '../../utils/enclosure'
 import { absolutize, selfUrl } from '../../utils/url'
 
+export { validateInput } from '../../validate'
+
 /** Serialize the neutral model to a JSON Feed 1.1 string. */
 export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): string {
   const { options, items } = input
@@ -33,11 +35,15 @@ export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): strin
   if (options.language && !v1) feed.language = options.language
   if (options.image) feed.icon = absolutize(options.image, base)
   if (options.favicon) feed.favicon = absolutize(options.favicon, base)
+  // JSON Feed only has next_url; there's no equivalent for prev/first/last.
+  if (options.paging?.next) feed.next_url = absolutize(options.paging.next, base)
   if (options.author) {
     if (v1) feed.author = jsonAuthor(options.author)
     else feed.authors = [jsonAuthor(options.author)]
   }
   if (options.expired !== undefined) feed.expired = options.expired
+
+  if (options.customJson) mergeCustomJson(feed, options.customJson)
 
   feed.items = items.map((item) => jsonItem(item, v1, base))
 
@@ -48,6 +54,13 @@ function jsonAuthor(a: Author): Record<string, string> {
   const o: Record<string, string> = { name: a.name }
   if (a.url) o.url = a.url
   return o
+}
+
+// A built-in key always wins on collision — customJson can only add keys, not override them.
+function mergeCustomJson(target: Record<string, unknown>, custom: Record<string, unknown>): void {
+  for (const [key, value] of Object.entries(custom)) {
+    if (!(key in target)) target[key] = value
+  }
 }
 
 function jsonItem(item: FeedItem, v1: boolean, base?: string): Record<string, unknown> {
@@ -87,6 +100,8 @@ function jsonItem(item: FeedItem, v1: boolean, base?: string): Record<string, un
     return attachment
   })
   if (attachments.length) o.attachments = attachments
+
+  if (item.customJson) mergeCustomJson(o, item.customJson)
 
   return o
 }

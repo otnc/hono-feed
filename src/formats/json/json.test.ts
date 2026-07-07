@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FeedInput } from '../../types'
-import { toJSONFeed } from './index'
+import { toJSONFeed, validateInput } from './index'
 
 const input: FeedInput = {
   options: { title: 'example blog', link: 'https://example.com/' },
@@ -15,6 +15,32 @@ const input: FeedInput = {
 }
 
 describe('toJSONFeed', () => {
+  it('merges customJson (feed and item level), and a built-in key always wins on collision', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: {
+          ...input.options,
+          customJson: { _custom: 'feed-value', title: 'should not win' },
+        },
+        items: [
+          {
+            ...input.items[0],
+            customJson: { _custom: 'item-value', title: 'should not win either' },
+          },
+        ],
+      }),
+    )
+    expect(json._custom).toBe('feed-value')
+    expect(json.title).toBe('example blog')
+    expect(json.items[0]._custom).toBe('item-value')
+    expect(json.items[0].title).toBe('post 1')
+  })
+
+  it('has no customJson → output unaffected', () => {
+    const json = JSON.parse(toJSONFeed(input))
+    expect(Object.keys(json)).not.toContain('_custom')
+  })
+
   it('emits version 1.1 and array items', () => {
     const json = JSON.parse(toJSONFeed(input))
     expect(json.version).toBe('https://jsonfeed.org/version/1.1')
@@ -27,6 +53,24 @@ describe('toJSONFeed', () => {
     expect(JSON.parse(toJSONFeed(input, { jsonFeedVersion: '1' })).version).toBe(
       'https://jsonfeed.org/version/1',
     )
+  })
+
+  it('maps paging.next to next_url, absolutized; other paging fields have no JSON mapping', () => {
+    const json = JSON.parse(
+      toJSONFeed(
+        {
+          ...input,
+          options: { ...input.options, paging: { next: '/feed?page=2', prev: '/feed' } },
+        },
+        { baseUrl: 'https://example.com' },
+      ),
+    )
+    expect(json.next_url).toBe('https://example.com/feed?page=2')
+    expect(json.prev_url).toBeUndefined()
+  })
+
+  it('omits next_url when paging.next is unset', () => {
+    expect(JSON.parse(toJSONFeed(input)).next_url).toBeUndefined()
   })
 
   it('escapes JSON string content and stays valid (control chars need no stripping here)', () => {
@@ -250,5 +294,13 @@ describe('toJSONFeed', () => {
         items: [{ title: 'a', content: '<p>b</p>' }],
       }),
     ).toThrow(/requires "id"/)
+  })
+})
+
+describe('validateInput (re-exported for this subpath)', () => {
+  it('is importable alongside toJSONFeed', () => {
+    expect(() => validateInput({ options: { title: '' }, items: [] }, 'json')).toThrow(
+      /feed "title" is required/,
+    )
   })
 })

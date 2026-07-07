@@ -17,5 +17,7 @@ export type {
   RssVersion,
   SerializeOptions,
   ServeFeedOptions,
+  XmlElementSpec,
   XmlVersion,
 } from './types'
+export { validateInput } from './validate'

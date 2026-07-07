@@ -2,8 +2,9 @@ import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { firstAuthor } from '../../utils/author'
 import { rfc822 } from '../../utils/date'
 import { firstEnclosure } from '../../utils/enclosure'
+import { pagingRels } from '../../utils/paging'
 import { absolutize, isUrl, selfUrl } from '../../utils/url'
-import { cdata, el, type Node, raw, xmlDocument } from '../../utils/xml'
+import { cdata, el, type Node, raw, specToNode, xmlDocument } from '../../utils/xml'
 
 // `<rss version="…">` structure (Netscape/UserLand lineage: 0.91 / 0.92 / 0.93 / 0.94 / 2.0).
 //
@@ -44,12 +45,34 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   channel.push(el('description', undefined, options.description ?? ''))
   if (options.language) channel.push(el('language', undefined, options.language))
   if (options.copyright) channel.push(el('copyright', undefined, options.copyright))
+  // Channel <category> arrived in 0.92 alongside the item-level element (same rules apply).
+  if (caps.itemRich092 && options.categories) {
+    for (const cat of options.categories) {
+      channel.push(el('category', { domain: cat.scheme }, cat.term))
+    }
+  }
   if (options.updated) channel.push(el('lastBuildDate', undefined, rfc822(options.updated)))
   if (caps.rss20) {
     channel.push(el('generator', undefined, options.generator ?? 'hono-feed'))
     if (options.ttl !== undefined) channel.push(el('ttl', undefined, String(options.ttl)))
     if (self) {
       channel.push(el('atom:link', { href: self, rel: 'self', type: 'application/rss+xml' }))
+    }
+    if (options.paging) {
+      for (const { rel, href } of pagingRels(options.paging, base)) {
+        channel.push(el('atom:link', { href, rel }))
+      }
+    }
+    // <managingEditor> requires an email, same rule as the item-level <author> (below).
+    const feedAuthor = firstAuthor(options.author)
+    if (feedAuthor?.email) {
+      channel.push(
+        el(
+          'managingEditor',
+          undefined,
+          feedAuthor.name ? `${feedAuthor.email} (${feedAuthor.name})` : feedAuthor.email,
+        ),
+      )
     }
   }
 
@@ -61,6 +84,9 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
     channel.push(el('image', undefined, img))
   }
 
+  // Escape hatch: appended unconditionally (no caps gating) — the caller opted in explicitly.
+  if (options.customXml) channel.push(...options.customXml.map(specToNode))
+
   for (const item of items) channel.push(rssItem(item, caps, base))
 
   const hasContent = caps.rss20 && items.some((item) => item.content != null)
@@ -70,6 +96,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
       version,
       'xmlns:atom': caps.rss20 ? 'http://www.w3.org/2005/Atom' : undefined,
       'xmlns:content': hasContent ? 'http://purl.org/rss/1.0/modules/content/' : undefined,
+      ...options.customNamespaces,
     },
     [el('channel', undefined, channel)],
   )
@@ -98,6 +125,9 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
   if (item.description) ch.push(el('description', undefined, raw(cdata(item.description))))
   if (caps.rss20 && item.content)
     ch.push(el('content:encoded', undefined, raw(cdata(item.content))))
+  if (caps.itemRich092 && item.comments) {
+    ch.push(el('comments', undefined, absolutize(item.comments, base)))
+  }
 
   // RSS author requires an email; skip when absent.
   if (caps.rss20) {
@@ -126,6 +156,8 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
       }),
     )
   }
+
+  if (item.customXml) ch.push(...item.customXml.map(specToNode))
 
   return el('item', undefined, ch)
 }
