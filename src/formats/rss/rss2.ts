@@ -93,7 +93,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
 
   for (const item of items) channel.push(rssItem(item, caps, base))
 
-  const hasContent = caps.rss20 && items.some((item) => item.content != null)
+  const hasContent = caps.rss20 && items.some((item) => item.content)
   const root = el(
     'rss',
     {

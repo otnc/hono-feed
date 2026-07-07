@@ -46,7 +46,7 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
   }
   nodes.push(...itemNodes)
 
-  const hasContent = items.some((item) => item.content != null)
+  const hasContent = items.some((item) => item.content)
   const root = el(
     'rdf:RDF',
     {
