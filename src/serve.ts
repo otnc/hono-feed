@@ -132,6 +132,8 @@ function serveWithEtagFrom(
       headers['Cache-Control'] =
         typeof cacheControl === 'string' ? cacheControl : serializeCacheControl(cacheControl)
     }
+    // RFC 9110 §15.4.5: a 304 MUST carry the same Vary a 200 for this request would have.
+    if (negotiation.negotiated) headers.Vary = 'Accept'
     return c.body(null, 304, headers)
   }
   return resolveInput(input, (resolved) =>

@@ -581,6 +581,26 @@ describe('serveFeed: etagFrom', () => {
     expect(inputFn).not.toHaveBeenCalled()
   })
 
+  it('carries Vary: Accept on the 304 short-circuit when the format was negotiated', async () => {
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, buildFeed(), { etagFrom: () => 'rev-vary' }))
+    const res = await a.request('/feed', {
+      headers: { accept: 'application/atom+xml', 'if-none-match': 'W/"rev-vary"' },
+    })
+    expect(res.status).toBe(304)
+    expect(res.headers.get('vary')).toBe('Accept')
+  })
+
+  it('omits Vary on the 304 short-circuit when the format was not negotiated (explicit format)', async () => {
+    const a = new Hono()
+    a.get('/feed', (c) =>
+      serveFeed(c, buildFeed(), { format: 'rss', etagFrom: () => 'rev-novary' }),
+    )
+    const res = await a.request('/feed', { headers: { 'if-none-match': 'W/"rev-novary"' } })
+    expect(res.status).toBe(304)
+    expect(res.headers.get('vary')).toBeNull()
+  })
+
   it('a weak-compared match (bare quoted tag) still short-circuits', async () => {
     const inputFn = vi.fn(() => buildFeed())
     const a = new Hono()

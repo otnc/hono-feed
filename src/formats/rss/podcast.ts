@@ -136,7 +136,8 @@ export function podcastItemNodes(
     nodes.push(
       el('podcast:chapters', {
         url: absolutize(podcast.chapters.url, base),
-        type: podcast.chapters.type,
+        // `type` is required by the Podcasting 2.0 namespace; default per PodcastChapters' doc.
+        type: podcast.chapters.type ?? 'application/json+chapters',
       }),
     )
   }
