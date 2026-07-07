@@ -24,6 +24,11 @@ export function validateInput(input: FeedInput, format: FeedFormat): void {
     )
   }
 
+  // RSS <skipHours> holds GMT hours (0–23).
+  if (options.skipHours?.some((hour) => !Number.isInteger(hour) || hour < 0 || hour > 23)) {
+    throw new TypeError('hono-feed: "skipHours" values must be integers between 0 and 23')
+  }
+
   if (format === 'atom') {
     if (!options.id && !options.link && !options.feedUrl) {
       throw new TypeError('hono-feed: Atom feed requires "id" (or "link" / "feedUrl")')

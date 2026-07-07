@@ -238,6 +238,92 @@ describe('toRSS', () => {
     expect(out).toContain('<managingEditor>otnc@example.com</managingEditor>')
   })
 
+  it('emits channel webMaster from options.webmaster when email is present', () => {
+    const out = toRSS({
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        webmaster: { name: 'otnc', email: 'web@example.com' },
+      },
+      items: [],
+    })
+    expect(out).toContain('<webMaster>web@example.com (otnc)</webMaster>')
+  })
+
+  it('emits channel webMaster with just the email when webmaster has no name', () => {
+    const out = toRSS({
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        webmaster: { name: '', email: 'web@example.com' },
+      },
+      items: [],
+    })
+    expect(out).toContain('<webMaster>web@example.com</webMaster>')
+  })
+
+  it('omits channel webMaster when options.webmaster has no email', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/', webmaster: { name: 'otnc' } },
+      items: [],
+    })
+    expect(out).not.toContain('<webMaster>')
+  })
+
+  it('emits webMaster, docs, skipHours and skipDays on RSS 0.91 too (available since Netscape 0.91)', () => {
+    const out = toRSS(
+      {
+        options: {
+          title: 't',
+          link: 'https://example.com/',
+          language: 'en',
+          webmaster: { name: 'otnc', email: 'web@example.com' },
+          docs: true,
+          skipHours: [0, 23],
+          skipDays: ['Saturday', 'Sunday'],
+        },
+        items: [],
+      },
+      { rssVersion: '0.91' },
+    )
+    expect(out).toContain('<webMaster>web@example.com (otnc)</webMaster>')
+    expect(out).toContain('<docs>https://www.rssboard.org/rss-specification</docs>')
+    expect(out).toContain('<skipHours><hour>0</hour><hour>23</hour></skipHours>')
+    expect(out).toContain('<skipDays><day>Saturday</day><day>Sunday</day></skipDays>')
+  })
+
+  it('docs: true emits the canonical RSS 2.0 spec URL', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/', docs: true },
+      items: [],
+    })
+    expect(out).toContain('<docs>https://www.rssboard.org/rss-specification</docs>')
+  })
+
+  it('docs: a string emits that URL as-is', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/', docs: 'https://example.com/rss-docs' },
+      items: [],
+    })
+    expect(out).toContain('<docs>https://example.com/rss-docs</docs>')
+  })
+
+  it('omits docs, skipHours and skipDays when unset', () => {
+    const out = toRSS({ options: { title: 't', link: 'https://example.com/' }, items: [] })
+    expect(out).not.toContain('<docs>')
+    expect(out).not.toContain('<skipHours>')
+    expect(out).not.toContain('<skipDays>')
+  })
+
+  it('omits skipHours/skipDays entirely for an empty array', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/', skipHours: [], skipDays: [] },
+      items: [],
+    })
+    expect(out).not.toContain('<skipHours>')
+    expect(out).not.toContain('<skipDays>')
+  })
+
   it('emits item <comments>, absolutized, gated the same as category/enclosure (0.92+)', () => {
     const withComments: FeedInput = {
       options: { title: 't', link: 'https://example.com/', language: 'en' },

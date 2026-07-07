@@ -60,6 +60,40 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
     }
   }
   if (options.updated) channel.push(el('lastBuildDate', undefined, rfc822(options.updated)))
+  // webMaster/docs/skipHours/skipDays are part of the format since Netscape 0.91; ungated here
+  // like language/copyright above (unlike managingEditor below, kept 2.0-only for now).
+  if (options.webmaster?.email) {
+    channel.push(
+      el('webMaster', undefined, emailLine(options.webmaster.email, options.webmaster.name)),
+    )
+  }
+  if (options.docs) {
+    channel.push(
+      el(
+        'docs',
+        undefined,
+        options.docs === true ? 'https://www.rssboard.org/rss-specification' : options.docs,
+      ),
+    )
+  }
+  if (options.skipHours?.length) {
+    channel.push(
+      el(
+        'skipHours',
+        undefined,
+        options.skipHours.map((hour) => el('hour', undefined, String(hour))),
+      ),
+    )
+  }
+  if (options.skipDays?.length) {
+    channel.push(
+      el(
+        'skipDays',
+        undefined,
+        options.skipDays.map((day) => el('day', undefined, day)),
+      ),
+    )
+  }
   if (caps.rss20) {
     channel.push(el('generator', undefined, options.generator ?? 'hono-feed'))
     if (options.ttl !== undefined) channel.push(el('ttl', undefined, String(options.ttl)))
@@ -80,13 +114,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
     // <managingEditor> requires an email, same rule as the item-level <author> (below).
     const feedAuthor = firstAuthor(options.author)
     if (feedAuthor?.email) {
-      channel.push(
-        el(
-          'managingEditor',
-          undefined,
-          feedAuthor.name ? `${feedAuthor.email} (${feedAuthor.name})` : feedAuthor.email,
-        ),
-      )
+      channel.push(el('managingEditor', undefined, emailLine(feedAuthor.email, feedAuthor.name)))
     }
   }
 
@@ -127,6 +155,13 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   return xmlDocument(root, { pretty: opts.pretty, version: opts.xmlVersion })
 }
 
+// "email (name)" when name is present, otherwise the bare email — shared by managingEditor,
+// webMaster, and item <author>, all of which require an email (checked by the caller) and
+// treat the name as optional.
+function emailLine(email: string, name: string | undefined): string {
+  return name ? `${email} (${name})` : email
+}
+
 function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
   const ch: Node[] = []
   ch.push(el('title', undefined, item.title))
@@ -157,9 +192,7 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
   if (caps.rss20) {
     const author = firstAuthor(item.author)
     if (author?.email) {
-      ch.push(
-        el('author', undefined, author.name ? `${author.email} (${author.name})` : author.email),
-      )
+      ch.push(el('author', undefined, emailLine(author.email, author.name)))
     }
   }
 

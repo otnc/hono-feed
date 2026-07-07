@@ -212,6 +212,20 @@ export interface FeedOptions {
   customJson?: Record<string, unknown>
   /** Podcast metadata (iTunes + Podcasting 2.0 namespaces). RSS 2.0 only — see `FeedPodcast`. */
   podcast?: FeedPodcast
+  /** RSS `webMaster` (email required, same rule as `author`/`managingEditor`). No Atom/JSON equivalent. Available since RSS 0.91. */
+  webmaster?: Author
+  /**
+   * RSS `docs` — a URL pointing at the documentation for the RSS format itself (not your feed).
+   * `true` emits the canonical RSS 2.0 spec URL; a string emits that URL as-is. No Atom/JSON
+   * equivalent. Available since RSS 0.91.
+   */
+  docs?: boolean | string
+  /** RSS `skipHours` — hours (0–23, GMT) when readers can skip polling. No Atom/JSON equivalent. Available since RSS 0.91. */
+  skipHours?: number[]
+  /** RSS `skipDays` — days when readers can skip polling. No Atom/JSON equivalent. Available since RSS 0.91. */
+  skipDays?: Array<
+    'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday'
+  >
 }
 
 export interface FeedItem {
