@@ -601,6 +601,23 @@ paging: {
 
 Like the rest of `paging`, `complete`/`archive`/`current` are RSS 2.0 / Atom 1.0 only; JSON Feed has no mapping for any of them.
 
+## RSS channel extras
+
+A handful of `<channel>` elements have no equivalent in Atom or JSON Feed, so they're plain `FeedOptions` fields rather than part of the shared model — available in every `<rss version="…">` structure (0.91 through 2.0), same as `language`/`copyright`:
+
+```ts
+const feed = new Feed({
+  title: 'My Blog',
+  link: 'https://example.com/',
+  webmaster: { name: 'Ada', email: 'webmaster@example.com' }, // <webMaster> — email required, like author
+  docs: true, // <docs> — true emits the canonical RSS 2.0 spec URL; a string emits it as-is
+  skipHours: [0, 1, 2], // <skipHours><hour>…</hour></skipHours> — GMT hours (0–23) readers can skip
+  skipDays: ['Saturday', 'Sunday'], // <skipDays><day>…</day></skipDays>
+})
+```
+
+`skipHours` values outside 0–23 throw. `textInput` and `cloud` (rssCloud) are deliberately not modeled — `textInput` is essentially unused in the wild, and `cloud` is superseded in practice by the WebSub support [above](#websub); reach for `customXml` if you need either.
+
 ## Extending with custom fields
 
 The neutral model is deliberately small — anything outside it (Media RSS, Dublin Core extras, a namespaced module hono-feed doesn't model, custom JSON Feed keys) needs an escape hatch. `customXml` / `customNamespaces` (XML formats) and `customJson` (JSON Feed) are that hatch, on both `FeedOptions` (feed-level) and `FeedItem` (item-level):
