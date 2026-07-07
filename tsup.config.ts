@@ -5,6 +5,7 @@ export default defineConfig({
     index: 'src/index.ts',
     'middleware/index': 'src/middleware/index.ts',
     'renderer/index': 'src/renderer/index.ts',
+    'discovery/index': 'src/discovery/index.ts',
     'formats/rss': 'src/formats/rss/index.ts',
     'formats/atom': 'src/formats/atom/index.ts',
     'formats/json': 'src/formats/json/index.ts',

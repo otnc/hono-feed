@@ -56,6 +56,16 @@
         "default": "./dist/renderer/index.cjs"
       }
     },
+    "./discovery": {
+      "import": {
+        "types": "./dist/discovery/index.d.ts",
+        "default": "./dist/discovery/index.js"
+      },
+      "require": {
+        "types": "./dist/discovery/index.d.cts",
+        "default": "./dist/discovery/index.cjs"
+      }
+    },
     "./rss": {
       "import": {
         "types": "./dist/formats/rss.d.ts",
