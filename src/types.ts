@@ -49,10 +49,13 @@ export interface Enclosure {
 /**
  * A JSON-shaped XML element tree for the `customXml` escape hatch. Attribute values and
  * `text` are escaped exactly like built-in elements — this isn't raw string injection.
+ * `name` and attribute keys are structural, not content, so they're validated against the XML
+ * `Name` production instead (a `TypeError` on violation) rather than escaped.
  */
 export interface XmlElementSpec {
-  /** Element name, e.g. `'itunes:author'`. */
+  /** Element name, e.g. `'itunes:author'`. Must match the XML `Name` production. */
   name: string
+  /** Keys must match the XML `Name` production. */
   attrs?: Record<string, string | number | boolean | undefined>
   /** Nested elements. When set, `text` is ignored. */
   children?: XmlElementSpec[]

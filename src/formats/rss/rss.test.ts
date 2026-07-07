@@ -102,6 +102,18 @@ describe('toRSS', () => {
     expect(out).toContain('<x:extra>v</x:extra>')
   })
 
+  it('rejects a customXml element name that is not a valid XML Name (no raw markup injection)', () => {
+    expect(() =>
+      toRSS({
+        ...input,
+        options: {
+          ...input.options,
+          customXml: [{ name: 'x><script>alert(1)</script><x', text: 'hi' }],
+        },
+      }),
+    ).toThrow(TypeError)
+  })
+
   it('has no custom fields → output unaffected', () => {
     expect(toRSS(input, { feedUrl: 'https://example.com/feed' })).not.toContain('itunes')
   })
