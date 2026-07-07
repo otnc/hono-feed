@@ -33,7 +33,7 @@ export function toRSS11(input: FeedInput, opts: SerializeOptions): string {
   // Escape hatch: appended unconditionally — RDF has no per-element gating to opt out of.
   if (options.customXml) channel.push(...options.customXml.map(specToNode))
 
-  const hasContent = items.some((item) => item.content != null)
+  const hasContent = items.some((item) => item.content)
   const root = el(
     'Channel',
     {

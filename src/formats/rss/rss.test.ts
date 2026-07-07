@@ -294,6 +294,15 @@ describe('toRSS', () => {
     expect(out).not.toContain('xmlns:content')
   })
 
+  it('omits xmlns:content when the only content is an empty string (no <content:encoded> either)', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a', link: 'https://example.com/1', content: '' }],
+    })
+    expect(out).not.toContain('xmlns:content')
+    expect(out).not.toContain('content:encoded')
+  })
+
   it('emits the version attribute for 0.93 / 0.94', () => {
     expect(toRSS(input, { rssVersion: '0.94' })).toContain('<rss version="0.94"')
   })
@@ -324,6 +333,20 @@ describe('toRSS', () => {
     expect(out).toContain('rdf:about="https://example.com/feed"')
     expect(out).toContain('<item rdf:about="https://example.com/1">')
     expect(out).not.toContain('rdf:Seq')
+  })
+
+  it('RSS 1.0/1.1: omits xmlns:content when the only content is an empty string', () => {
+    const emptyContent: FeedInput = {
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a', link: 'https://example.com/1', content: '' }],
+    }
+    const rss10 = toRSS(emptyContent, { rssVersion: '1.0', feedUrl: 'https://example.com/feed' })
+    expect(rss10).not.toContain('xmlns:content')
+    expect(rss10).not.toContain('content:encoded')
+
+    const rss11 = toRSS(emptyContent, { rssVersion: '1.1', feedUrl: 'https://example.com/feed' })
+    expect(rss11).not.toContain('xmlns:content')
+    expect(rss11).not.toContain('content:encoded')
   })
 
   it('RDF (1.0/1.1): feed-level customXml/customNamespaces are supported, no item-level', () => {
