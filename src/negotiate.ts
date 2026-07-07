@@ -109,32 +109,46 @@ export function parseAccept(header: string | null | undefined): AcceptEntry[] {
   })
 }
 
-// `'all'` means a wildcard (defer to defaultFormat).
+// `'all'` means a wildcard (`*/*` or `application/*`), applying to every format at once.
 function resolveEntry(e: AcceptEntry): FeedFormat | 'all' | null {
   if (e.type === '*' && e.subtype === '*') return 'all'
   if (e.type === 'application' && e.subtype === '*') return 'all'
   return MIME_FORMAT[`${e.type}/${e.subtype}`] ?? null
 }
 
-// Formats explicitly rejected (q=0) by the Accept header's entries. `'all'` (a `*/*` or
-// `application/*` wildcard at q=0) rejects every format at once.
-function rejectedFormats(entries: AcceptEntry[]): Set<FeedFormat> {
-  const rejected = new Set<FeedFormat>()
+/**
+ * Per-format effective q, per RFC 9110 §12.5.1: the media range with the highest precedence
+ * (most specific match) determines the quality value, regardless of q — an exact match
+ * (`application/rss+xml`) always outranks a wildcard (any-type) for that format, even at q=0.
+ * A format with no matching entry at all is left out of the map ("no opinion"), distinct from
+ * an entry that matches it at q=0 (an explicit rejection).
+ *
+ * Ties (same specificity, same format) keep whichever entry `parseAccept` sorted first — q
+ * desc, so the higher-q entry wins; this only matters for the pathological case of a client
+ * listing the same effective format twice (e.g. both `application/xml` and
+ * `application/rss+xml`, which are synonyms in `MIME_FORMAT`).
+ */
+function effectiveQs(entries: AcceptEntry[]): Map<FeedFormat, number> {
+  const best = new Map<FeedFormat, { specificity: number; q: number }>()
+  const consider = (format: FeedFormat, spec: number, q: number) => {
+    const current = best.get(format)
+    if (!current || spec > current.specificity) best.set(format, { specificity: spec, q })
+  }
   for (const e of entries) {
-    if (e.q !== 0) continue
     const r = resolveEntry(e)
+    const spec = specificity(e)
     if (r === 'all') {
-      rejected.add('rss')
-      rejected.add('atom')
-      rejected.add('json')
+      for (const format of FEED_FORMATS) consider(format, spec, e.q)
     } else if (r) {
-      rejected.add(r)
+      consider(r, spec, e.q)
     }
   }
-  return rejected
+  const qs = new Map<FeedFormat, number>()
+  for (const [format, { q }] of best) qs.set(format, q)
+  return qs
 }
 
-/** Negotiate a format from the Accept header, honouring `q=0` rejections. */
+/** Negotiate a format from the Accept header, honouring RFC 9110 §12.5.1 precedence. */
 export function negotiateFormat(
   header: string | null | undefined,
   defaultFormat: FeedFormat,
@@ -142,16 +156,43 @@ export function negotiateFormat(
   const entries = parseAccept(header)
   if (entries.length === 0) return null
 
-  const rejected = rejectedFormats(entries)
-  for (const e of entries) {
-    if (e.q === 0) continue
-    const r = resolveEntry(e)
-    if (!r) continue
-    const candidate = r === 'all' ? defaultFormat : r
-    if (!rejected.has(candidate)) return candidate
+  const qs = effectiveQs(entries)
+  let winner: FeedFormat | null = null
+  let winnerQ = 0
+  for (const format of FEED_FORMATS) {
+    const q = qs.get(format)
+    if (q === undefined || q <= 0) continue
+    // Prefer defaultFormat on ties, so an unopinionated wildcard (`*/*` alone) still resolves
+    // to it rather than an arbitrary FEED_FORMATS member.
+    if (q > winnerQ || (q === winnerQ && format === defaultFormat)) {
+      winner = format
+      winnerQ = q
+    }
   }
+  return winner
+}
 
-  return null
+/**
+ * The format to fall back to when `negotiateFormat` returns null and `strictAccept` doesn't
+ * apply (or didn't trigger). Falls back to `defaultFormat` unless the header explicitly
+ * rejected it (effective q of exactly 0), in which case the first non-rejected format (in
+ * `FEED_FORMATS` order) is used instead — an explicit rejection must never be silently
+ * resurrected by the fallback. When every format is rejected, `defaultFormat` is returned
+ * regardless (matching the documented non-`strictAccept` behaviour of falling through).
+ */
+export function resolveFallbackFormat(
+  header: string | null | undefined,
+  defaultFormat: FeedFormat,
+): FeedFormat {
+  const entries = parseAccept(header)
+  if (entries.length === 0) return defaultFormat
+
+  const qs = effectiveQs(entries)
+  if (qs.get(defaultFormat) !== 0) return defaultFormat
+  for (const format of FEED_FORMATS) {
+    if (qs.get(format) !== 0) return format
+  }
+  return defaultFormat
 }
 
 /**
@@ -163,5 +204,6 @@ export function negotiateFormat(
 export function rejectsAllFormats(header: string | null | undefined): boolean {
   const entries = parseAccept(header)
   if (entries.length === 0) return false
-  return rejectedFormats(entries).size === FEED_FORMATS.length
+  const qs = effectiveQs(entries)
+  return FEED_FORMATS.every((format) => qs.get(format) === 0)
 }

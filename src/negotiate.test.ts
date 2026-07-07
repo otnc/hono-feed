@@ -8,6 +8,7 @@ import {
   negotiateFormat,
   parseAccept,
   rejectsAllFormats,
+  resolveFallbackFormat,
   versionFromQuery,
 } from './negotiate'
 
@@ -104,13 +105,35 @@ describe('negotiateFormat', () => {
     expect(negotiateFormat('text/plain', 'rss')).toBeNull()
   })
 
-  it('a q=0 wildcard rejects every format, even ones explicitly listed', () => {
-    expect(negotiateFormat('application/rss+xml, */*;q=0', 'rss')).toBeNull()
-    expect(negotiateFormat('application/*;q=0, application/json', 'rss')).toBeNull()
+  it('a specific media type at q>0 overrides a q=0 wildcard (RFC 9110 §12.5.1 precedence)', () => {
+    expect(negotiateFormat('application/rss+xml, */*;q=0', 'rss')).toBe('rss')
+    expect(negotiateFormat('application/*;q=0, application/json', 'rss')).toBe('json')
+  })
+
+  it('a q=0 wildcard still rejects formats it is the only opinion on', () => {
+    expect(negotiateFormat('application/rss+xml;q=0, */*;q=0', 'rss')).toBeNull()
   })
 
   it('a q=0 entry for an unmapped type is a no-op (does not reject anything)', () => {
     expect(negotiateFormat('text/plain;q=0, application/json', 'rss')).toBe('json')
+  })
+})
+
+describe('resolveFallbackFormat', () => {
+  it('returns defaultFormat for an absent header or one that says nothing about it', () => {
+    expect(resolveFallbackFormat(undefined, 'rss')).toBe('rss')
+    expect(resolveFallbackFormat('application/atom+xml;q=0', 'rss')).toBe('rss')
+  })
+
+  it('does not resurrect a format the header explicitly rejected', () => {
+    expect(resolveFallbackFormat('application/rss+xml;q=0', 'rss')).toBe('atom')
+    expect(resolveFallbackFormat('application/rss+xml;q=0, application/atom+xml;q=0', 'rss')).toBe(
+      'json',
+    )
+  })
+
+  it('falls back to defaultFormat when every format is rejected', () => {
+    expect(resolveFallbackFormat('*/*;q=0', 'rss')).toBe('rss')
   })
 })
 
@@ -130,6 +153,10 @@ describe('rejectsAllFormats', () => {
 
   it('false when at least one format is still acceptable', () => {
     expect(rejectsAllFormats('application/rss+xml;q=0, application/atom+xml')).toBe(false)
+  })
+
+  it('false when a specific media type at q>0 overrides a q=0 wildcard', () => {
+    expect(rejectsAllFormats('application/rss+xml, */*;q=0')).toBe(false)
   })
 
   it('false for an absent or empty header — that is "no match", not a rejection', () => {

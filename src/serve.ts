@@ -9,6 +9,7 @@ import {
   isRssVersion,
   negotiateFormat,
   rejectsAllFormats,
+  resolveFallbackFormat,
   versionFromQuery,
 } from './negotiate'
 import type { FeedFormat, FeedInput, ServeFeedOptions } from './types'
@@ -81,17 +82,25 @@ export function serveFeed(
     let f: FeedFormat | null = null
     if (detectFormatFromQuery) f = formatFromQuery(url.searchParams.get(formatQueryParam))
     if (!f && detectFromExtension) f = formatFromExtension(url.pathname)
-    if (!f) {
+    if (f) {
+      format = f
+    } else {
       const acceptHeader = c.req.header('accept')
-      f = negotiateFormat(acceptHeader, defaultFormat)
       negotiated = true
-      // Only an Accept header that actively rejects every format (q=0) triggers this — an
-      // absent header, or one that simply doesn't match anything, still falls through below.
-      if (!f && strictAccept && rejectsAllFormats(acceptHeader)) {
+      const winner = negotiateFormat(acceptHeader, defaultFormat)
+      if (winner) {
+        format = winner
+      } else if (strictAccept && rejectsAllFormats(acceptHeader)) {
+        // Only an Accept header that actively rejects every format (q=0) triggers this — an
+        // absent header, or one that simply doesn't match anything, still falls through below.
         return c.text('hono-feed: no acceptable feed format', 406, NO_STORE)
+      } else {
+        // No candidate won outright (e.g. the header only rejects formats without accepting
+        // any). Fall back to defaultFormat, but never resurrect a format the header explicitly
+        // rejected — resolveFallbackFormat picks the first non-rejected format instead.
+        format = resolveFallbackFormat(acceptHeader, defaultFormat)
       }
     }
-    format = f ?? defaultFormat
   }
 
   // `rssVersion` / `atomVersion` / `jsonFeedVersion` set in code always win; the query is

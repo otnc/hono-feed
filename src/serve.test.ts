@@ -79,6 +79,31 @@ describe('serveFeed', () => {
       const res = await a.request('/rss.xml', { headers: { accept: '*/*;q=0' } })
       expect(res.status).toBe(200)
     })
+
+    it('answers 200 with rss when Accept asks for rss only (specific type outranks a q=0 wildcard)', async () => {
+      const a = new Hono()
+      a.get('/feed', (c) => serveFeed(c, buildFeed(), { strictAccept: true }))
+      const res = await a.request('/feed', { headers: { accept: 'application/rss+xml, */*;q=0' } })
+      expect(res.status).toBe(200)
+      expect(res.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
+    })
+  })
+
+  describe('q=0 rejection', () => {
+    it('does not fall back to a format the Accept header explicitly rejected via a wildcard', async () => {
+      const res = await app().request('/feed', {
+        headers: { accept: 'application/rss+xml;q=0, */*' },
+      })
+      expect(res.headers.get('content-type')).not.toBe('application/rss+xml; charset=utf-8')
+    })
+
+    it('does not fall back to defaultFormat when it alone was explicitly rejected', async () => {
+      const res = await app().request('/feed', {
+        headers: { accept: 'application/rss+xml;q=0' },
+      })
+      expect(res.status).toBe(200)
+      expect(res.headers.get('content-type')).not.toBe('application/rss+xml; charset=utf-8')
+    })
   })
 
   it('answers If-None-Match with an empty 304', async () => {
