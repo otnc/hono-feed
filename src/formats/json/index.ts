@@ -2,8 +2,11 @@ import type { Author, FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { authorList } from '../../utils/author'
 import { rfc3339 } from '../../utils/date'
 import { warnDeprecated } from '../../utils/deprecation'
+import { enclosureList } from '../../utils/enclosure'
 import { hubList } from '../../utils/hub'
 import { absolutize, selfUrl } from '../../utils/url'
+
+export { validateInput } from '../../validate'
 
 /** Serialize the neutral model to a JSON Feed 1.1 string. */
 export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): string {
@@ -33,6 +36,8 @@ export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): strin
   if (options.language && !v1) feed.language = options.language
   if (options.image) feed.icon = absolutize(options.image, base)
   if (options.favicon) feed.favicon = absolutize(options.favicon, base)
+  // JSON Feed only has next_url; there's no equivalent for prev/first/last.
+  if (options.paging?.next) feed.next_url = absolutize(options.paging.next, base)
   if (options.author) {
     if (v1) feed.author = jsonAuthor(options.author)
     else feed.authors = [jsonAuthor(options.author)]
@@ -41,6 +46,9 @@ export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): strin
   if (hubs.length) {
     feed.hubs = hubs.map((url) => ({ type: 'WebSub', url: absolutize(url, base) }))
   }
+  if (options.expired !== undefined) feed.expired = options.expired
+
+  if (options.customJson) mergeCustomJson(feed, options.customJson)
 
   feed.items = items.map((item) => jsonItem(item, v1, base))
 
@@ -53,6 +61,13 @@ function jsonAuthor(a: Author): Record<string, string> {
   return o
 }
 
+// A built-in key always wins on collision — customJson can only add keys, not override them.
+function mergeCustomJson(target: Record<string, unknown>, custom: Record<string, unknown>): void {
+  for (const [key, value] of Object.entries(custom)) {
+    if (!(key in target)) target[key] = value
+  }
+}
+
 function jsonItem(item: FeedItem, v1: boolean, base?: string): Record<string, unknown> {
   // Readers must discard items without an id, so refusing here beats emitting one.
   const id = item.id ?? item.link
@@ -61,6 +76,7 @@ function jsonItem(item: FeedItem, v1: boolean, base?: string): Record<string, un
 
   const url = absolutize(item.link, base)
   if (url) o.url = url
+  if (item.externalUrl) o.external_url = absolutize(item.externalUrl, base)
   o.title = item.title
   if (item.description) o.summary = item.description
   // At least one of content_html / content_text must be present; fall back to the summary text.
@@ -76,15 +92,21 @@ function jsonItem(item: FeedItem, v1: boolean, base?: string): Record<string, un
   }
   if (item.categories?.length) o.tags = item.categories.map((c) => c.term)
   if (item.image) o.image = absolutize(item.image, base)
+  if (item.bannerImage) o.banner_image = absolutize(item.bannerImage, base)
+  // Per-item language is 1.1-only, gated the same way the feed-level language already is.
+  if (item.language && !v1) o.language = item.language
 
-  if (item.enclosure) {
+  const attachments = enclosureList(item.enclosure).map((enclosure) => {
     const attachment: Record<string, unknown> = {
-      url: absolutize(item.enclosure.url, base),
-      mime_type: item.enclosure.type,
+      url: absolutize(enclosure.url, base),
+      mime_type: enclosure.type,
     }
-    if (item.enclosure.length !== undefined) attachment.size_in_bytes = item.enclosure.length
-    o.attachments = [attachment]
-  }
+    if (enclosure.length !== undefined) attachment.size_in_bytes = enclosure.length
+    return attachment
+  })
+  if (attachments.length) o.attachments = attachments
+
+  if (item.customJson) mergeCustomJson(o, item.customJson)
 
   return o
 }

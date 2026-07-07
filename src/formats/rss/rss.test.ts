@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FeedInput } from '../../types'
-import { toRSS } from './index'
+import { toRSS, validateInput } from './index'
 
 const input: FeedInput = {
   options: {
@@ -51,6 +51,61 @@ describe('toRSS', () => {
     expect(toRSS(input)).not.toContain('rel="hub"')
   })
 
+  it('emits atom:link rel="next"/"previous"/"first"/"last" for paging, absolutized', () => {
+    const out = toRSS(
+      {
+        ...input,
+        options: {
+          ...input.options,
+          paging: {
+            next: '/feed?page=3',
+            prev: '/feed?page=1',
+            first: '/feed?page=1',
+            last: '/feed?page=10',
+          },
+        },
+      },
+      { baseUrl: 'https://example.com', feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('<atom:link href="https://example.com/feed?page=3" rel="next"/>')
+    expect(out).toContain('<atom:link href="https://example.com/feed?page=1" rel="previous"/>')
+    expect(out).toContain('<atom:link href="https://example.com/feed?page=1" rel="first"/>')
+    expect(out).toContain('<atom:link href="https://example.com/feed?page=10" rel="last"/>')
+  })
+
+  it('omits paging links when unset', () => {
+    expect(input.options.paging).toBeUndefined()
+    expect(toRSS(input, { feedUrl: 'https://example.com/feed' })).not.toContain('rel="next"')
+  })
+
+  it('appends customXml after built-in channel/item elements and merges customNamespaces', () => {
+    const out = toRSS({
+      options: {
+        ...input.options,
+        customNamespaces: { 'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd' },
+        customXml: [{ name: 'itunes:author', text: 'Ada' }],
+      },
+      items: [{ ...input.items[0], customXml: [{ name: 'itunes:duration', text: '3:45' }] }],
+    })
+    expect(out).toContain('xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"')
+    expect(out).toContain('<itunes:author>Ada</itunes:author>')
+    expect(out).toContain('<itunes:duration>3:45</itunes:duration>')
+    // channel-level custom element comes after built-ins, before the item.
+    expect(out.indexOf('<itunes:author>')).toBeLessThan(out.indexOf('<item>'))
+  })
+
+  it('emits customXml unconditionally even on RSS 0.91 (no built-in gating to opt out of)', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, customXml: [{ name: 'x:extra', text: 'v' }] } },
+      { rssVersion: '0.91' },
+    )
+    expect(out).toContain('<x:extra>v</x:extra>')
+  })
+
+  it('has no custom fields → output unaffected', () => {
+    expect(toRSS(input, { feedUrl: 'https://example.com/feed' })).not.toContain('itunes')
+  })
+
   it('maps ttl, enclosure, email author and category domain', () => {
     const out = toRSS({
       options: { title: 't', link: 'https://example.com/', ttl: 60 },
@@ -70,6 +125,58 @@ describe('toRSS', () => {
     expect(out).toContain(
       '<enclosure url="https://example.com/a.mp3" type="audio/mpeg" length="123"/>',
     )
+  })
+
+  it('emits channel <category> per feed-level category, gated like item categories (0.92+)', () => {
+    const withFeedCategories: FeedInput = {
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        categories: [{ term: 'tech', scheme: 'https://example.com/cats' }, { term: 'news' }],
+      },
+      items: [],
+    }
+    const out = toRSS(withFeedCategories)
+    expect(out).toContain('<category domain="https://example.com/cats">tech</category>')
+    expect(out).toContain('<category>news</category>')
+
+    const out091 = toRSS(
+      { ...withFeedCategories, options: { ...withFeedCategories.options, language: 'en' } },
+      { rssVersion: '0.91' },
+    )
+    expect(out091).not.toContain('<category')
+  })
+
+  it('emits channel managingEditor from options.author when email is present', () => {
+    const out = toRSS({
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        author: { name: 'otnc', email: 'otnc@example.com' },
+      },
+      items: [],
+    })
+    expect(out).toContain('<managingEditor>otnc@example.com (otnc)</managingEditor>')
+  })
+
+  it('omits channel managingEditor when the feed author has no email', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/', author: { name: 'otnc' } },
+      items: [],
+    })
+    expect(out).not.toContain('<managingEditor>')
+  })
+
+  it('emits item <comments>, absolutized, gated the same as category/enclosure (0.92+)', () => {
+    const withComments: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', language: 'en' },
+      items: [{ title: 'a', link: 'https://example.com/1', comments: '/1#comments' }],
+    }
+    const out = toRSS(withComments, { baseUrl: 'https://example.com' })
+    expect(out).toContain('<comments>https://example.com/1#comments</comments>')
+
+    const out091 = toRSS(withComments, { rssVersion: '0.91' })
+    expect(out091).not.toContain('<comments>')
   })
 
   it('honours xmlVersion and rssVersion', () => {
@@ -131,6 +238,26 @@ describe('toRSS', () => {
     expect(out).toContain('<author>otnc@example.com</author>')
   })
 
+  it('emits only the first enclosure when given an array (RSS supports at most one)', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [
+        {
+          title: 'a',
+          link: 'https://example.com/1',
+          enclosure: [
+            { url: 'https://example.com/a.mp3', type: 'audio/mpeg', length: 123 },
+            { url: 'https://example.com/a.ogg', type: 'audio/ogg' },
+          ],
+        },
+      ],
+    })
+    expect(out).toContain(
+      '<enclosure url="https://example.com/a.mp3" type="audio/mpeg" length="123"/>',
+    )
+    expect(out).not.toContain('audio/ogg')
+  })
+
   it('defaults enclosure length to 0 when omitted', () => {
     const out = toRSS({
       options: { title: 't', link: 'https://example.com/' },
@@ -185,6 +312,24 @@ describe('toRSS', () => {
     expect(out).toContain('rdf:about="https://example.com/feed"')
     expect(out).toContain('<item rdf:about="https://example.com/1">')
     expect(out).not.toContain('rdf:Seq')
+  })
+
+  it('RDF (1.0/1.1): feed-level customXml/customNamespaces are supported, no item-level', () => {
+    const withCustom: FeedInput = {
+      ...input,
+      options: {
+        ...input.options,
+        customNamespaces: { 'xmlns:x': 'urn:x' },
+        customXml: [{ name: 'x:extra', text: 'v' }],
+      },
+    }
+    const rss10 = toRSS(withCustom, { rssVersion: '1.0', feedUrl: 'https://example.com/feed' })
+    expect(rss10).toContain('xmlns:x="urn:x"')
+    expect(rss10).toContain('<x:extra>v</x:extra>')
+
+    const rss11 = toRSS(withCustom, { rssVersion: '1.1', feedUrl: 'https://example.com/feed' })
+    expect(rss11).toContain('xmlns:x="urn:x"')
+    expect(rss11).toContain('<x:extra>v</x:extra>')
   })
 
   it('0.91 requires a per-item <link>, even though later 0.9x/2.0 versions do not', () => {
@@ -341,6 +486,31 @@ describe('toRSS', () => {
     expect(rss11).toContain('<dc:subject>news</dc:subject>')
   })
 
+  it('emits feed-level dc:subject per category in RSS 1.0/1.1 channels', () => {
+    const feedWithCategories: FeedInput = {
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        feedUrl: 'https://example.com/feed',
+        categories: [{ term: 'tech' }, { term: 'news' }],
+      },
+      items: [],
+    }
+    const rss10 = toRSS(feedWithCategories, {
+      rssVersion: '1.0',
+      feedUrl: 'https://example.com/feed',
+    })
+    expect(rss10).toContain('<dc:subject>tech</dc:subject>')
+    expect(rss10).toContain('<dc:subject>news</dc:subject>')
+
+    const rss11 = toRSS(feedWithCategories, {
+      rssVersion: '1.1',
+      feedUrl: 'https://example.com/feed',
+    })
+    expect(rss11).toContain('<dc:subject>tech</dc:subject>')
+    expect(rss11).toContain('<dc:subject>news</dc:subject>')
+  })
+
   it('throws when an RSS 1.0/1.1 item has neither link nor id', () => {
     const noItemUri: FeedInput = {
       options: { title: 't', link: 'https://example.com/', feedUrl: 'https://example.com/feed' },
@@ -352,5 +522,13 @@ describe('toRSS', () => {
     expect(() =>
       toRSS(noItemUri, { rssVersion: '1.1', feedUrl: 'https://example.com/feed' }),
     ).toThrow(/RSS 1.1 item requires "link" or "id"/)
+  })
+})
+
+describe('validateInput (re-exported for this subpath)', () => {
+  it('is importable alongside toRSS', () => {
+    expect(() => validateInput({ options: { title: '' }, items: [] }, 'rss')).toThrow(
+      /feed "title" is required/,
+    )
   })
 })
