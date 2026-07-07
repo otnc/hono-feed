@@ -284,6 +284,24 @@ describe('Atom enclosure mapping (RFC 4287 §4.2.7.2)', () => {
     )
   })
 
+  it('Atom 0.3 omits the length attribute when unset, like 1.0', () => {
+    const xml = toAtom(
+      {
+        ...withEnclosure,
+        items: [
+          {
+            ...withEnclosure.items[0],
+            enclosure: { url: 'https://example.com/ep1.mp3', type: 'audio/mpeg' },
+          },
+        ],
+      },
+      { atomVersion: '0.3', suppressDeprecationWarnings: true },
+    )
+    expect(xml).toContain(
+      '<link rel="enclosure" href="https://example.com/ep1.mp3" type="audio/mpeg"/>',
+    )
+  })
+
   it('no enclosure → no rel="enclosure" link', () => {
     expect(toAtom(complete)).not.toContain('rel="enclosure"')
   })

@@ -179,6 +179,18 @@ describe('toRSS', () => {
     expect(out).not.toContain('<managingEditor>')
   })
 
+  it('emits channel managingEditor with just the email when the feed author has no name', () => {
+    const out = toRSS({
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        author: { name: '', email: 'otnc@example.com' },
+      },
+      items: [],
+    })
+    expect(out).toContain('<managingEditor>otnc@example.com</managingEditor>')
+  })
+
   it('emits item <comments>, absolutized, gated the same as category/enclosure (0.92+)', () => {
     const withComments: FeedInput = {
       options: { title: 't', link: 'https://example.com/', language: 'en' },
