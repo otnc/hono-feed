@@ -182,6 +182,20 @@ export interface FeedOptions {
     first?: string
     /** `rel="last"`. No JSON Feed equivalent. */
     last?: string
+    /**
+     * RFC 5005 §2 — this document contains the *entire* feed (readers may drop entries no
+     * longer present). Emits `<fh:complete/>` (RSS 2.0 / Atom 1.0 only). Mutually exclusive
+     * with `archive`.
+     */
+    complete?: boolean
+    /**
+     * RFC 5005 §4 — this document is an archive page whose content never changes (pairs
+     * naturally with `cacheControl: { immutable: true }`). Emits `<fh:archive/>` (RSS 2.0 /
+     * Atom 1.0 only). Mutually exclusive with `complete`.
+     */
+    archive?: boolean
+    /** `rel="current"` — used together with `archive` (RFC 5005 §4) to point at the always-up-to-date document. No JSON Feed equivalent. */
+    current?: string
   }
   /**
    * Extra elements appended after the built-in channel/feed elements (XML formats only) —
