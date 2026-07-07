@@ -74,11 +74,29 @@ export function el(name: string, attrs?: Attrs, children?: Node[] | Node): ElNod
   return { kind: 'el', name, attrs, children: ch }
 }
 
+// A pragmatic ASCII subset of the XML `Name` production (letters/underscore start, then
+// letters/digits/._-, with one optional namespace-prefix colon). Rejects e.g. a name
+// containing `<`/`>`/whitespace, which — unlike text/attribute values — `el()` never escapes,
+// since element and attribute names are structural, not content.
+const XML_NAME = /^[A-Za-z_][\w.-]*(?::[A-Za-z_][\w.-]*)?$/
+
+function assertXmlName(name: string, what: string): void {
+  if (!XML_NAME.test(name)) {
+    throw new TypeError(`hono-feed: invalid XML ${what}: ${JSON.stringify(name)}`)
+  }
+}
+
 /**
  * Convert a public, JSON-shaped `XmlElementSpec` (the `customXml` escape hatch) into a `Node`.
  * Goes through `el()` like every built-in element, so attrs/text are escaped the same way.
+ * The element name and any attribute keys are validated against the XML `Name` production —
+ * unlike attribute/text values, names are never escaped, so an invalid one would inject raw
+ * markup into the document.
  */
 export function specToNode(spec: XmlElementSpec): Node {
+  assertXmlName(spec.name, 'element name')
+  for (const key of Object.keys(spec.attrs ?? {})) assertXmlName(key, 'attribute name')
+
   if (spec.children?.length) {
     return el(spec.name, spec.attrs, spec.children.map(specToNode))
   }
@@ -89,11 +107,9 @@ function renderAttrs(attrs?: Attrs): string {
   if (!attrs) return ''
   let out = ''
   for (const [k, v] of Object.entries(attrs)) {
+    // `false` (like `null`/`undefined`) omits the attribute; `true` still needs a value —
+    // XML 1.0 has no valueless/boolean attribute syntax — so it falls through to `String(v)`.
     if (v === undefined || v === null || v === false) continue
-    if (v === true) {
-      out += ` ${k}`
-      continue
-    }
     out += ` ${k}="${escapeAttr(String(v))}"`
   }
   return out

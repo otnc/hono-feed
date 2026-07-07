@@ -36,8 +36,10 @@ describe('xml utils', () => {
     expect(xmlDocument(doc, { version: '1.1' }).startsWith('<?xml version="1.1"')).toBe(true)
   })
 
-  it('omits null/undefined/false attributes and renders boolean true bare', () => {
-    expect(xmlDocument(el('x', { a: undefined, b: false, c: true, d: null }))).toContain('<x c/>')
+  it('omits null/undefined/false attributes and renders boolean true as ="true"', () => {
+    expect(xmlDocument(el('x', { a: undefined, b: false, c: true, d: null }))).toContain(
+      '<x c="true"/>',
+    )
   })
 })
 
@@ -184,5 +186,27 @@ describe('specToNode', () => {
     expect(xmlDocument(specToNode({ name: 'x' }))).toBe(
       '<?xml version="1.0" encoding="utf-8"?><x/>',
     )
+  })
+
+  it('accepts valid XML names, including namespaced and underscore-led ones', () => {
+    expect(() => specToNode({ name: 'itunes:author' })).not.toThrow()
+    expect(() => specToNode({ name: 'media-thumb' })).not.toThrow()
+    expect(() => specToNode({ name: '_x' })).not.toThrow()
+    expect(() => specToNode({ name: 'x', attrs: { 'data-foo': '1' } })).not.toThrow()
+  })
+
+  it('rejects an element name that is not a valid XML Name', () => {
+    expect(() => specToNode({ name: 'x><script>alert(1)</script><x' })).toThrow(TypeError)
+    expect(() => specToNode({ name: 'a b' })).toThrow(TypeError)
+    expect(() => specToNode({ name: '1abc' })).toThrow(TypeError)
+    expect(() => specToNode({ name: 'a:b:c' })).toThrow(TypeError)
+  })
+
+  it('rejects an attribute key that is not a valid XML Name', () => {
+    expect(() => specToNode({ name: 'x', attrs: { 'a="1" onload': 'x' } })).toThrow(TypeError)
+  })
+
+  it('validates nested children too', () => {
+    expect(() => specToNode({ name: 'parent', children: [{ name: 'a b' }] })).toThrow(TypeError)
   })
 })
