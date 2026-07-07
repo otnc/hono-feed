@@ -12,7 +12,14 @@ import {
   resolveFallbackFormat,
   versionFromQuery,
 } from './negotiate'
-import type { FeedFormat, FeedInput, ServeFeedOptions } from './types'
+import type {
+  AtomVersion,
+  FeedFormat,
+  FeedInput,
+  JsonFeedVersion,
+  RssVersion,
+  ServeFeedOptions,
+} from './types'
 import { serializeCacheControl } from './utils/cache-control'
 import { latestDate } from './utils/date'
 import { resolveEtag } from './utils/etag'
@@ -39,14 +46,117 @@ const SERIALIZERS: Record<FeedFormat, typeof toRSS> = {
 }
 
 /**
+ * A `FeedInput`/`Feed`, or a function producing one (possibly asynchronously). The function
+ * form defers resolving feed data until it's actually needed — a request satisfied by
+ * `etagFrom` never calls it at all.
+ */
+export type FeedInputSource =
+  | FeedInput
+  | Feed
+  | (() => FeedInput | Feed | Promise<FeedInput | Feed>)
+
+/**
  * Turn a neutral feed (a `Feed` instance or `{ options, items }`) into a correct
  * `Response`, handling content negotiation, conditional requests and caching.
+ *
+ * Stays synchronous (returning a plain `Response`) unless `etagFrom` or a lazy `input`
+ * function is used, in which case it may return a `Promise<Response>` instead — see the
+ * overloads below.
  */
 export function serveFeed(
   c: Context,
   input: FeedInput | Feed,
+  options?: Omit<ServeFeedOptions, 'etagFrom'>,
+): Response
+export function serveFeed(
+  c: Context,
+  input: FeedInputSource,
+  options?: ServeFeedOptions,
+): Response | Promise<Response>
+export function serveFeed(
+  c: Context,
+  input: FeedInputSource,
   options: ServeFeedOptions = {},
-): Response {
+): Response | Promise<Response> {
+  const negotiation = resolveNegotiation(c, options)
+  if (negotiation instanceof Response) return negotiation
+
+  const { etagFrom } = options
+  if (!etagFrom) {
+    return resolveInput(input, (resolved) => finishServeFeed(c, resolved, options, negotiation))
+  }
+
+  const tag = etagFrom()
+  return tag instanceof Promise
+    ? tag.then((resolvedTag) => serveWithEtagFrom(c, resolvedTag, input, options, negotiation))
+    : serveWithEtagFrom(c, tag, input, options, negotiation)
+}
+
+/** Bind a `serveFeed` call to `c`, folding in defaults that per-call options can override. */
+export function bindServeFeed(
+  c: Context,
+  defaults: ServeFeedOptions,
+): (input: FeedInputSource, options?: ServeFeedOptions) => Response | Promise<Response> {
+  return (input, options) => serveFeed(c, input, { ...defaults, ...options })
+}
+
+// Resolve a maybe-thunk, maybe-async feed source, then hand off to `cb`. Stays synchronous
+// end-to-end when neither the thunk nor its result is a Promise, which is what lets the plain
+// (no `etagFrom`, non-function `input`) call site keep returning an actual `Response`.
+function resolveInput<R>(
+  input: FeedInputSource,
+  cb: (resolved: FeedInput | Feed) => R,
+): R | Promise<R> {
+  const value = typeof input === 'function' ? input() : input
+  return value instanceof Promise ? value.then(cb) : cb(value)
+}
+
+/**
+ * `etagFrom` matched: check it against `If-None-Match` before resolving `input` at all. A
+ * match answers 304 immediately; otherwise `input` is resolved and served normally, with this
+ * tag used as the response ETag (see `finishServeFeed`'s `etagFromValue` parameter).
+ */
+function serveWithEtagFrom(
+  c: Context,
+  tag: string,
+  input: FeedInputSource,
+  options: ServeFeedOptions,
+  negotiation: Negotiation,
+): Response | Promise<Response> {
+  const etagValue = resolveEtag('', () => tag)
+  const inm = c.req.header('if-none-match')
+  if (inm !== undefined && etagMatches(inm, etagValue)) {
+    const { cacheControl = 'public, max-age=3600' } = options
+    const headers: Record<string, string> = { ETag: etagValue }
+    if (cacheControl !== false) {
+      headers['Cache-Control'] =
+        typeof cacheControl === 'string' ? cacheControl : serializeCacheControl(cacheControl)
+    }
+    return c.body(null, 304, headers)
+  }
+  return resolveInput(input, (resolved) =>
+    finishServeFeed(c, resolved, options, negotiation, etagValue),
+  )
+}
+
+interface Negotiation {
+  format: FeedFormat
+  negotiated: boolean
+  rssVersion: RssVersion | undefined
+  atomVersion: AtomVersion | undefined
+  jsonFeedVersion: JsonFeedVersion | undefined
+  versionQueried: boolean
+  base: string
+  url: URL
+}
+
+/**
+ * Resolve the response format and version, purely from the request and `options` — no feed
+ * data needed. Runs before `input` is ever touched, so an invalid `?version=` (400) or a
+ * `strictAccept` rejection (406) never resolves it either. Returns the early `Response`
+ * directly on either of those paths.
+ */
+function resolveNegotiation(c: Context, options: ServeFeedOptions): Negotiation | Response {
   const {
     format: explicitFormat,
     defaultFormat = 'rss',
@@ -57,19 +167,11 @@ export function serveFeed(
     formatQueryParam = 'format',
     versionQueryParam = 'version',
     strictAccept = false,
-    cacheControl = 'public, max-age=3600',
-    etag = true,
-    lastModified = true,
     baseUrl,
-    pretty = false,
-    xmlVersion,
     rssVersion: rssVersionOpt,
     atomVersion: atomVersionOpt,
     jsonFeedVersion: jsonFeedVersionOpt,
-    suppressDeprecationWarnings,
   } = options
-
-  const resolved: FeedInput = input instanceof Feed ? input.toInput() : input
 
   const url = new URL(c.req.url)
   const base = baseUrl ?? url.origin
@@ -139,6 +241,38 @@ export function serveFeed(
     }
   }
 
+  return { format, negotiated, rssVersion, atomVersion, jsonFeedVersion, versionQueried, base, url }
+}
+
+/** The rest of the response: validate, serialize, and build headers/status from resolved `input`. */
+function finishServeFeed(
+  c: Context,
+  input: FeedInput | Feed,
+  options: ServeFeedOptions,
+  negotiation: Negotiation,
+  etagFromValue?: string,
+): Response {
+  const {
+    format,
+    negotiated,
+    rssVersion,
+    atomVersion,
+    jsonFeedVersion,
+    versionQueried,
+    base,
+    url,
+  } = negotiation
+  const {
+    cacheControl = 'public, max-age=3600',
+    etag = true,
+    lastModified = true,
+    pretty = false,
+    xmlVersion,
+    suppressDeprecationWarnings,
+  } = options
+
+  const resolved: FeedInput = input instanceof Feed ? input.toInput() : input
+
   // Validate with the request-derived feedUrl folded in: rules that accept feedUrl as a
   // fallback (RSS channel <link>, Atom feed id) are satisfiable here even when the caller
   // set neither, because serving always yields a self URL. Absolutizing against `base`
@@ -179,7 +313,11 @@ export function serveFeed(
   if (negotiated) headers.Vary = 'Accept'
 
   let etagValue: string | undefined
-  if (etag) {
+  if (etagFromValue !== undefined) {
+    // etagFrom already gave us the canonical tag; don't also hash the body.
+    etagValue = etagFromValue
+    headers.ETag = etagValue
+  } else if (etag) {
     etagValue = resolveEtag(body, typeof etag === 'function' ? etag : undefined)
     headers.ETag = etagValue
   }
@@ -198,14 +336,6 @@ export function serveFeed(
 
   if (c.req.method === 'HEAD') return c.body(null, 200, headers)
   return c.body(body, 200, headers)
-}
-
-/** Bind a `serveFeed` call to `c`, folding in defaults that per-call options can override. */
-export function bindServeFeed(
-  c: Context,
-  defaults: ServeFeedOptions,
-): (input: FeedInput | Feed, options?: ServeFeedOptions) => Response {
-  return (input, options) => serveFeed(c, input, { ...defaults, ...options })
 }
 
 function isNotModified(

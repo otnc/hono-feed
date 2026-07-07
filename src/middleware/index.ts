@@ -1,10 +1,12 @@
 import type { MiddlewareHandler } from 'hono'
-import type { Feed } from '../feed'
-import { bindServeFeed } from '../serve'
-import type { FeedInput, ServeFeedOptions } from '../types'
+import { bindServeFeed, type FeedInputSource } from '../serve'
+import type { ServeFeedOptions } from '../types'
 
 /** Type of `c.var.serveFeed`: a `serveFeed` with folded-in defaults. */
-export type ServeFeedFn = (input: FeedInput | Feed, options?: ServeFeedOptions) => Response
+export type ServeFeedFn = (
+  input: FeedInputSource,
+  options?: ServeFeedOptions,
+) => Response | Promise<Response>
 
 /** Helper Env type for `new Hono<FeedMiddlewareEnv>()`. */
 export interface FeedMiddlewareEnv {
