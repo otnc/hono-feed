@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { Feed } from './feed'
 import { serveFeed } from './serve'
 
@@ -502,5 +502,216 @@ describe('serveFeed', () => {
       })
       expect(res.status).toBe(200)
     })
+  })
+})
+
+describe('serveFeed: lazy input', () => {
+  it('stays synchronous when input is a plain object and etagFrom is unset (regression)', async () => {
+    let wasPromise: boolean | undefined
+    const a = new Hono()
+    a.get('/feed', (c) => {
+      const res = serveFeed(c, buildFeed())
+      wasPromise = res instanceof Promise
+      return res
+    })
+    const res = await a.request('/feed')
+    expect(wasPromise).toBe(false)
+    expect(res.status).toBe(200)
+  })
+
+  it('stays synchronous when a lazy input function itself resolves synchronously', async () => {
+    let wasPromise: boolean | undefined
+    const a = new Hono()
+    a.get('/feed', (c) => {
+      const res = serveFeed(c, () => buildFeed())
+      wasPromise = res instanceof Promise
+      return res
+    })
+    const res = await a.request('/feed')
+    expect(wasPromise).toBe(false)
+    expect(res.status).toBe(200)
+  })
+
+  it('returns a Promise when the lazy input function is itself async', async () => {
+    let wasPromise: boolean | undefined
+    const a = new Hono()
+    a.get('/feed', (c) => {
+      const res = serveFeed(c, async () => buildFeed())
+      wasPromise = res instanceof Promise
+      return res
+    })
+    const res = await a.request('/feed')
+    expect(wasPromise).toBe(true)
+    expect(res.status).toBe(200)
+  })
+
+  it('works with the default body-hash ETag: resolves once, 304s on a matching If-None-Match', async () => {
+    const inputFn = vi.fn(() => buildFeed())
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, inputFn))
+    const first = await a.request('/feed')
+    expect(first.status).toBe(200)
+    const etag = first.headers.get('etag') as string
+    const second = await a.request('/feed', { headers: { 'if-none-match': etag } })
+    expect(second.status).toBe(304)
+    expect(inputFn).toHaveBeenCalledTimes(2) // once per request — no etagFrom short-circuit here
+  })
+})
+
+describe('serveFeed: etagFrom', () => {
+  it('answers 304 from a matching If-None-Match without ever resolving input', async () => {
+    const inputFn = vi.fn(() => buildFeed())
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, inputFn, { etagFrom: () => 'rev-1' }))
+    const res = await a.request('/feed', { headers: { 'if-none-match': 'W/"rev-1"' } })
+    expect(res.status).toBe(304)
+    expect(inputFn).not.toHaveBeenCalled()
+  })
+
+  it('answers 304 for HEAD too, without resolving input', async () => {
+    const inputFn = vi.fn(() => buildFeed())
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, inputFn, { etagFrom: () => 'rev-1' }))
+    const res = await a.request('/feed', {
+      method: 'HEAD',
+      headers: { 'if-none-match': 'W/"rev-1"' },
+    })
+    expect(res.status).toBe(304)
+    expect(await res.text()).toBe('')
+    expect(inputFn).not.toHaveBeenCalled()
+  })
+
+  it('a weak-compared match (bare quoted tag) still short-circuits', async () => {
+    const inputFn = vi.fn(() => buildFeed())
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, inputFn, { etagFrom: () => 'rev-1' }))
+    const res = await a.request('/feed', { headers: { 'if-none-match': '"rev-1"' } })
+    expect(res.status).toBe(304)
+    expect(inputFn).not.toHaveBeenCalled()
+  })
+
+  it('resolves input and uses the etagFrom tag as the ETag when If-None-Match does not match', async () => {
+    const inputFn = vi.fn(() => buildFeed())
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, inputFn, { etagFrom: () => 'rev-2' }))
+    const res = await a.request('/feed', { headers: { 'if-none-match': 'W/"stale"' } })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('etag')).toBe('W/"rev-2"')
+    expect(inputFn).toHaveBeenCalledTimes(1)
+  })
+
+  it('resolves input normally when there is no If-None-Match at all', async () => {
+    const inputFn = vi.fn(() => buildFeed())
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, inputFn, { etagFrom: () => 'rev-3' }))
+    const res = await a.request('/feed')
+    expect(res.status).toBe(200)
+    expect(res.headers.get('etag')).toBe('W/"rev-3"')
+    expect(inputFn).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores If-Modified-Since when If-None-Match is present but does not match the etagFrom tag', async () => {
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, buildFeed(), { etagFrom: () => 'rev-4' }))
+    const res = await a.request('/feed', {
+      headers: {
+        'if-none-match': 'W/"stale"',
+        'if-modified-since': 'Wed, 01 Jul 2026 00:00:00 GMT', // would satisfy IMS alone
+      },
+    })
+    expect(res.status).toBe(200)
+  })
+
+  it('still answers a satisfied If-Modified-Since with 304 when there is no If-None-Match', async () => {
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, buildFeed(), { etagFrom: () => 'rev-5' }))
+    const res = await a.request('/feed', {
+      headers: { 'if-modified-since': 'Wed, 01 Jul 2026 00:00:00 GMT' },
+    })
+    expect(res.status).toBe(304)
+  })
+
+  it('accepts an async etagFrom and stays correct end-to-end', async () => {
+    const inputFn = vi.fn(() => buildFeed())
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, inputFn, { etagFrom: async () => 'rev-6' }))
+    const res = await a.request('/feed', { headers: { 'if-none-match': 'W/"rev-6"' } })
+    expect(res.status).toBe(304)
+    expect(inputFn).not.toHaveBeenCalled()
+  })
+
+  it('serializes a CacheControlDirectives object on the etagFrom 304 short-circuit', async () => {
+    const a = new Hono()
+    a.get('/feed', (c) =>
+      serveFeed(c, buildFeed(), {
+        etagFrom: () => 'rev-cc',
+        cacheControl: { public: true, maxAge: 600 },
+      }),
+    )
+    const res = await a.request('/feed', { headers: { 'if-none-match': 'W/"rev-cc"' } })
+    expect(res.status).toBe(304)
+    expect(res.headers.get('cache-control')).toBe('public, max-age=600')
+  })
+
+  it('omits Cache-Control on the etagFrom 304 short-circuit when cacheControl is false', async () => {
+    const a = new Hono()
+    a.get('/feed', (c) =>
+      serveFeed(c, buildFeed(), { etagFrom: () => 'rev-cc2', cacheControl: false }),
+    )
+    const res = await a.request('/feed', { headers: { 'if-none-match': 'W/"rev-cc2"' } })
+    expect(res.status).toBe(304)
+    expect(res.headers.get('cache-control')).toBeNull()
+  })
+
+  it('returns a Promise when etagFrom is itself async, even if it matches', async () => {
+    let wasPromise: boolean | undefined
+    const a = new Hono()
+    a.get('/feed', (c) => {
+      const res = serveFeed(c, buildFeed(), { etagFrom: async () => 'rev-7' })
+      wasPromise = res instanceof Promise
+      return res
+    })
+    const res = await a.request('/feed', { headers: { 'if-none-match': 'W/"rev-7"' } })
+    expect(wasPromise).toBe(true)
+    expect(res.status).toBe(304)
+  })
+
+  it('stays synchronous at runtime when etagFrom resolves synchronously and input is a plain object', async () => {
+    let wasPromise: boolean | undefined
+    const a = new Hono()
+    a.get('/feed', (c) => {
+      const res = serveFeed(c, buildFeed(), { etagFrom: () => 'rev-8' })
+      wasPromise = res instanceof Promise
+      return res
+    })
+    const res = await a.request('/feed', { headers: { 'if-none-match': 'W/"rev-8"' } })
+    expect(wasPromise).toBe(false)
+    expect(res.status).toBe(304)
+  })
+
+  it('resolves both an async etagFrom and a lazy async input when neither short-circuits', async () => {
+    const inputFn = vi.fn(async () => buildFeed())
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, inputFn, { etagFrom: async () => 'rev-9' }))
+    const res = await a.request('/feed', { headers: { 'if-none-match': 'W/"stale"' } })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('etag')).toBe('W/"rev-9"')
+    expect(inputFn).toHaveBeenCalledTimes(1)
+  })
+
+  it('a strictAccept 406 short-circuits before etagFrom is ever called', async () => {
+    const etagFromFn = vi.fn(() => 'rev-10')
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, buildFeed(), { strictAccept: true, etagFrom: etagFromFn }))
+    const res = await a.request('/feed', { headers: { accept: '*/*;q=0' } })
+    expect(res.status).toBe(406)
+    expect(etagFromFn).not.toHaveBeenCalled()
+  })
+
+  it('Last-Modified is still derived from the resolved feed on the non-304 path', async () => {
+    const a = new Hono()
+    a.get('/feed', (c) => serveFeed(c, buildFeed(), { etagFrom: () => 'rev-11' }))
+    const res = await a.request('/feed')
+    expect(res.headers.get('last-modified')).toBe('Mon, 29 Jun 2026 00:00:00 GMT')
   })
 })

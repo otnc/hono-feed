@@ -265,4 +265,19 @@ export interface ServeFeedOptions {
   jsonFeedVersion?: JsonFeedVersion
   /** Do not emit deprecation warnings for deprecated versions. Default false. */
   suppressDeprecationWarnings?: boolean
+  /**
+   * A validator resolvable *before* the feed input exists — a content revision, a
+   * `max(updated_at)` scalar, … — checked against `If-None-Match` ahead of resolving `input`
+   * or serializing anything, so a match answers 304 without either. Only `If-None-Match` is
+   * checked this early (there's no `updated` date yet for `If-Modified-Since`); per RFC 9110
+   * §13.1.3 a request carrying `If-None-Match` ignores `If-Modified-Since` anyway, so this
+   * still covers the common revalidation case.
+   *
+   * May return synchronously or asynchronously; `serveFeed`'s return type follows suit
+   * (`Response` normally, `Response | Promise<Response>` once `etagFrom` or a lazy `input`
+   * function is used). On a miss, the resolved value is used as the response ETag (the
+   * `etag` option is ignored) — same verbatim-vs-`W/"…"`-wrapping rule as a custom `etag`
+   * function.
+   */
+  etagFrom?: () => string | Promise<string>
 }

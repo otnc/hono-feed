@@ -286,6 +286,32 @@ app.get('/feed', (c) =>
 
 The object form is recommended when the fields cover what you need — it can't typo a directive name or forget a comma. The raw string isn't deprecated, though: it's the header's own native shape, and it's still the way to reach directives (or vendor extensions) `CacheControlDirectives` doesn't model yet. Both forms are first-class and neither is going away.
 
+## Skipping work on a 304
+
+By default, answering a conditional request still costs a full round trip through your data: `serveFeed` needs the serialized body to compute its ETag, so a `304` only happens *after* you've already built the feed. If `input` is loaded from a database, that's a wasted query on every poll that finds nothing new — and feed readers poll a lot.
+
+Two options fix this, and they can be used together:
+
+- **`etagFrom`** — a cheap, pre-serialization validator (a content revision, a `max(updated_at)` scalar, …). `serveFeed` checks it against `If-None-Match` *before* touching `input` at all; a match answers `304` immediately.
+- **A lazy `input` function** — `(): FeedInput | Feed | Promise<...>` instead of a plain value. It's only called when a response body is actually needed, so it's never invoked when `etagFrom` already short-circuited.
+
+```ts
+app.get('/feed', (c) =>
+  serveFeed(
+    c,
+    () => db.getFeedInput(), // only called when a body is actually needed
+    { etagFrom: () => db.getRevision() }, // cheap — no need to load the full feed
+  ),
+)
+```
+
+`etagFrom` may return synchronously or as a `Promise`; either way, `serveFeed`'s return type becomes `Response | Promise<Response>` once `etagFrom` or a lazy `input` is used (TypeScript picks this up automatically via overloads — the plain, synchronous call shown everywhere else in this README is unaffected and keeps returning a plain `Response`).
+
+A few things worth knowing:
+- Only `If-None-Match` can be checked this early — there's no `updated` date yet for `If-Modified-Since`. Per RFC 9110 §13.1.3, a request carrying `If-None-Match` ignores `If-Modified-Since` anyway, so this still covers the common revalidation case; a request with only `If-Modified-Since` resolves `input` normally.
+- On a miss, the `etagFrom` value becomes the response's `ETag` (the `etag` option is ignored) — same verbatim-vs-`W/"…"` wrapping rule as a custom `etag` function.
+- `strictAccept`'s `406` and an invalid `?version=`'s `400` are both resolved before `etagFrom` or `input` are ever touched.
+
 ## Sharing options with middleware
 
 Setting the same options on every route gets repetitive.  
@@ -403,6 +429,7 @@ All options for `serveFeed(c, input, options?)`:
 | `strictAccept` | `boolean` | `false` | Answer `406 Not Acceptable` when the Accept header explicitly rejects every format (`q=0`), instead of falling back to `defaultFormat` |
 | `cacheControl` | `string \| CacheControlDirectives \| false` | `'public, max-age=3600'` | `Cache-Control` header (see [Cache-Control](#cache-control); `false` to omit) |
 | `etag` | `boolean \| ((body: string) => string)` | `true` | Send an `ETag` and answer `304` on a match — `true` for the built-in weak FNV-1a-64 hash, a function for your own tag (e.g. from a revision you already track), or `false` to omit |
+| `etagFrom` | `() => string \| Promise<string>` | – | Answer `If-None-Match` from a cheap, pre-serialization value, without resolving `input` or serializing anything (see [Skipping work on a 304](#skipping-work-on-a-304)) |
 | `lastModified` | `boolean` | `true` | Send `Last-Modified` from `feed.updated` |
 | `baseUrl` | `string` | request origin | Base used to turn relative URLs into absolute ones |
 | `pretty` | `boolean` | `false` | Indent the output for readability |
