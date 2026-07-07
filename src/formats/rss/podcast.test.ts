@@ -132,6 +132,21 @@ describe('RSS 2.0 podcast namespaces (iTunes / Podcasting 2.0)', () => {
     )
   })
 
+  it('podcast:chapters defaults type to application/json+chapters when omitted', () => {
+    const out = toRSS({
+      ...base,
+      items: [
+        {
+          ...base.items[0],
+          podcast: { chapters: { url: 'https://example.com/1-chapters.json' } },
+        },
+      ],
+    })
+    expect(out).toContain(
+      '<podcast:chapters url="https://example.com/1-chapters.json" type="application/json+chapters"/>',
+    )
+  })
+
   it('itunes:duration prefers item.podcast.duration over enclosure.duration', () => {
     const out = toRSS({
       ...base,
