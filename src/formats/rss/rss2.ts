@@ -6,6 +6,13 @@ import { hubList } from '../../utils/hub'
 import { pagingRels } from '../../utils/paging'
 import { absolutize, isUrl, selfUrl } from '../../utils/url'
 import { cdata, el, type Node, raw, specToNode, xmlDocument } from '../../utils/xml'
+import {
+  ITUNES_NS,
+  PODCAST_NS,
+  podcastChannelNodes,
+  podcastItemNodes,
+  podcastNamespacesUsed,
+} from './podcast'
 
 // `<rss version="…">` structure (Netscape/UserLand lineage: 0.91 / 0.92 / 0.93 / 0.94 / 2.0).
 //
@@ -88,18 +95,26 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
     channel.push(el('image', undefined, img))
   }
 
+  // Podcast metadata (iTunes / Podcasting 2.0) is RSS 2.0-only, like the rest of caps.rss20.
+  if (caps.rss20) channel.push(...podcastChannelNodes(options.podcast, base))
+
   // Escape hatch: appended unconditionally (no caps gating) — the caller opted in explicitly.
   if (options.customXml) channel.push(...options.customXml.map(specToNode))
 
   for (const item of items) channel.push(rssItem(item, caps, base))
 
   const hasContent = caps.rss20 && items.some((item) => item.content)
+  const podcastNs = caps.rss20
+    ? podcastNamespacesUsed(options, items)
+    : { itunes: false, podcast: false }
   const root = el(
     'rss',
     {
       version,
       'xmlns:atom': caps.rss20 ? 'http://www.w3.org/2005/Atom' : undefined,
       'xmlns:content': hasContent ? 'http://purl.org/rss/1.0/modules/content/' : undefined,
+      'xmlns:itunes': podcastNs.itunes ? ITUNES_NS : undefined,
+      'xmlns:podcast': podcastNs.podcast ? PODCAST_NS : undefined,
       ...options.customNamespaces,
     },
     [el('channel', undefined, channel)],
@@ -160,6 +175,8 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
       }),
     )
   }
+
+  if (caps.rss20) ch.push(...podcastItemNodes(item.podcast, enclosure, base))
 
   if (item.customXml) ch.push(...item.customXml.map(specToNode))
 

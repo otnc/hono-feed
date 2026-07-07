@@ -48,6 +48,81 @@ export interface Enclosure {
   duration?: number
 }
 
+/** `itunes:owner` — the podcast's admin contact, shown only to Apple Podcasts, never in the UI. */
+export interface PodcastOwner {
+  name: string
+  email: string
+}
+
+/** `podcast:funding` (Podcasting 2.0) — a single funding/support link. */
+export interface PodcastFunding {
+  url: string
+  /** Link text shown to listeners. */
+  text?: string
+}
+
+/** `podcast:transcript` (Podcasting 2.0) — a transcript in a specific format. */
+export interface PodcastTranscript {
+  url: string
+  /** MIME type, e.g. `'text/vtt'`, `'application/srt'`, `'text/html'`. */
+  type: string
+}
+
+/** `podcast:chapters` (Podcasting 2.0) — a JSON Chapters file for the episode. */
+export interface PodcastChapters {
+  url: string
+  /** Defaults to `'application/json+chapters'` when omitted, per the spec. */
+  type?: string
+}
+
+/**
+ * Podcast metadata for the feed as a whole (RSS 2.0 only — ignored by Atom, JSON Feed, and
+ * every other RSS version). Covers the iTunes namespace and the Podcasting 2.0 namespace;
+ * `xmlns:itunes` / `xmlns:podcast` are declared automatically, only when a field from that
+ * namespace is actually set somewhere in the feed. An explicit `customNamespaces` entry for
+ * either prefix always wins over the automatic one.
+ */
+export interface FeedPodcast {
+  /** `itunes:author` — independent of the feed-level `author`, which iTunes doesn't read. */
+  author?: string
+  /** `itunes:category` — one `<itunes:category text="…"/>` per entry. */
+  category?: string[]
+  /** `itunes:explicit`. */
+  explicit?: boolean
+  /** `itunes:image` `href`. */
+  image?: string
+  /** `itunes:owner`. */
+  owner?: PodcastOwner
+  /** `itunes:type`. */
+  type?: 'episodic' | 'serial'
+  /** `podcast:guid` — a stable identifier for the podcast itself, distinct from any episode id. */
+  guid?: string
+  /** `podcast:locked` — `true` tells other hosting platforms not to import this feed. */
+  locked?: boolean
+  /** `podcast:funding` — one element per entry. */
+  funding?: PodcastFunding[]
+}
+
+/** Podcast metadata for a single episode (RSS 2.0 only — see `FeedPodcast`). */
+export interface ItemPodcast {
+  /** `itunes:duration`, in seconds. Falls back to `enclosure.duration` when unset. */
+  duration?: number
+  /** `itunes:explicit`. */
+  explicit?: boolean
+  /** `itunes:episode`. */
+  episode?: number
+  /** `itunes:season`. */
+  season?: number
+  /** `itunes:episodeType`. */
+  episodeType?: 'full' | 'trailer' | 'bonus'
+  /** `itunes:image` `href`. */
+  image?: string
+  /** `podcast:transcript` — one element per entry. */
+  transcript?: PodcastTranscript[]
+  /** `podcast:chapters`. */
+  chapters?: PodcastChapters
+}
+
 /**
  * A JSON-shaped XML element tree for the `customXml` escape hatch. Attribute values and
  * `text` are escaped exactly like built-in elements — this isn't raw string injection.
@@ -121,6 +196,8 @@ export interface FeedOptions {
    * start with `_`. A built-in key always wins on collision — this can only add, not override.
    */
   customJson?: Record<string, unknown>
+  /** Podcast metadata (iTunes + Podcasting 2.0 namespaces). RSS 2.0 only — see `FeedPodcast`. */
+  podcast?: FeedPodcast
 }
 
 export interface FeedItem {
@@ -154,6 +231,8 @@ export interface FeedItem {
   customXml?: XmlElementSpec[]
   /** Extra keys merged into the JSON Feed item object. A built-in key always wins on collision. */
   customJson?: Record<string, unknown>
+  /** Podcast metadata (iTunes + Podcasting 2.0 namespaces). RSS 2.0 only — see `ItemPodcast`. */
+  podcast?: ItemPodcast
 }
 
 export interface FeedInput {
