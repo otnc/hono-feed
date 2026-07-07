@@ -72,15 +72,47 @@ function specificity(e: AcceptEntry): number {
   return 2
 }
 
+// Split on `delim` outside of a quoted-string (RFC 9110 §5.6.4 quoted-string: DQUOTE-delimited,
+// `\` escapes the next character). Used for both the top-level "," separating Accept entries
+// and the ";" separating an entry's accept-params, so a quoted parameter value (e.g.
+// `profile="a,b"`) isn't torn apart by a delimiter that only appears inside its quotes.
+function splitUnquoted(s: string, delim: string): string[] {
+  const parts: string[] = []
+  let start = 0
+  let inQuotes = false
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i]
+    if (ch === '\\' && inQuotes) {
+      i++ // skip the escaped character, so a `\"` or `\\` inside quotes is never mistaken
+    } else if (ch === '"') {
+      inQuotes = !inQuotes
+    } else if (ch === delim && !inQuotes) {
+      parts.push(s.slice(start, i))
+      start = i + 1
+    }
+  }
+  parts.push(s.slice(start))
+  return parts
+}
+
+// Strip a quoted-string's surrounding DQUOTEs and unescape any `\x` sequence. Left as-is when
+// not quoted (the common case: `q=0.9`, `charset=utf-8`).
+function unquote(s: string): string {
+  if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {
+    return s.slice(1, -1).replace(/\\(.)/g, '$1')
+  }
+  return s
+}
+
 /** Parse an Accept header, sorted by q desc then specificity desc (stable). */
 export function parseAccept(header: string | null | undefined): AcceptEntry[] {
   if (!header) return []
   const entries: AcceptEntry[] = []
 
-  for (const part of header.split(',')) {
+  for (const part of splitUnquoted(header, ',')) {
     const trimmed = part.trim()
     if (!trimmed) continue
-    const [mime = '', ...paramParts] = trimmed.split(';')
+    const [mime = '', ...paramParts] = splitUnquoted(trimmed, ';')
     const [type = '', subtype = ''] = mime.trim().toLowerCase().split('/')
     if (!type || !subtype) continue
 
@@ -90,7 +122,7 @@ export function parseAccept(header: string | null | undefined): AcceptEntry[] {
       const idx = p.indexOf('=')
       if (idx === -1) continue
       const key = p.slice(0, idx).trim().toLowerCase()
-      const val = p.slice(idx + 1).trim()
+      const val = unquote(p.slice(idx + 1).trim())
       if (key === 'q') {
         const n = Number.parseFloat(val)
         q = Number.isNaN(n) ? 1 : Math.min(1, Math.max(0, n))
