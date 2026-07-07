@@ -102,6 +102,7 @@ function jsonItem(item: FeedItem, v1: boolean, base?: string): Record<string, un
       mime_type: enclosure.type,
     }
     if (enclosure.length !== undefined) attachment.size_in_bytes = enclosure.length
+    if (enclosure.duration !== undefined) attachment.duration_in_seconds = enclosure.duration
     return attachment
   })
   if (attachments.length) o.attachments = attachments

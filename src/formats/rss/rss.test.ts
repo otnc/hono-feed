@@ -286,6 +286,23 @@ describe('toRSS', () => {
     )
   })
 
+  it('ignores enclosure.duration (no RSS <enclosure> attribute for it)', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [
+        {
+          title: 'a',
+          link: 'https://example.com/1',
+          enclosure: { url: 'https://example.com/a.mp3', type: 'audio/mpeg', duration: 1800 },
+        },
+      ],
+    })
+    expect(out).toContain(
+      '<enclosure url="https://example.com/a.mp3" type="audio/mpeg" length="0"/>',
+    )
+    expect(out).not.toContain('1800')
+  })
+
   it('omits xmlns:content when no item has content', () => {
     const out = toRSS({
       options: { title: 't', link: 'https://example.com/' },

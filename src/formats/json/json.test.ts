@@ -290,6 +290,40 @@ describe('toJSONFeed', () => {
     expect(json.items[0].attachments[0].size_in_bytes).toBeUndefined()
   })
 
+  it('maps enclosure.duration to duration_in_seconds', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: { title: 't', link: 'https://example.com/' },
+        items: [
+          {
+            title: 'a',
+            link: 'https://example.com/1',
+            content: '<p>b</p>',
+            enclosure: { url: 'https://example.com/a.mp3', type: 'audio/mpeg', duration: 1800 },
+          },
+        ],
+      }),
+    )
+    expect(json.items[0].attachments[0].duration_in_seconds).toBe(1800)
+  })
+
+  it('omits duration_in_seconds when the enclosure has no duration', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: { title: 't', link: 'https://example.com/' },
+        items: [
+          {
+            title: 'a',
+            link: 'https://example.com/1',
+            content: '<p>b</p>',
+            enclosure: { url: 'https://example.com/a.mp3', type: 'audio/mpeg' },
+          },
+        ],
+      }),
+    )
+    expect(json.items[0].attachments[0].duration_in_seconds).toBeUndefined()
+  })
+
   it('pretty-prints with 2-space indentation', () => {
     const out = toJSONFeed(
       { options: { title: 't', link: 'https://example.com/' }, items: [] },

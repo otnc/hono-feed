@@ -287,4 +287,20 @@ describe('Atom enclosure mapping (RFC 4287 §4.2.7.2)', () => {
   it('no enclosure → no rel="enclosure" link', () => {
     expect(toAtom(complete)).not.toContain('rel="enclosure"')
   })
+
+  it('ignores enclosure.duration (no Atom attribute for it)', () => {
+    const xml = toAtom({
+      ...withEnclosure,
+      items: [
+        {
+          ...withEnclosure.items[0],
+          enclosure: { url: 'https://example.com/ep1.mp3', type: 'audio/mpeg', duration: 1800 },
+        },
+      ],
+    })
+    expect(xml).toContain(
+      '<link rel="enclosure" href="https://example.com/ep1.mp3" type="audio/mpeg"/>',
+    )
+    expect(xml).not.toContain('1800')
+  })
 })

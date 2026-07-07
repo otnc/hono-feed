@@ -44,6 +44,8 @@ export interface Enclosure {
   type: string
   /** Size in bytes. RSS requires the attribute; emitted as 0 when unset, per the RSS Best Practices Profile. */
   length?: number
+  /** Duration in seconds. JSON Feed `duration_in_seconds`; no RSS/Atom enclosure equivalent. */
+  duration?: number
 }
 
 /**
