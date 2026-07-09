@@ -184,6 +184,33 @@ describe('Atom pagination links (RFC 5005 §3)', () => {
     expect(xml).toContain('<link rel="current" href="https://example.com/feed"/>')
   })
 
+  it('emits link rel="prev-archive"/"next-archive" for the RFC 5005 §4 archive rels, absolutized', () => {
+    const withArchiveRels: FeedInput = {
+      ...complete,
+      options: {
+        ...complete.options,
+        paging: { prevArchive: '/archive/2', nextArchive: '/archive/4' },
+      },
+    }
+    const xml = toAtom(withArchiveRels, { baseUrl: 'https://example.com' })
+    expect(xml).toContain('<link rel="prev-archive" href="https://example.com/archive/2"/>')
+    expect(xml).toContain('<link rel="next-archive" href="https://example.com/archive/4"/>')
+  })
+
+  it('an archive page emits fh:archive, current and prev-archive together (RFC 5005 §4 shape)', () => {
+    const archivePage: FeedInput = {
+      ...complete,
+      options: {
+        ...complete.options,
+        paging: { archive: true, current: '/feed', prevArchive: '/archive/2' },
+      },
+    }
+    const xml = toAtom(archivePage, { baseUrl: 'https://example.com' })
+    expect(xml).toContain('<fh:archive/>')
+    expect(xml).toContain('<link rel="current" href="https://example.com/feed"/>')
+    expect(xml).toContain('<link rel="prev-archive" href="https://example.com/archive/2"/>')
+  })
+
   it('emits <fh:complete/> and declares xmlns:fh for paging.complete', () => {
     const withComplete: FeedInput = {
       ...complete,

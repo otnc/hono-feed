@@ -86,6 +86,46 @@ describe('toRSS', () => {
     expect(out).toContain('<atom:link href="https://example.com/feed" rel="current"/>')
   })
 
+  it('emits atom:link rel="prev-archive"/"next-archive" for the RFC 5005 §4 archive rels, absolutized', () => {
+    const out = toRSS(
+      {
+        ...input,
+        options: {
+          ...input.options,
+          paging: { prevArchive: '/archive/2', nextArchive: '/archive/4' },
+        },
+      },
+      { baseUrl: 'https://example.com', feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('<atom:link href="https://example.com/archive/2" rel="prev-archive"/>')
+    expect(out).toContain('<atom:link href="https://example.com/archive/4" rel="next-archive"/>')
+  })
+
+  it('omits prev-archive/next-archive links when unset', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, paging: { next: '/feed?page=2' } } },
+      { feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).not.toContain('rel="prev-archive"')
+    expect(out).not.toContain('rel="next-archive"')
+  })
+
+  it('an archive page emits fh:archive, current and prev-archive together (RFC 5005 §4 shape)', () => {
+    const out = toRSS(
+      {
+        ...input,
+        options: {
+          ...input.options,
+          paging: { archive: true, current: '/feed', prevArchive: '/archive/2' },
+        },
+      },
+      { baseUrl: 'https://example.com', feedUrl: 'https://example.com/archive/3' },
+    )
+    expect(out).toContain('<fh:archive/>')
+    expect(out).toContain('<atom:link href="https://example.com/feed" rel="current"/>')
+    expect(out).toContain('<atom:link href="https://example.com/archive/2" rel="prev-archive"/>')
+  })
+
   it('emits <fh:complete/> and declares xmlns:fh for paging.complete', () => {
     const out = toRSS(
       { ...input, options: { ...input.options, paging: { complete: true } } },
