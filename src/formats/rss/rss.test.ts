@@ -310,13 +310,14 @@ describe('toRSS', () => {
     expect(out).not.toContain('<webMaster>')
   })
 
-  it('emits webMaster, docs, skipHours and skipDays on RSS 0.91 too (available since Netscape 0.91)', () => {
+  it('emits managingEditor, webMaster, docs, skipHours and skipDays on RSS 0.91 too (available since Netscape 0.91)', () => {
     const out = toRSS(
       {
         options: {
           title: 't',
           link: 'https://example.com/',
           language: 'en',
+          author: { name: 'otnc', email: 'otnc@example.com' },
           webmaster: { name: 'otnc', email: 'web@example.com' },
           docs: true,
           skipHours: [0, 23],
@@ -326,6 +327,7 @@ describe('toRSS', () => {
       },
       { rssVersion: '0.91' },
     )
+    expect(out).toContain('<managingEditor>otnc@example.com (otnc)</managingEditor>')
     expect(out).toContain('<webMaster>web@example.com (otnc)</webMaster>')
     expect(out).toContain('<docs>https://www.rssboard.org/rss-specification</docs>')
     expect(out).toContain('<skipHours><hour>0</hour><hour>23</hour></skipHours>')
