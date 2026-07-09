@@ -48,15 +48,9 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # npm trusted publishing (OIDC) requires npm CLI >=11.5.1. `pnpm publish` does not perform
-      # the OIDC token exchange (github.com/pnpm/pnpm/issues/9812 — closed as won't-implement;
-      # every real-world workaround switches the actual publish command to `npm publish`), so
-      # this step uses npm directly even though the rest of the workflow stays on pnpm.
-      - name: Install npm >=11.5.1 (required for OIDC trusted publishing)
-        run: npm install -g npm@latest
-
-      - name: Publish to npm (OIDC trusted publishing)
-        run: npm publish --access public --provenance
+      # pnpm doesn't do the OIDC exchange, so publish uses npm directly
+      - run: npm install -g npm@11
+      - run: npm publish --access public --provenance
 
       - name: Commit, tag and push
         run: |
