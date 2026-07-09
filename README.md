@@ -557,7 +557,7 @@ const feed = new Feed({
 })
 ```
 
-**Notification** — `notifyHub()` sends the hub the WebSub §5 "publish" ping after you publish or update content, so subscribers get it in real time instead of waiting for their next poll:
+**Notification** — `notifyHub()` tells the hub a feed changed, so subscribers get the update in real time instead of waiting for their next poll. This is the publisher's obligation under WebSub §6 (Publishing); the spec leaves the mechanism open, so `notifyHub` sends the de-facto standard PubSubHubbub 0.4 "publish" ping that real-world hubs accept:
 
 ```ts
 import { notifyHub } from 'hono-feed'
