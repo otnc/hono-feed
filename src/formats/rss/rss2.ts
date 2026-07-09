@@ -60,8 +60,12 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
     }
   }
   if (options.updated) channel.push(el('lastBuildDate', undefined, rfc822(options.updated)))
-  // webMaster/docs/skipHours/skipDays are part of the format since Netscape 0.91; ungated here
-  // like language/copyright above (unlike managingEditor below, kept 2.0-only for now).
+  // managingEditor/webMaster/docs/skipHours/skipDays are all part of the format since Netscape
+  // 0.91; ungated here like language/copyright above.
+  const feedAuthor = firstAuthor(options.author)
+  if (feedAuthor?.email) {
+    channel.push(el('managingEditor', undefined, emailLine(feedAuthor.email, feedAuthor.name)))
+  }
   if (options.webmaster?.email) {
     channel.push(
       el('webMaster', undefined, emailLine(options.webmaster.email, options.webmaster.name)),
@@ -110,11 +114,6 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
       // RFC 5005 §2/§4 — <fh:complete/> or <fh:archive/>; validateInput rejects setting both.
       const marker = pagingMarker(options.paging)
       if (marker) channel.push(el(`fh:${marker}`))
-    }
-    // <managingEditor> requires an email, same rule as the item-level <author> (below).
-    const feedAuthor = firstAuthor(options.author)
-    if (feedAuthor?.email) {
-      channel.push(el('managingEditor', undefined, emailLine(feedAuthor.email, feedAuthor.name)))
     }
   }
 
