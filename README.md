@@ -590,16 +590,20 @@ const feed = new Feed({
 
 RSS 2.0 and Atom 1.0 emit one `atom:link`/`link` per set field; JSON Feed only maps `next` (to `next_url` — the spec has no equivalent for the others).
 
-Two more fields complete the RFC: `complete` (§2) marks a document as containing the *entire* feed, and `archive` (§4) marks an archive page whose content never changes — pairs naturally with `cacheControl: { immutable: true }`. They emit `<fh:complete/>` / `<fh:archive/>` (the `xmlns:fh` namespace is declared automatically, only when one is set), and are mutually exclusive — setting both throws:
+Two more fields complete §2/§4: `complete` (§2) marks a document as containing the *entire* feed, and `archive` (§4) marks an archive page whose content never changes — pairs naturally with `cacheControl: { immutable: true }`. They emit `<fh:complete/>` / `<fh:archive/>` (the `xmlns:fh` namespace is declared automatically, only when one is set), and are mutually exclusive — setting both throws:
 
 ```ts
 paging: {
   archive: true, // this page never changes; safe to cache forever
   current: '/feed', // rel="current" — where the always-up-to-date document lives
+  prevArchive: '/archive/2', // rel="prev-archive" — the preceding archive page
+  nextArchive: '/archive/4', // rel="next-archive" — the following archive page
 }
 ```
 
-Like the rest of `paging`, `complete`/`archive`/`current` are RSS 2.0 / Atom 1.0 only; JSON Feed has no mapping for any of them.
+`prevArchive`/`nextArchive` are how a reader walks an archived feed's history from one page to the next — the point of `archive` pages in the first place.
+
+Like the rest of `paging`, `complete`/`archive`/`current`/`prevArchive`/`nextArchive` are RSS 2.0 / Atom 1.0 only; JSON Feed has no mapping for any of them.
 
 ## RSS channel extras
 
