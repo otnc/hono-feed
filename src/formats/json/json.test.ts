@@ -95,19 +95,27 @@ describe('toJSONFeed', () => {
     expect(JSON.parse(toJSONFeed(input)).next_url).toBeUndefined()
   })
 
-  it('has no mapping for paging.complete/archive/current (JSON Feed defines none)', () => {
+  it('has no mapping for paging.complete/archive/current/prevArchive/nextArchive (JSON Feed defines none)', () => {
     const json = JSON.parse(
       toJSONFeed({
         ...input,
         options: {
           ...input.options,
-          paging: { complete: true, current: '/feed' },
+          paging: {
+            complete: true,
+            current: '/feed',
+            prevArchive: '/archive/2',
+            nextArchive: '/archive/4',
+          },
         },
       }),
     )
     expect(json).not.toHaveProperty('complete')
     expect(json).not.toHaveProperty('current_url')
+    expect(json).not.toHaveProperty('prev_archive_url')
+    expect(json).not.toHaveProperty('next_archive_url')
     expect(JSON.stringify(json)).not.toContain('fh:')
+    expect(JSON.stringify(json)).not.toContain('archive')
   })
 
   it('escapes JSON string content and stays valid (control chars need no stripping here)', () => {

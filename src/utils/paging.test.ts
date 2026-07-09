@@ -26,6 +26,18 @@ describe('pagingRels', () => {
   it('ignores complete/archive booleans (not link rels)', () => {
     expect(pagingRels({ complete: true, archive: false }, undefined)).toEqual([])
   })
+
+  it('maps prevArchive/nextArchive to the hyphenated RFC 5005 §4 rels, absolutized, after the other rels', () => {
+    const rels = pagingRels(
+      { current: '/feed', prevArchive: '/archive/2', nextArchive: '/archive/4' },
+      'https://example.com',
+    )
+    expect(rels).toEqual([
+      { rel: 'current', href: 'https://example.com/feed' },
+      { rel: 'prev-archive', href: 'https://example.com/archive/2' },
+      { rel: 'next-archive', href: 'https://example.com/archive/4' },
+    ])
+  })
 })
 
 describe('pagingMarker', () => {
