@@ -34,22 +34,31 @@ export function stripInvalidXmlChars(s: string): string {
   return s.replace(INVALID_XML_CHARS, '')
 }
 
-const TEXT_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;' }
-
-/** Escape `& < >` for text nodes (after dropping characters invalid in XML). */
-export function escapeText(s: string): string {
-  return stripInvalidXmlChars(s).replace(/[&<>]/g, (ch) => TEXT_ESCAPES[ch])
+// A literal CR (or the CR half of a CRLF pair) is normalized to LF on parse (XML 1.0 §2.11 —
+// end-of-line handling applies uniformly, text content included), so it's emitted as a numeric
+// reference to survive round-trip; tab/LF need no such escaping in text content.
+const TEXT_ESCAPES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '\r': '&#xD;',
 }
 
-// Beyond `& < > " '`, the whitespace characters tab/LF/CR are emitted as numeric references:
-// a parser normalizes literal ones to spaces on read, so this is what preserves them round-trip.
+/** Escape `& < >` (plus CR, so it survives §2.11 normalization) for text nodes, after dropping
+ * characters invalid in XML. */
+export function escapeText(s: string): string {
+  return stripInvalidXmlChars(s).replace(/[&<>\r]/g, (ch) => TEXT_ESCAPES[ch])
+}
+
+// Attribute-value normalization (XML 1.0 §3.3.3) additionally flattens any literal tab/LF to a
+// space — on top of §2.11's CR handling above — so attribute values need tab/LF as numeric
+// references too, beyond what escapeText requires for text content.
 const ATTR_ESCAPES: Record<string, string> = {
   ...TEXT_ESCAPES,
   '"': '&quot;',
   "'": '&apos;',
   '\t': '&#x9;',
   '\n': '&#xA;',
-  '\r': '&#xD;',
 }
 
 /** Escape an attribute value: `& < > " '` plus tab/LF/CR as numeric references. */

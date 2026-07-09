@@ -61,8 +61,16 @@ describe('escapeText', () => {
     expect(escapeText(`"'`)).toBe(`"'`)
   })
 
-  it('preserves tab, newline and carriage return in text', () => {
-    expect(escapeText('a\tb\nc\rd')).toBe('a\tb\nc\rd')
+  it('preserves tab and newline literally (unaffected by XML 1.0 §2.11)', () => {
+    expect(escapeText('a\tb\nc')).toBe('a\tb\nc')
+  })
+
+  it('escapes carriage return as a numeric reference, so it survives §2.11 normalization', () => {
+    expect(escapeText('a\rb')).toBe('a&#xD;b')
+  })
+
+  it('escapes the CR half of a CRLF pair too', () => {
+    expect(escapeText('a\r\nb')).toBe('a&#xD;\nb')
   })
 
   it('keeps multi-byte and astral (emoji) characters intact', () => {
