@@ -196,6 +196,10 @@ export interface FeedOptions {
     archive?: boolean
     /** `rel="current"` — used together with `archive` (RFC 5005 §4) to point at the always-up-to-date document. No JSON Feed equivalent. */
     current?: string
+    /** `rel="prev-archive"` — the immediately preceding archive document (RFC 5005 §4). No JSON Feed equivalent. */
+    prevArchive?: string
+    /** `rel="next-archive"` — the immediately following archive document (RFC 5005 §4). No JSON Feed equivalent. */
+    nextArchive?: string
   }
   /**
    * Extra elements appended after the built-in channel/feed elements (XML formats only) —

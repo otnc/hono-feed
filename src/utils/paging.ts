@@ -2,16 +2,19 @@ import type { FeedOptions } from '../types'
 import { absolutize } from './url'
 
 type Paging = NonNullable<FeedOptions['paging']>
-type LinkKey = 'next' | 'prev' | 'first' | 'last' | 'current'
+type LinkKey = 'next' | 'prev' | 'first' | 'last' | 'current' | 'prevArchive' | 'nextArchive'
 
-// RFC 5005 §3 spells the "previous" rel out in full (not "prev"); order matches a natural
-// reading order (next, previous, first, last, current) rather than object key order.
+// RFC 5005 §3 spells the "previous" rel out in full (not "prev"), while §4's archive rels
+// really are hyphenated "prev-archive"/"next-archive" — not expansions of "prev". Order
+// matches a natural reading order rather than object key order.
 const RELS: Array<[LinkKey, string]> = [
   ['next', 'next'],
   ['prev', 'previous'],
   ['first', 'first'],
   ['last', 'last'],
   ['current', 'current'],
+  ['prevArchive', 'prev-archive'],
+  ['nextArchive', 'next-archive'],
 ]
 
 /** Resolve `FeedOptions.paging` into `{ rel, href }` pairs, absolutized, skipping unset fields. */
