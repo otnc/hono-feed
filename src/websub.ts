@@ -12,9 +12,12 @@ export interface NotifyHubOptions {
 }
 
 /**
- * Ping one or more WebSub hubs with the classic PubSubHubbub "publish" mode (WebSub §5), telling
- * them a feed has new content. Sends one `fetch` POST per hub, form-encoded, with a repeated
- * `hub.url` parameter for every feed URL — call this after publishing/updating content.
+ * Ping one or more WebSub hubs to tell them a feed has new content — the publisher's
+ * obligation under WebSub §6 (Publishing). §6 deliberately leaves the notification mechanism
+ * up to the hub and publisher; what's sent here is the de-facto standard inherited from
+ * PubSubHubbub 0.4 that real-world hubs accept: one `fetch` POST per hub, form-encoded as
+ * `hub.mode=publish` with a repeated `hub.url` parameter for every feed URL. Call this after
+ * publishing/updating content.
  *
  * Never throws: a non-2xx response, a network error, or an aborted request are all reported as
  * a result rather than a rejection, so one unreachable hub can't fail the whole publish flow —
