@@ -282,6 +282,45 @@ describe('toJSONFeed', () => {
     expect(json.author).toEqual({ name: 'otnc', avatar: 'https://example.com/otnc.png' })
   })
 
+  it('absolutizes author.url against baseUrl, like every other JSON Feed URL field', () => {
+    const json = JSON.parse(
+      toJSONFeed(
+        {
+          options: {
+            title: 't',
+            link: 'https://example.com/',
+            author: { name: 'otnc', url: '/otnc' },
+          },
+          items: [
+            {
+              title: 'a',
+              link: 'https://example.com/1',
+              content: 'b',
+              author: [{ name: 'a', url: 'https://external.example.com/a' }],
+            },
+          ],
+        },
+        { baseUrl: 'https://example.com' },
+      ),
+    )
+    expect(json.authors).toEqual([{ name: 'otnc', url: 'https://example.com/otnc' }])
+    expect(json.items[0].authors).toEqual([{ name: 'a', url: 'https://external.example.com/a' }])
+  })
+
+  it('leaves author.url as-is when no baseUrl is set', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: {
+          title: 't',
+          link: 'https://example.com/',
+          author: { name: 'otnc', url: '/otnc' },
+        },
+        items: [],
+      }),
+    )
+    expect(json.authors).toEqual([{ name: 'otnc', url: '/otnc' }])
+  })
+
   it('includes per-item language for the default (1.1) version, omits it for 1.0', () => {
     const build = (jsonFeedVersion?: '1' | '1.1') =>
       JSON.parse(

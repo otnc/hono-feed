@@ -58,8 +58,8 @@ export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): strin
 
 function jsonAuthor(a: Author, base?: string): Record<string, string> {
   const o: Record<string, string> = { name: a.name }
-  if (a.url) o.url = a.url
-  // absolutize() only returns undefined for a falsy url, which a.avatar isn't here.
+  // absolutize() only returns undefined for a falsy url, which a.url/a.avatar aren't here.
+  if (a.url) o.url = absolutize(a.url, base) as string
   if (a.avatar) o.avatar = absolutize(a.avatar, base) as string
   return o
 }
