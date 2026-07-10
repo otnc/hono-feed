@@ -214,6 +214,74 @@ describe('toJSONFeed', () => {
     expect(json.items[0].banner_image).toBe('https://example.com/banner.png')
   })
 
+  it('maps feed userComment to user_comment', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: {
+          title: 't',
+          link: 'https://example.com/',
+          userComment: 'This feed allows you to read the posts from this site in any feed reader.',
+        },
+        items: [],
+      }),
+    )
+    expect(json.user_comment).toBe(
+      'This feed allows you to read the posts from this site in any feed reader.',
+    )
+  })
+
+  it('omits user_comment when unset', () => {
+    const json = JSON.parse(
+      toJSONFeed({ options: { title: 't', link: 'https://example.com/' }, items: [] }),
+    )
+    expect(json.user_comment).toBeUndefined()
+  })
+
+  it('maps author.avatar, absolutized against baseUrl; omits it when unset', () => {
+    const json = JSON.parse(
+      toJSONFeed(
+        {
+          options: {
+            title: 't',
+            link: 'https://example.com/',
+            author: { name: 'otnc', avatar: '/otnc.png' },
+          },
+          items: [
+            {
+              title: 'a',
+              link: 'https://example.com/1',
+              content: 'b',
+              author: [{ name: 'a' }, { name: 'b', avatar: 'https://cdn.example.com/b.png' }],
+            },
+          ],
+        },
+        { baseUrl: 'https://example.com' },
+      ),
+    )
+    expect(json.authors).toEqual([{ name: 'otnc', avatar: 'https://example.com/otnc.png' }])
+    expect(json.items[0].authors).toEqual([
+      { name: 'a' },
+      { name: 'b', avatar: 'https://cdn.example.com/b.png' },
+    ])
+  })
+
+  it('maps author.avatar for jsonFeedVersion 1 (singular author)', () => {
+    const json = JSON.parse(
+      toJSONFeed(
+        {
+          options: {
+            title: 't',
+            link: 'https://example.com/',
+            author: { name: 'otnc', avatar: '/otnc.png' },
+          },
+          items: [],
+        },
+        { baseUrl: 'https://example.com', jsonFeedVersion: '1', suppressDeprecationWarnings: true },
+      ),
+    )
+    expect(json.author).toEqual({ name: 'otnc', avatar: 'https://example.com/otnc.png' })
+  })
+
   it('includes per-item language for the default (1.1) version, omits it for 1.0', () => {
     const build = (jsonFeedVersion?: '1' | '1.1') =>
       JSON.parse(
