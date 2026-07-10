@@ -407,6 +407,36 @@ describe('toRSS', () => {
     expect(out).toContain('<copyright>© otnc</copyright>')
   })
 
+  it('emits channel <pubDate> from options.published, RFC822-formatted', () => {
+    const out = toRSS({
+      ...input,
+      options: { ...input.options, published: new Date('2026-06-01T00:00:00Z') },
+    })
+    const channel = out.match(/<channel>([\s\S]*?)<item>/)?.[1] ?? ''
+    expect(channel).toContain('<pubDate>Mon, 01 Jun 2026 00:00:00 GMT</pubDate>')
+  })
+
+  it('omits channel <pubDate> when options.published is unset', () => {
+    const channel = xml.match(/<channel>([\s\S]*?)<item>/)?.[1] ?? ''
+    expect(channel).not.toContain('<pubDate>')
+  })
+
+  it('emits channel <pubDate> on RSS 0.91 too (available since Netscape 0.91)', () => {
+    const out = toRSS(
+      {
+        options: {
+          title: 't',
+          link: 'https://example.com/',
+          language: 'en',
+          published: new Date('2026-06-01T00:00:00Z'),
+        },
+        items: [],
+      },
+      { rssVersion: '0.91' },
+    )
+    expect(out).toContain('<pubDate>Mon, 01 Jun 2026 00:00:00 GMT</pubDate>')
+  })
+
   it('marks guid isPermaLink="false" when the id differs from the link', () => {
     const out = toRSS({
       options: { title: 't', link: 'https://example.com/' },
