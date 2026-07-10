@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FeedInput } from '../../types'
-import { toRSS } from './index'
+import { toRSS, validateInput } from './index'
 
 const input: FeedInput = {
   options: {
@@ -33,6 +33,178 @@ describe('toRSS', () => {
     expect(xml).toContain('<guid isPermaLink="true">https://example.com/1</guid>')
   })
 
+  it('emits one atom:link rel="hub" per hub URL, absolutized', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, hub: ['/hub1', 'https://hub.example.com/'] } },
+      { baseUrl: 'https://example.com', feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('<atom:link href="https://example.com/hub1" rel="hub"/>')
+    expect(out).toContain('<atom:link href="https://hub.example.com/" rel="hub"/>')
+  })
+
+  it('accepts a single hub URL as well as an array', () => {
+    const out = toRSS({ ...input, options: { ...input.options, hub: 'https://hub.example.com/' } })
+    expect(out).toContain('<atom:link href="https://hub.example.com/" rel="hub"/>')
+  })
+
+  it('omits hub links when unset', () => {
+    expect(toRSS(input)).not.toContain('rel="hub"')
+  })
+
+  it('emits atom:link rel="next"/"previous"/"first"/"last" for paging, absolutized', () => {
+    const out = toRSS(
+      {
+        ...input,
+        options: {
+          ...input.options,
+          paging: {
+            next: '/feed?page=3',
+            prev: '/feed?page=1',
+            first: '/feed?page=1',
+            last: '/feed?page=10',
+          },
+        },
+      },
+      { baseUrl: 'https://example.com', feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('<atom:link href="https://example.com/feed?page=3" rel="next"/>')
+    expect(out).toContain('<atom:link href="https://example.com/feed?page=1" rel="previous"/>')
+    expect(out).toContain('<atom:link href="https://example.com/feed?page=1" rel="first"/>')
+    expect(out).toContain('<atom:link href="https://example.com/feed?page=10" rel="last"/>')
+  })
+
+  it('omits paging links when unset', () => {
+    expect(input.options.paging).toBeUndefined()
+    expect(toRSS(input, { feedUrl: 'https://example.com/feed' })).not.toContain('rel="next"')
+  })
+
+  it('emits atom:link rel="current" for paging.current, absolutized', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, paging: { current: '/feed' } } },
+      { baseUrl: 'https://example.com', feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('<atom:link href="https://example.com/feed" rel="current"/>')
+  })
+
+  it('emits atom:link rel="prev-archive"/"next-archive" for the RFC 5005 §4 archive rels, absolutized', () => {
+    const out = toRSS(
+      {
+        ...input,
+        options: {
+          ...input.options,
+          paging: { prevArchive: '/archive/2', nextArchive: '/archive/4' },
+        },
+      },
+      { baseUrl: 'https://example.com', feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('<atom:link href="https://example.com/archive/2" rel="prev-archive"/>')
+    expect(out).toContain('<atom:link href="https://example.com/archive/4" rel="next-archive"/>')
+  })
+
+  it('omits prev-archive/next-archive links when unset', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, paging: { next: '/feed?page=2' } } },
+      { feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).not.toContain('rel="prev-archive"')
+    expect(out).not.toContain('rel="next-archive"')
+  })
+
+  it('an archive page emits fh:archive, current and prev-archive together (RFC 5005 §4 shape)', () => {
+    const out = toRSS(
+      {
+        ...input,
+        options: {
+          ...input.options,
+          paging: { archive: true, current: '/feed', prevArchive: '/archive/2' },
+        },
+      },
+      { baseUrl: 'https://example.com', feedUrl: 'https://example.com/archive/3' },
+    )
+    expect(out).toContain('<fh:archive/>')
+    expect(out).toContain('<atom:link href="https://example.com/feed" rel="current"/>')
+    expect(out).toContain('<atom:link href="https://example.com/archive/2" rel="prev-archive"/>')
+  })
+
+  it('emits <fh:complete/> and declares xmlns:fh for paging.complete', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, paging: { complete: true } } },
+      { feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('xmlns:fh="http://purl.org/syndication/history/1.0"')
+    expect(out).toContain('<fh:complete/>')
+    expect(out).not.toContain('<fh:archive/>')
+  })
+
+  it('emits <fh:archive/> and declares xmlns:fh for paging.archive', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, paging: { archive: true } } },
+      { feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).toContain('xmlns:fh="http://purl.org/syndication/history/1.0"')
+    expect(out).toContain('<fh:archive/>')
+    expect(out).not.toContain('<fh:complete/>')
+  })
+
+  it('omits xmlns:fh and any fh:* element when paging has no complete/archive', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, paging: { next: '/feed?page=2' } } },
+      { feedUrl: 'https://example.com/feed' },
+    )
+    expect(out).not.toContain('xmlns:fh')
+    expect(out).not.toContain('fh:complete')
+    expect(out).not.toContain('fh:archive')
+  })
+
+  it('does not emit fh:* or xmlns:fh outside RSS 2.0 (gated like the rest of paging)', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, language: 'en', paging: { complete: true } } },
+      { rssVersion: '0.91' },
+    )
+    expect(out).not.toContain('xmlns:fh')
+    expect(out).not.toContain('fh:complete')
+  })
+
+  it('appends customXml after built-in channel/item elements and merges customNamespaces', () => {
+    const out = toRSS({
+      options: {
+        ...input.options,
+        customNamespaces: { 'xmlns:itunes': 'http://www.itunes.com/dtds/podcast-1.0.dtd' },
+        customXml: [{ name: 'itunes:author', text: 'Ada' }],
+      },
+      items: [{ ...input.items[0], customXml: [{ name: 'itunes:duration', text: '3:45' }] }],
+    })
+    expect(out).toContain('xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"')
+    expect(out).toContain('<itunes:author>Ada</itunes:author>')
+    expect(out).toContain('<itunes:duration>3:45</itunes:duration>')
+    // channel-level custom element comes after built-ins, before the item.
+    expect(out.indexOf('<itunes:author>')).toBeLessThan(out.indexOf('<item>'))
+  })
+
+  it('emits customXml unconditionally even on RSS 0.91 (no built-in gating to opt out of)', () => {
+    const out = toRSS(
+      { ...input, options: { ...input.options, customXml: [{ name: 'x:extra', text: 'v' }] } },
+      { rssVersion: '0.91' },
+    )
+    expect(out).toContain('<x:extra>v</x:extra>')
+  })
+
+  it('rejects a customXml element name that is not a valid XML Name (no raw markup injection)', () => {
+    expect(() =>
+      toRSS({
+        ...input,
+        options: {
+          ...input.options,
+          customXml: [{ name: 'x><script>alert(1)</script><x', text: 'hi' }],
+        },
+      }),
+    ).toThrow(TypeError)
+  })
+
+  it('has no custom fields → output unaffected', () => {
+    expect(toRSS(input, { feedUrl: 'https://example.com/feed' })).not.toContain('itunes')
+  })
+
   it('maps ttl, enclosure, email author and category domain', () => {
     const out = toRSS({
       options: { title: 't', link: 'https://example.com/', ttl: 60 },
@@ -52,6 +224,164 @@ describe('toRSS', () => {
     expect(out).toContain(
       '<enclosure url="https://example.com/a.mp3" type="audio/mpeg" length="123"/>',
     )
+  })
+
+  it('emits channel <category> per feed-level category (RSS 2.0 only — 0.92 only added the item-level element)', () => {
+    const withFeedCategories: FeedInput = {
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        categories: [{ term: 'tech', scheme: 'https://example.com/cats' }, { term: 'news' }],
+      },
+      items: [],
+    }
+    const out = toRSS(withFeedCategories)
+    expect(out).toContain('<category domain="https://example.com/cats">tech</category>')
+    expect(out).toContain('<category>news</category>')
+
+    const out091 = toRSS(
+      { ...withFeedCategories, options: { ...withFeedCategories.options, language: 'en' } },
+      { rssVersion: '0.91' },
+    )
+    expect(out091).not.toContain('<category')
+
+    const out092 = toRSS(withFeedCategories, { rssVersion: '0.92' })
+    expect(out092).not.toContain('<category')
+  })
+
+  it('emits channel managingEditor from options.author when email is present', () => {
+    const out = toRSS({
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        author: { name: 'otnc', email: 'otnc@example.com' },
+      },
+      items: [],
+    })
+    expect(out).toContain('<managingEditor>otnc@example.com (otnc)</managingEditor>')
+  })
+
+  it('omits channel managingEditor when the feed author has no email', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/', author: { name: 'otnc' } },
+      items: [],
+    })
+    expect(out).not.toContain('<managingEditor>')
+  })
+
+  it('emits channel managingEditor with just the email when the feed author has no name', () => {
+    const out = toRSS({
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        author: { name: '', email: 'otnc@example.com' },
+      },
+      items: [],
+    })
+    expect(out).toContain('<managingEditor>otnc@example.com</managingEditor>')
+  })
+
+  it('emits channel webMaster from options.webmaster when email is present', () => {
+    const out = toRSS({
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        webmaster: { name: 'otnc', email: 'web@example.com' },
+      },
+      items: [],
+    })
+    expect(out).toContain('<webMaster>web@example.com (otnc)</webMaster>')
+  })
+
+  it('emits channel webMaster with just the email when webmaster has no name', () => {
+    const out = toRSS({
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        webmaster: { name: '', email: 'web@example.com' },
+      },
+      items: [],
+    })
+    expect(out).toContain('<webMaster>web@example.com</webMaster>')
+  })
+
+  it('omits channel webMaster when options.webmaster has no email', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/', webmaster: { name: 'otnc' } },
+      items: [],
+    })
+    expect(out).not.toContain('<webMaster>')
+  })
+
+  it('emits managingEditor, webMaster, docs, skipHours and skipDays on RSS 0.91 too (available since Netscape 0.91)', () => {
+    const out = toRSS(
+      {
+        options: {
+          title: 't',
+          link: 'https://example.com/',
+          language: 'en',
+          author: { name: 'otnc', email: 'otnc@example.com' },
+          webmaster: { name: 'otnc', email: 'web@example.com' },
+          docs: true,
+          skipHours: [0, 23],
+          skipDays: ['Saturday', 'Sunday'],
+        },
+        items: [],
+      },
+      { rssVersion: '0.91' },
+    )
+    expect(out).toContain('<managingEditor>otnc@example.com (otnc)</managingEditor>')
+    expect(out).toContain('<webMaster>web@example.com (otnc)</webMaster>')
+    expect(out).toContain('<docs>https://www.rssboard.org/rss-specification</docs>')
+    expect(out).toContain('<skipHours><hour>0</hour><hour>23</hour></skipHours>')
+    expect(out).toContain('<skipDays><day>Saturday</day><day>Sunday</day></skipDays>')
+  })
+
+  it('docs: true emits the canonical RSS 2.0 spec URL', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/', docs: true },
+      items: [],
+    })
+    expect(out).toContain('<docs>https://www.rssboard.org/rss-specification</docs>')
+  })
+
+  it('docs: a string emits that URL as-is', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/', docs: 'https://example.com/rss-docs' },
+      items: [],
+    })
+    expect(out).toContain('<docs>https://example.com/rss-docs</docs>')
+  })
+
+  it('omits docs, skipHours and skipDays when unset', () => {
+    const out = toRSS({ options: { title: 't', link: 'https://example.com/' }, items: [] })
+    expect(out).not.toContain('<docs>')
+    expect(out).not.toContain('<skipHours>')
+    expect(out).not.toContain('<skipDays>')
+  })
+
+  it('omits skipHours/skipDays entirely for an empty array', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/', skipHours: [], skipDays: [] },
+      items: [],
+    })
+    expect(out).not.toContain('<skipHours>')
+    expect(out).not.toContain('<skipDays>')
+  })
+
+  it('emits item <comments>, absolutized, gated to RSS 2.0 only (introduced in 2.0, not 0.92)', () => {
+    const withComments: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', language: 'en' },
+      items: [{ title: 'a', link: 'https://example.com/1', comments: '/1#comments' }],
+    }
+    const out = toRSS(withComments, { baseUrl: 'https://example.com' })
+    expect(out).toContain('<comments>https://example.com/1#comments</comments>')
+
+    const out091 = toRSS(withComments, { rssVersion: '0.91' })
+    expect(out091).not.toContain('<comments>')
+
+    const out092 = toRSS(withComments, { rssVersion: '0.92', baseUrl: 'https://example.com' })
+    expect(out092).not.toContain('<comments>')
   })
 
   it('honours xmlVersion and rssVersion', () => {
@@ -81,6 +411,36 @@ describe('toRSS', () => {
   it('emits channel copyright when set', () => {
     const out = toRSS({ ...input, options: { ...input.options, copyright: '© otnc' } })
     expect(out).toContain('<copyright>© otnc</copyright>')
+  })
+
+  it('emits channel <pubDate> from options.published, RFC822-formatted', () => {
+    const out = toRSS({
+      ...input,
+      options: { ...input.options, published: new Date('2026-06-01T00:00:00Z') },
+    })
+    const channel = out.match(/<channel>([\s\S]*?)<item>/)?.[1] ?? ''
+    expect(channel).toContain('<pubDate>Mon, 01 Jun 2026 00:00:00 GMT</pubDate>')
+  })
+
+  it('omits channel <pubDate> when options.published is unset', () => {
+    const channel = xml.match(/<channel>([\s\S]*?)<item>/)?.[1] ?? ''
+    expect(channel).not.toContain('<pubDate>')
+  })
+
+  it('emits channel <pubDate> on RSS 0.91 too (available since Netscape 0.91)', () => {
+    const out = toRSS(
+      {
+        options: {
+          title: 't',
+          link: 'https://example.com/',
+          language: 'en',
+          published: new Date('2026-06-01T00:00:00Z'),
+        },
+        items: [],
+      },
+      { rssVersion: '0.91' },
+    )
+    expect(out).toContain('<pubDate>Mon, 01 Jun 2026 00:00:00 GMT</pubDate>')
   })
 
   it('marks guid isPermaLink="false" when the id differs from the link', () => {
@@ -113,6 +473,73 @@ describe('toRSS', () => {
     expect(out).toContain('<author>otnc@example.com</author>')
   })
 
+  it('falls back to <dc:creator> for a name-only item author (no email), declaring xmlns:dc', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a', link: 'https://example.com/1', author: { name: 'Ada' } }],
+    })
+    expect(out).toContain('xmlns:dc="http://purl.org/dc/elements/1.1/"')
+    expect(out).toContain('<dc:creator>Ada</dc:creator>')
+    expect(out).not.toContain('<author>')
+  })
+
+  it('prefers <author> over <dc:creator> when the item author has an email', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [
+        {
+          title: 'a',
+          link: 'https://example.com/1',
+          author: { name: 'Ada', email: 'ada@example.com' },
+        },
+      ],
+    })
+    expect(out).toContain('<author>ada@example.com (Ada)</author>')
+    expect(out).not.toContain('<dc:creator>')
+    expect(out).not.toContain('xmlns:dc')
+  })
+
+  it('omits xmlns:dc when no item needs the dc:creator fallback', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a', link: 'https://example.com/1' }],
+    })
+    expect(out).not.toContain('xmlns:dc')
+    expect(out).not.toContain('dc:creator')
+  })
+
+  it('does not emit dc:creator outside RSS 2.0 (item author is 2.0-gated)', () => {
+    const out = toRSS(
+      {
+        options: { title: 't', link: 'https://example.com/', language: 'en' },
+        items: [{ title: 'a', link: 'https://example.com/1', author: { name: 'Ada' } }],
+      },
+      { rssVersion: '0.91' },
+    )
+    expect(out).not.toContain('dc:creator')
+    expect(out).not.toContain('xmlns:dc')
+  })
+
+  it('emits only the first enclosure when given an array (RSS supports at most one)', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [
+        {
+          title: 'a',
+          link: 'https://example.com/1',
+          enclosure: [
+            { url: 'https://example.com/a.mp3', type: 'audio/mpeg', length: 123 },
+            { url: 'https://example.com/a.ogg', type: 'audio/ogg' },
+          ],
+        },
+      ],
+    })
+    expect(out).toContain(
+      '<enclosure url="https://example.com/a.mp3" type="audio/mpeg" length="123"/>',
+    )
+    expect(out).not.toContain('audio/ogg')
+  })
+
   it('defaults enclosure length to 0 when omitted', () => {
     const out = toRSS({
       options: { title: 't', link: 'https://example.com/' },
@@ -129,12 +556,38 @@ describe('toRSS', () => {
     )
   })
 
+  it('has no <enclosure> attribute for duration (it surfaces via itunes:duration instead — see podcast tests)', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [
+        {
+          title: 'a',
+          link: 'https://example.com/1',
+          enclosure: { url: 'https://example.com/a.mp3', type: 'audio/mpeg', duration: 1800 },
+        },
+      ],
+    })
+    expect(out).toContain(
+      '<enclosure url="https://example.com/a.mp3" type="audio/mpeg" length="0"/>',
+    )
+    expect(out).not.toContain('duration="1800"')
+  })
+
   it('omits xmlns:content when no item has content', () => {
     const out = toRSS({
       options: { title: 't', link: 'https://example.com/' },
       items: [{ title: 'a', link: 'https://example.com/1' }],
     })
     expect(out).not.toContain('xmlns:content')
+  })
+
+  it('omits xmlns:content when the only content is an empty string (no <content:encoded> either)', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a', link: 'https://example.com/1', content: '' }],
+    })
+    expect(out).not.toContain('xmlns:content')
+    expect(out).not.toContain('content:encoded')
   })
 
   it('emits the version attribute for 0.93 / 0.94', () => {
@@ -167,6 +620,38 @@ describe('toRSS', () => {
     expect(out).toContain('rdf:about="https://example.com/feed"')
     expect(out).toContain('<item rdf:about="https://example.com/1">')
     expect(out).not.toContain('rdf:Seq')
+  })
+
+  it('RSS 1.0/1.1: omits xmlns:content when the only content is an empty string', () => {
+    const emptyContent: FeedInput = {
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a', link: 'https://example.com/1', content: '' }],
+    }
+    const rss10 = toRSS(emptyContent, { rssVersion: '1.0', feedUrl: 'https://example.com/feed' })
+    expect(rss10).not.toContain('xmlns:content')
+    expect(rss10).not.toContain('content:encoded')
+
+    const rss11 = toRSS(emptyContent, { rssVersion: '1.1', feedUrl: 'https://example.com/feed' })
+    expect(rss11).not.toContain('xmlns:content')
+    expect(rss11).not.toContain('content:encoded')
+  })
+
+  it('RDF (1.0/1.1): feed-level customXml/customNamespaces are supported, no item-level', () => {
+    const withCustom: FeedInput = {
+      ...input,
+      options: {
+        ...input.options,
+        customNamespaces: { 'xmlns:x': 'urn:x' },
+        customXml: [{ name: 'x:extra', text: 'v' }],
+      },
+    }
+    const rss10 = toRSS(withCustom, { rssVersion: '1.0', feedUrl: 'https://example.com/feed' })
+    expect(rss10).toContain('xmlns:x="urn:x"')
+    expect(rss10).toContain('<x:extra>v</x:extra>')
+
+    const rss11 = toRSS(withCustom, { rssVersion: '1.1', feedUrl: 'https://example.com/feed' })
+    expect(rss11).toContain('xmlns:x="urn:x"')
+    expect(rss11).toContain('<x:extra>v</x:extra>')
   })
 
   it('0.91 requires a per-item <link>, even though later 0.9x/2.0 versions do not', () => {
@@ -323,6 +808,31 @@ describe('toRSS', () => {
     expect(rss11).toContain('<dc:subject>news</dc:subject>')
   })
 
+  it('emits feed-level dc:subject per category in RSS 1.0/1.1 channels', () => {
+    const feedWithCategories: FeedInput = {
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        feedUrl: 'https://example.com/feed',
+        categories: [{ term: 'tech' }, { term: 'news' }],
+      },
+      items: [],
+    }
+    const rss10 = toRSS(feedWithCategories, {
+      rssVersion: '1.0',
+      feedUrl: 'https://example.com/feed',
+    })
+    expect(rss10).toContain('<dc:subject>tech</dc:subject>')
+    expect(rss10).toContain('<dc:subject>news</dc:subject>')
+
+    const rss11 = toRSS(feedWithCategories, {
+      rssVersion: '1.1',
+      feedUrl: 'https://example.com/feed',
+    })
+    expect(rss11).toContain('<dc:subject>tech</dc:subject>')
+    expect(rss11).toContain('<dc:subject>news</dc:subject>')
+  })
+
   it('throws when an RSS 1.0/1.1 item has neither link nor id', () => {
     const noItemUri: FeedInput = {
       options: { title: 't', link: 'https://example.com/', feedUrl: 'https://example.com/feed' },
@@ -334,5 +844,13 @@ describe('toRSS', () => {
     expect(() =>
       toRSS(noItemUri, { rssVersion: '1.1', feedUrl: 'https://example.com/feed' }),
     ).toThrow(/RSS 1.1 item requires "link" or "id"/)
+  })
+})
+
+describe('validateInput (re-exported for this subpath)', () => {
+  it('is importable alongside toRSS', () => {
+    expect(() => validateInput({ options: { title: '' }, items: [] }, 'rss')).toThrow(
+      /feed "title" is required/,
+    )
   })
 })

@@ -7,6 +7,8 @@ import {
   isRssVersion,
   negotiateFormat,
   parseAccept,
+  rejectsAllFormats,
+  resolveFallbackFormat,
   versionFromQuery,
 } from './negotiate'
 
@@ -68,6 +70,30 @@ describe('parseAccept', () => {
   it('defaults q to 1 when the q value is not a number', () => {
     expect(parseAccept('application/json;q=abc')[0].q).toBe(1)
   })
+
+  it('does not split a quoted parameter value on an internal comma', () => {
+    const entries = parseAccept('application/feed+json;profile="a,b";q=0.9, application/atom+xml')
+    expect(entries).toHaveLength(2)
+    const json = entries.find((e) => e.subtype === 'feed+json')
+    expect(json?.params).toEqual({ profile: 'a,b' })
+    expect(json?.q).toBe(0.9)
+    expect(entries.find((e) => e.subtype === 'atom+xml')?.q).toBe(1)
+  })
+
+  it('does not split a quoted parameter value on an internal semicolon', () => {
+    const entries = parseAccept('application/json;profile="a;b";q=0.7')
+    expect(entries[0].params).toEqual({ profile: 'a;b' })
+    expect(entries[0].q).toBe(0.7)
+  })
+
+  it('unescapes a backslash-escaped quote inside a quoted parameter value', () => {
+    const entries = parseAccept(String.raw`application/json;profile="a\"b"`)
+    expect(entries[0].params).toEqual({ profile: 'a"b' })
+  })
+
+  it('leaves an unquoted parameter value untouched', () => {
+    expect(parseAccept('text/html;charset=utf-8')[0].params).toEqual({ charset: 'utf-8' })
+  })
 })
 
 describe('formatFromQuery', () => {
@@ -103,13 +129,67 @@ describe('negotiateFormat', () => {
     expect(negotiateFormat('text/plain', 'rss')).toBeNull()
   })
 
-  it('a q=0 wildcard rejects every format, even ones explicitly listed', () => {
-    expect(negotiateFormat('application/rss+xml, */*;q=0', 'rss')).toBeNull()
-    expect(negotiateFormat('application/*;q=0, application/json', 'rss')).toBeNull()
+  it('a specific media type at q>0 overrides a q=0 wildcard (RFC 9110 §12.5.1 precedence)', () => {
+    expect(negotiateFormat('application/rss+xml, */*;q=0', 'rss')).toBe('rss')
+    expect(negotiateFormat('application/*;q=0, application/json', 'rss')).toBe('json')
+  })
+
+  it('a q=0 wildcard still rejects formats it is the only opinion on', () => {
+    expect(negotiateFormat('application/rss+xml;q=0, */*;q=0', 'rss')).toBeNull()
   })
 
   it('a q=0 entry for an unmapped type is a no-op (does not reject anything)', () => {
     expect(negotiateFormat('text/plain;q=0, application/json', 'rss')).toBe('json')
+  })
+})
+
+describe('resolveFallbackFormat', () => {
+  it('returns defaultFormat for an absent header or one that says nothing about it', () => {
+    expect(resolveFallbackFormat(undefined, 'rss')).toBe('rss')
+    expect(resolveFallbackFormat('application/atom+xml;q=0', 'rss')).toBe('rss')
+  })
+
+  it('does not resurrect a format the header explicitly rejected', () => {
+    expect(resolveFallbackFormat('application/rss+xml;q=0', 'rss')).toBe('atom')
+    expect(resolveFallbackFormat('application/rss+xml;q=0, application/atom+xml;q=0', 'rss')).toBe(
+      'json',
+    )
+  })
+
+  it('falls back to defaultFormat when every format is rejected', () => {
+    expect(resolveFallbackFormat('*/*;q=0', 'rss')).toBe('rss')
+  })
+})
+
+describe('rejectsAllFormats', () => {
+  it('true for a q=0 wildcard', () => {
+    expect(rejectsAllFormats('*/*;q=0')).toBe(true)
+    expect(rejectsAllFormats('application/*;q=0')).toBe(true)
+  })
+
+  it('true when every known format is individually rejected at q=0', () => {
+    expect(
+      rejectsAllFormats(
+        'application/rss+xml;q=0, application/atom+xml;q=0, application/feed+json;q=0, application/json;q=0',
+      ),
+    ).toBe(true)
+  })
+
+  it('false when at least one format is still acceptable', () => {
+    expect(rejectsAllFormats('application/rss+xml;q=0, application/atom+xml')).toBe(false)
+  })
+
+  it('false when a specific media type at q>0 overrides a q=0 wildcard', () => {
+    expect(rejectsAllFormats('application/rss+xml, */*;q=0')).toBe(false)
+  })
+
+  it('false for an absent or empty header — that is "no match", not a rejection', () => {
+    expect(rejectsAllFormats(undefined)).toBe(false)
+    expect(rejectsAllFormats(null)).toBe(false)
+  })
+
+  it('false when the header simply mentions unrelated types', () => {
+    expect(rejectsAllFormats('text/html')).toBe(false)
   })
 })
 

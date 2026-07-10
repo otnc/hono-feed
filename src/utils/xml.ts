@@ -1,6 +1,8 @@
 // Minimal XML builder: build a node tree, then serialize with optional pretty-printing.
 // Text nodes are auto-escaped; raw XML (e.g. CDATA) is inserted via `raw()`.
 
+import type { XmlElementSpec } from '../types'
+
 export type AttrValue = string | number | boolean | null | undefined
 
 export type Attrs = Record<string, AttrValue>
@@ -32,22 +34,31 @@ export function stripInvalidXmlChars(s: string): string {
   return s.replace(INVALID_XML_CHARS, '')
 }
 
-const TEXT_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;' }
-
-/** Escape `& < >` for text nodes (after dropping characters invalid in XML). */
-export function escapeText(s: string): string {
-  return stripInvalidXmlChars(s).replace(/[&<>]/g, (ch) => TEXT_ESCAPES[ch])
+// A literal CR (or the CR half of a CRLF pair) is normalized to LF on parse (XML 1.0 §2.11 —
+// end-of-line handling applies uniformly, text content included), so it's emitted as a numeric
+// reference to survive round-trip; tab/LF need no such escaping in text content.
+const TEXT_ESCAPES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '\r': '&#xD;',
 }
 
-// Beyond `& < > " '`, the whitespace characters tab/LF/CR are emitted as numeric references:
-// a parser normalizes literal ones to spaces on read, so this is what preserves them round-trip.
+/** Escape `& < >` (plus CR, so it survives §2.11 normalization) for text nodes, after dropping
+ * characters invalid in XML. */
+export function escapeText(s: string): string {
+  return stripInvalidXmlChars(s).replace(/[&<>\r]/g, (ch) => TEXT_ESCAPES[ch])
+}
+
+// Attribute-value normalization (XML 1.0 §3.3.3) additionally flattens any literal tab/LF to a
+// space — on top of §2.11's CR handling above — so attribute values need tab/LF as numeric
+// references too, beyond what escapeText requires for text content.
 const ATTR_ESCAPES: Record<string, string> = {
   ...TEXT_ESCAPES,
   '"': '&quot;',
   "'": '&apos;',
   '\t': '&#x9;',
   '\n': '&#xA;',
-  '\r': '&#xD;',
 }
 
 /** Escape an attribute value: `& < > " '` plus tab/LF/CR as numeric references. */
@@ -72,15 +83,42 @@ export function el(name: string, attrs?: Attrs, children?: Node[] | Node): ElNod
   return { kind: 'el', name, attrs, children: ch }
 }
 
+// A pragmatic ASCII subset of the XML `Name` production (letters/underscore start, then
+// letters/digits/._-, with one optional namespace-prefix colon). Rejects e.g. a name
+// containing `<`/`>`/whitespace, which — unlike text/attribute values — `el()` never escapes,
+// since element and attribute names are structural, not content.
+const XML_NAME = /^[A-Za-z_][\w.-]*(?::[A-Za-z_][\w.-]*)?$/
+
+function assertXmlName(name: string, what: string): void {
+  if (!XML_NAME.test(name)) {
+    throw new TypeError(`hono-feed: invalid XML ${what}: ${JSON.stringify(name)}`)
+  }
+}
+
+/**
+ * Convert a public, JSON-shaped `XmlElementSpec` (the `customXml` escape hatch) into a `Node`.
+ * Goes through `el()` like every built-in element, so attrs/text are escaped the same way.
+ * The element name and any attribute keys are validated against the XML `Name` production —
+ * unlike attribute/text values, names are never escaped, so an invalid one would inject raw
+ * markup into the document.
+ */
+export function specToNode(spec: XmlElementSpec): Node {
+  assertXmlName(spec.name, 'element name')
+  for (const key of Object.keys(spec.attrs ?? {})) assertXmlName(key, 'attribute name')
+
+  if (spec.children?.length) {
+    return el(spec.name, spec.attrs, spec.children.map(specToNode))
+  }
+  return el(spec.name, spec.attrs, spec.text)
+}
+
 function renderAttrs(attrs?: Attrs): string {
   if (!attrs) return ''
   let out = ''
   for (const [k, v] of Object.entries(attrs)) {
+    // `false` (like `null`/`undefined`) omits the attribute; `true` still needs a value —
+    // XML 1.0 has no valueless/boolean attribute syntax — so it falls through to `String(v)`.
     if (v === undefined || v === null || v === false) continue
-    if (v === true) {
-      out += ` ${k}`
-      continue
-    }
     out += ` ${k}="${escapeAttr(String(v))}"`
   }
   return out

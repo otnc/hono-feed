@@ -1,7 +1,7 @@
 import type { FeedInput, SerializeOptions } from '../../types'
 import { rfc3339 } from '../../utils/date'
 import { absolutize, selfUrl } from '../../utils/url'
-import { el, type Node, xmlDocument } from '../../utils/xml'
+import { el, type Node, specToNode, xmlDocument } from '../../utils/xml'
 import { rdfItem } from './rdf-item'
 
 // RSS 1.0 (RDF Site Summary): `<rdf:RDF>` root with an `<items>`/`rdf:Seq` table of
@@ -30,8 +30,13 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
   if (options.language) channel.push(el('dc:language', undefined, options.language))
   if (options.updated) channel.push(el('dc:date', undefined, rfc3339(options.updated)))
   if (options.copyright) channel.push(el('dc:rights', undefined, options.copyright))
+  if (options.categories) {
+    for (const cat of options.categories) channel.push(el('dc:subject', undefined, cat.term))
+  }
   channel.push(el('items', undefined, [el('rdf:Seq', undefined, seq)]))
   if (imageUrl) channel.push(el('image', { 'rdf:resource': imageUrl }))
+  // Escape hatch: appended unconditionally — RDF has no per-element gating to opt out of.
+  if (options.customXml) channel.push(...options.customXml.map(specToNode))
 
   const nodes: Node[] = [el('channel', { 'rdf:about': feedUri }, channel)]
   if (imageUrl) {
@@ -41,7 +46,7 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
   }
   nodes.push(...itemNodes)
 
-  const hasContent = items.some((item) => item.content != null)
+  const hasContent = items.some((item) => item.content)
   const root = el(
     'rdf:RDF',
     {
@@ -49,6 +54,7 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
       xmlns: 'http://purl.org/rss/1.0/',
       'xmlns:dc': 'http://purl.org/dc/elements/1.1/',
       'xmlns:content': hasContent ? 'http://purl.org/rss/1.0/modules/content/' : undefined,
+      ...options.customNamespaces,
     },
     nodes,
   )

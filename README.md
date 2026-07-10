@@ -286,6 +286,32 @@ app.get('/feed', (c) =>
 
 The object form is recommended when the fields cover what you need — it can't typo a directive name or forget a comma. The raw string isn't deprecated, though: it's the header's own native shape, and it's still the way to reach directives (or vendor extensions) `CacheControlDirectives` doesn't model yet. Both forms are first-class and neither is going away.
 
+## Skipping work on a 304
+
+By default, answering a conditional request still costs a full round trip through your data: `serveFeed` needs the serialized body to compute its ETag, so a `304` only happens *after* you've already built the feed. If `input` is loaded from a database, that's a wasted query on every poll that finds nothing new — and feed readers poll a lot.
+
+Two options fix this, and they can be used together:
+
+- **`etagFrom`** — a cheap, pre-serialization validator (a content revision, a `max(updated_at)` scalar, …). `serveFeed` checks it against `If-None-Match` *before* touching `input` at all; a match answers `304` immediately.
+- **A lazy `input` function** — `(): FeedInput | Feed | Promise<...>` instead of a plain value. It's only called when a response body is actually needed, so it's never invoked when `etagFrom` already short-circuited.
+
+```ts
+app.get('/feed', (c) =>
+  serveFeed(
+    c,
+    () => db.getFeedInput(), // only called when a body is actually needed
+    { etagFrom: () => db.getRevision() }, // cheap — no need to load the full feed
+  ),
+)
+```
+
+`etagFrom` may return synchronously or as a `Promise`; either way, `serveFeed`'s return type becomes `Response | Promise<Response>` once `etagFrom` or a lazy `input` is used (TypeScript picks this up automatically via overloads — the plain, synchronous call shown everywhere else in this README is unaffected and keeps returning a plain `Response`).
+
+A few things worth knowing:
+- Only `If-None-Match` can be checked this early — there's no `updated` date yet for `If-Modified-Since`. Per RFC 9110 §13.1.3, a request carrying `If-None-Match` ignores `If-Modified-Since` anyway, so this still covers the common revalidation case; a request with only `If-Modified-Since` resolves `input` normally.
+- On a miss, the `etagFrom` value becomes the response's `ETag` (the `etag` option is ignored) — same verbatim-vs-`W/"…"` wrapping rule as a custom `etag` function.
+- `strictAccept`'s `406` and an invalid `?version=`'s `400` are both resolved before `etagFrom` or `input` are ever touched.
+
 ## Sharing options with middleware
 
 Setting the same options on every route gets repetitive.  
@@ -379,6 +405,8 @@ Rather than emit a document that violates its spec, `serveFeed` checks these per
 
 (Deprecated versions add a couple more — e.g. RSS 0.91 requires `language` — with equally explicit error messages.)
 
+`Enclosure.length` is optional in the neutral model, but RSS's `<enclosure>` requires the attribute — when it's unset, RSS emits `length="0"`, per the RSS Best Practices Profile ("If the length of an enclosure cannot be determined, a publisher SHOULD use a length of zero"). JSON Feed omits `size_in_bytes` instead, since it's optional there.
+
 > [!TIP]
 >   
 > hono-feed does the XML escaping for you, but it doesn't HTML-encode entities.  
@@ -398,8 +426,10 @@ All options for `serveFeed(c, input, options?)`:
 | `detectVersionFromQuery` | `boolean` | `detectFromQuery` | Read the version from `?version=` |
 | `formatQueryParam` | `string` | `'format'` | Query param name used to detect the format |
 | `versionQueryParam` | `string` | `'version'` | Query param name used to detect the version |
+| `strictAccept` | `boolean` | `false` | Answer `406 Not Acceptable` when the Accept header explicitly rejects every format (`q=0`), instead of falling back to `defaultFormat` |
 | `cacheControl` | `string \| CacheControlDirectives \| false` | `'public, max-age=3600'` | `Cache-Control` header (see [Cache-Control](#cache-control); `false` to omit) |
-| `etag` | `boolean` | `true` | Send a weak `ETag` and answer `304` on a match |
+| `etag` | `boolean \| ((body: string) => string)` | `true` | Send an `ETag` and answer `304` on a match — `true` for the built-in weak FNV-1a-64 hash, a function for your own tag (e.g. from a revision you already track), or `false` to omit |
+| `etagFrom` | `() => string \| Promise<string>` | – | Answer `If-None-Match` from a cheap, pre-serialization value, without resolving `input` or serializing anything (see [Skipping work on a 304](#skipping-work-on-a-304)) |
 | `lastModified` | `boolean` | `true` | Send `Last-Modified` from `feed.updated` |
 | `baseUrl` | `string` | request origin | Base used to turn relative URLs into absolute ones |
 | `pretty` | `boolean` | `false` | Indent the output for readability |
@@ -432,6 +462,192 @@ RSS 1.0 and 1.1 are fully **supported, not deprecated** — reach for them when 
 > They still produce valid output, but each logs a one-time, coded `DeprecationWarning` (`HONOFEED_DEP000N`, see [HONOFEED_DEP.md](HONOFEED_DEP.md) for the full list) — through `process.emitWarning` on Node, or `console.warn` on edge runtimes.  
 > To silence it, set `suppressDeprecationWarnings: true`, the `HONO_FEED_NO_DEPRECATION` env var, or run Node with `--no-deprecation`.
 
+## Podcasts
+
+RSS 2.0 gets typed podcast metadata — the iTunes namespace (what Apple Podcasts, Spotify, and most directories require) and the Podcasting 2.0 namespace — via a `podcast` field on `FeedOptions` (feed-level) and `FeedItem` (episode-level). `xmlns:itunes` / `xmlns:podcast` are declared automatically, only when a field from that namespace is actually used somewhere in the feed:
+
+```ts
+const feed = new Feed({
+  title: 'My Show',
+  link: 'https://example.com/',
+  podcast: {
+    author: 'Ada',
+    category: ['Technology'],
+    explicit: false,
+    image: 'https://example.com/cover.jpg',
+    owner: { name: 'Ada', email: 'ada@example.com' },
+    type: 'episodic',
+    subtitle: 'A show about things',
+    summary: 'A longer description of the show, shown in place of <description> by some apps.',
+    // block/complete only emit an element when true — Apple's documented value is "Yes";
+    // absence (false/unset) means no.
+    block: false,
+    complete: false,
+    // newFeedUrl: 'https://example.com/new-feed.xml', // set only once the feed has moved
+    // Podcasting 2.0:
+    guid: '917393e3-1b1e-5cef-ace4-edaa54e1f810',
+    locked: true,
+    funding: [{ url: 'https://example.com/support', text: 'Support the show' }],
+  },
+})
+
+feed.addItem({
+  title: 'Episode 1',
+  link: 'https://example.com/1',
+  enclosure: { url: 'https://example.com/1.mp3', type: 'audio/mpeg' },
+  podcast: {
+    duration: 1800, // itunes:duration, in seconds
+    episode: 1,
+    season: 1,
+    episodeType: 'full',
+    title: 'Pilot', // itunes:title — episode title without numbering
+    block: false,
+    // Podcasting 2.0:
+    transcript: [{ url: 'https://example.com/1.vtt', type: 'text/vtt' }],
+    chapters: { url: 'https://example.com/1-chapters.json' },
+  },
+})
+```
+
+`item.podcast.duration` is optional — when unset, `itunes:duration` falls back to the item's `enclosure.duration` ([above](#what-goes-in-a-feed)), so a plain `Enclosure` with a `duration` still reaches podcast directories without repeating it under `podcast`.
+
+`podcast` is ignored outside RSS 2.0 (every other RSS version, Atom, and JSON Feed) — there's no equivalent to map it to. An explicit `customNamespaces` entry for `xmlns:itunes` / `xmlns:podcast` always wins over the automatic declaration.
+
+## Feed discovery
+
+Serving a feed is half the story — it also has to be *findable*. `hono-feed/discovery` generates the `<link rel="alternate">` tags browsers and feed readers look for, and an HTTP `Link` header equivalent, from the same MIME-type table `serveFeed` itself uses (so they can never drift apart).
+
+For an HTML `<head>`:
+
+```ts
+// ESM
+import { feedLinksHtml } from 'hono-feed/discovery'
+
+// CJS
+const { feedLinksHtml } = require('hono-feed/discovery')
+
+app.get('/', (c) =>
+  c.html(`
+    <head>
+      ${feedLinksHtml({ title: 'My Blog', rss: '/feed.rss', atom: '/feed.atom' })}
+    </head>
+  `),
+)
+// <link rel="alternate" type="application/rss+xml" title="My Blog" href="/feed.rss">
+// <link rel="alternate" type="application/atom+xml" title="My Blog" href="/feed.atom">
+```
+
+`feedLinks(options)` returns the same data as a plain array (`{ rel, type, href, title? }[]`) instead of a string, for JSX or any other templating you already use. Both accept `baseUrl` to absolutize relative feed URLs; left unset, hrefs stay exactly as given (relative, resolved by the browser against the current page — which is usually what you want).
+
+For the HTTP-header equivalent ([RFC 8288](https://www.rfc-editor.org/rfc/rfc8288)), `feedLinkHeader` is middleware that appends one `Link` header per configured format, but only to responses whose `Content-Type` is HTML — a feed response has no use for advertising its own alternates:
+
+```ts
+// ESM
+import { feedLinkHeader } from 'hono-feed/discovery'
+
+// CJS
+const { feedLinkHeader } = require('hono-feed/discovery')
+
+app.use('*', feedLinkHeader({ rss: '/feed.rss' }))
+// Link: </feed.rss>; rel="alternate"; type="application/rss+xml"
+```
+
+## WebSub
+
+Two independent halves make up [WebSub](https://www.w3.org/TR/websub/) (formerly PubSubHubbub) support — subscribing readers can discover a hub, and you can tell that hub about new content.
+
+**Discovery** — `hub` on `FeedOptions` emits `rel="hub"` links so readers know where to subscribe (RSS/Atom `<atom:link rel="hub">`, JSON Feed `hubs`):
+
+```ts
+const feed = new Feed({
+  title: 'My Blog',
+  link: 'https://example.com/',
+  hub: 'https://pubsubhubbub.appspot.com/', // or string[] for more than one hub
+})
+```
+
+**Notification** — `notifyHub()` tells the hub a feed changed, so subscribers get the update in real time instead of waiting for their next poll. This is the publisher's obligation under WebSub §6 (Publishing); the spec leaves the mechanism open, so `notifyHub` sends the de-facto standard PubSubHubbub 0.4 "publish" ping that real-world hubs accept:
+
+```ts
+import { notifyHub } from 'hono-feed'
+
+const results = await notifyHub(
+  'https://pubsubhubbub.appspot.com/', // hub(s) — string or string[]
+  'https://example.com/feed.rss', // feed URL(s) that changed — string or string[]
+)
+// [{ hub: 'https://pubsubhubbub.appspot.com/', ok: true, status: 204 }]
+```
+
+`notifyHub` never throws — a non-2xx response, a network error, and an aborted request (pass `{ signal }` to time one out) are all reported as a result rather than a rejection, so one unreachable hub can't fail your publish flow. Subscribers still get the update on their next poll either way.
+
+## Pagination
+
+`paging` on `FeedOptions` covers [RFC 5005](https://www.rfc-editor.org/rfc/rfc5005) (Feed Paging and Archiving) end to end — for a feed too large to send in one document:
+
+```ts
+const feed = new Feed({
+  title: 'My Blog',
+  link: 'https://example.com/',
+  paging: {
+    next: '/feed?page=3', // rel="next"
+    prev: '/feed?page=1', // rel="previous" — RFC 5005's own term, not "prev"
+    first: '/feed?page=1', // rel="first"
+    last: '/feed?page=10', // rel="last"
+  },
+})
+```
+
+RSS 2.0 and Atom 1.0 emit one `atom:link`/`link` per set field; JSON Feed only maps `next` (to `next_url` — the spec has no equivalent for the others).
+
+Two more fields complete §2/§4: `complete` (§2) marks a document as containing the *entire* feed, and `archive` (§4) marks an archive page whose content never changes — pairs naturally with `cacheControl: { immutable: true }`. They emit `<fh:complete/>` / `<fh:archive/>` (the `xmlns:fh` namespace is declared automatically, only when one is set), and are mutually exclusive — setting both throws:
+
+```ts
+paging: {
+  archive: true, // this page never changes; safe to cache forever
+  current: '/feed', // rel="current" — where the always-up-to-date document lives
+  prevArchive: '/archive/2', // rel="prev-archive" — the preceding archive page
+  nextArchive: '/archive/4', // rel="next-archive" — the following archive page
+}
+```
+
+`prevArchive`/`nextArchive` are how a reader walks an archived feed's history from one page to the next — the point of `archive` pages in the first place.
+
+Like the rest of `paging`, `complete`/`archive`/`current`/`prevArchive`/`nextArchive` are RSS 2.0 / Atom 1.0 only; JSON Feed has no mapping for any of them.
+
+## RSS channel extras
+
+A handful of `<channel>` elements have no equivalent in Atom or JSON Feed, so they're plain `FeedOptions` fields rather than part of the shared model — available in every `<rss version="…">` structure (0.91 through 2.0), same as `language`/`copyright`:
+
+```ts
+const feed = new Feed({
+  title: 'My Blog',
+  link: 'https://example.com/',
+  webmaster: { name: 'Ada', email: 'webmaster@example.com' }, // <webMaster> — email required, like author
+  docs: true, // <docs> — true emits the canonical RSS 2.0 spec URL; a string emits it as-is
+  skipHours: [0, 1, 2], // <skipHours><hour>…</hour></skipHours> — GMT hours (0–23) readers can skip
+  skipDays: ['Saturday', 'Sunday'], // <skipDays><day>…</day></skipDays>
+})
+```
+
+`skipHours` values outside 0–23 throw. `textInput` and `cloud` (rssCloud) are deliberately not modeled — `textInput` is essentially unused in the wild, and `cloud` is superseded in practice by the WebSub support [above](#websub); reach for `customXml` if you need either.
+
+## Extending with custom fields
+
+The neutral model is deliberately small — anything outside it (Media RSS, Dublin Core extras, a namespaced module hono-feed doesn't model, custom JSON Feed keys) needs an escape hatch. `customXml` / `customNamespaces` (XML formats) and `customJson` (JSON Feed) are that hatch, on both `FeedOptions` (feed-level) and `FeedItem` (item-level):
+
+```ts
+const feed = new Feed({
+  title: 'My Show',
+  link: 'https://example.com/',
+  customNamespaces: { 'xmlns:media': 'http://search.yahoo.com/mrss/' },
+  customXml: [{ name: 'media:rating', text: 'nonadult' }],
+})
+```
+
+`customXml` is a JSON-shaped element tree (`{ name, attrs?, children?, text? }`), not a raw string — `text`/`attrs` are escaped exactly like every built-in element, so this stays correct by construction. Elements are appended after the format's built-in ones (`<channel>`/`<feed>` or `<item>`/`<entry>`); RDF (RSS 1.0/1.1) and legacy RSS 0.9x accept them unconditionally, since there's no built-in gating to opt out of once you've reached for this. `customNamespaces` adds `xmlns:*` declarations to the root element.
+
+`customJson` merges extra keys into the JSON Feed object (feed-level and/or per item) — per the [JSON Feed spec](https://www.jsonfeed.org/version/1.1/#extensions), custom keys should start with `_`. A built-in key always wins on collision, so this can only add fields, never override one hono-feed already sets.
+
 ## Low-level serializers
 
 Sometimes you just want the string — for a snapshot test, a queue, or a non-Hono transport.  
@@ -448,6 +664,26 @@ const { toRSS, toAtom, toJSONFeed } = require('hono-feed')
 // 'hono-feed/rss', 'hono-feed/atom', 'hono-feed/json', 'hono-feed/middleware'
 
 const xml = toRSS({ options, items }, { baseUrl: 'https://example.com' })
+```
+
+`serveFeed` runs the same per-format spec validation (Atom author coverage, absolute-IRI ids, required dates, …) before serializing — those checks aren't otherwise run on this low-level path, so if you want them, call `validateInput` yourself first:
+
+```ts
+import { toAtom, validateInput } from 'hono-feed'
+
+validateInput({ options, items }, 'atom') // throws TypeError with the same messages serveFeed gives
+const xml = toAtom({ options, items }, { baseUrl: 'https://example.com' })
+```
+
+## Linting
+
+`validateInput` only enforces what breaks the document (a missing title, a missing Atom author, …). `lintInput` goes further: it flags fields that are optional per spec but expected by real readers and directories — a missing feed `description`/`language`/`image`, an item with no `id`, `author`, or date, incomplete Podcast metadata once `podcast` is set, and so on. It never throws and returns a plain `string[]` of warnings (empty when clean), and `serveFeed` never calls it — it's for tests and CI, not the serve path:
+
+```ts
+import { lintInput } from 'hono-feed'
+
+const warnings = lintInput({ options, items }, 'rss')
+// e.g. expect(lintInput({ options, items }, 'rss')).toEqual([]) in a CI check
 ```
 
 ## Contributing

@@ -39,6 +39,14 @@ describe('validateInput', () => {
     expect(() => validateInput(bad, 'rss')).toThrow(/valid Date/)
   })
 
+  it('rejects an invalid feed-level "published" date', () => {
+    const bad: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', published: new Date('nope') },
+      items: [],
+    }
+    expect(() => validateInput(bad, 'rss')).toThrow(/feed\.published.*valid Date/)
+  })
+
   it('requires link or feedUrl for RSS (channel <link> is mandatory)', () => {
     expect(() => validateInput({ options: { title: 't' }, items: [] }, 'rss')).toThrow(
       /RSS feed requires "link"/,
@@ -193,5 +201,81 @@ describe('validateInput', () => {
         'atom',
       ),
     ).not.toThrow()
+  })
+
+  it('rejects paging.complete and paging.archive both set (RFC 5005 §2/§4 are mutually exclusive)', () => {
+    const bothSet: FeedInput = {
+      options: {
+        title: 't',
+        link: 'https://example.com/',
+        paging: { complete: true, archive: true },
+      },
+      items: [],
+    }
+    expect(() => validateInput(bothSet, 'rss')).toThrow(/mutually exclusive/)
+  })
+
+  it('allows paging.complete or paging.archive set alone', () => {
+    const completeOnly: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', paging: { complete: true } },
+      items: [],
+    }
+    expect(() => validateInput(completeOnly, 'rss')).not.toThrow()
+
+    const archiveOnly: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', paging: { archive: true } },
+      items: [],
+    }
+    expect(() => validateInput(archiveOnly, 'rss')).not.toThrow()
+  })
+
+  it('rejects skipHours values outside 0-23', () => {
+    const tooHigh: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', skipHours: [24] },
+      items: [],
+    }
+    expect(() => validateInput(tooHigh, 'rss')).toThrow(/skipHours/)
+
+    const negative: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', skipHours: [-1] },
+      items: [],
+    }
+    expect(() => validateInput(negative, 'rss')).toThrow(/skipHours/)
+
+    const nonInteger: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', skipHours: [1.5] },
+      items: [],
+    }
+    expect(() => validateInput(nonInteger, 'rss')).toThrow(/skipHours/)
+  })
+
+  it('allows skipHours values within 0-23, including the boundaries', () => {
+    const valid: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', skipHours: [0, 23] },
+      items: [],
+    }
+    expect(() => validateInput(valid, 'rss')).not.toThrow()
+  })
+
+  it('rejects a negative or non-integer ttl', () => {
+    const negative: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', ttl: -5 },
+      items: [],
+    }
+    expect(() => validateInput(negative, 'rss')).toThrow(/"ttl"/)
+
+    const nonInteger: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', ttl: 1.5 },
+      items: [],
+    }
+    expect(() => validateInput(nonInteger, 'rss')).toThrow(/"ttl"/)
+  })
+
+  it('allows a non-negative integer ttl, including zero', () => {
+    const valid: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', ttl: 0 },
+      items: [],
+    }
+    expect(() => validateInput(valid, 'rss')).not.toThrow()
   })
 })

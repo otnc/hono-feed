@@ -1,8 +1,11 @@
 import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { authorList } from '../../utils/author'
 import { latestDate, rfc3339 } from '../../utils/date'
+import { firstEnclosure } from '../../utils/enclosure'
+import { hubList } from '../../utils/hub'
+import { pagingMarker, pagingRels } from '../../utils/paging'
 import { absolutize } from '../../utils/url'
-import { el, type Node, xmlDocument } from '../../utils/xml'
+import { el, type Node, specToNode, xmlDocument } from '../../utils/xml'
 import { atomAuthorEl } from './author'
 import { atomFeedIdentity } from './identity'
 
@@ -20,14 +23,44 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
   feed.push(el('updated', undefined, rfc3339(options.updated ?? latestDate(items) ?? new Date())))
   if (link) feed.push(el('link', { rel: 'alternate', href: link }))
   if (self) feed.push(el('link', { rel: 'self', type: 'application/atom+xml', href: self }))
+  for (const hub of hubList(options.hub)) {
+    feed.push(el('link', { rel: 'hub', href: absolutize(hub, base) }))
+  }
+  if (options.paging) {
+    for (const { rel, href } of pagingRels(options.paging, base)) {
+      feed.push(el('link', { rel, href }))
+    }
+    // RFC 5005 §2/§4 — <fh:complete/> or <fh:archive/>; validateInput rejects setting both.
+    const marker = pagingMarker(options.paging)
+    if (marker) feed.push(el(`fh:${marker}`))
+  }
   if (options.author) feed.push(atomAuthorEl(options.author, 'uri'))
+  if (options.contributors) {
+    for (const c of options.contributors) feed.push(atomAuthorEl(c, 'uri', 'contributor'))
+  }
   feed.push(el('generator', undefined, options.generator ?? 'hono-feed'))
   if (options.copyright) feed.push(el('rights', undefined, options.copyright))
+  if (options.categories) {
+    for (const cat of options.categories) {
+      feed.push(el('category', { term: cat.term, scheme: cat.scheme }))
+    }
+  }
+  // RFC 4287 §4.2.8: icon is a small square, logo a 2:1 image — same roles as RSS <image>
+  // and JSON Feed icon/favicon.
+  if (options.favicon) feed.push(el('icon', undefined, absolutize(options.favicon, base)))
+  if (options.image) feed.push(el('logo', undefined, absolutize(options.image, base)))
+  if (options.customXml) feed.push(...options.customXml.map(specToNode))
 
   for (const item of items) feed.push(atomEntry10(item, base))
 
+  const hasFh = options.paging !== undefined && pagingMarker(options.paging)
   // renderAttrs drops undefined values, so xml:lang simply vanishes when language is unset.
-  const attrs = { xmlns: 'http://www.w3.org/2005/Atom', 'xml:lang': options.language }
+  const attrs = {
+    xmlns: 'http://www.w3.org/2005/Atom',
+    'xml:lang': options.language,
+    'xmlns:fh': hasFh ? 'http://purl.org/syndication/history/1.0' : undefined,
+    ...options.customNamespaces,
+  }
   return xmlDocument(el('feed', attrs, feed), { pretty: opts.pretty, version: opts.xmlVersion })
 }
 
@@ -47,6 +80,9 @@ function atomEntry10(item: FeedItem, base?: string): Node {
   if (item.content) ch.push(el('content', { type: 'html' }, item.content))
 
   for (const a of authorList(item.author)) ch.push(atomAuthorEl(a, 'uri'))
+  if (item.contributors) {
+    for (const c of item.contributors) ch.push(atomAuthorEl(c, 'uri', 'contributor'))
+  }
 
   if (item.categories) {
     for (const cat of item.categories) {
@@ -54,5 +90,22 @@ function atomEntry10(item: FeedItem, base?: string): Node {
     }
   }
 
-  return el('entry', undefined, ch)
+  // RFC 4287 §4.2.7.2: rel="enclosure" identifies a related, potentially large resource.
+  // Atom, like RSS, supports at most one; keep only the first.
+  const enclosure = firstEnclosure(item.enclosure)
+  if (enclosure) {
+    ch.push(
+      el('link', {
+        rel: 'enclosure',
+        href: absolutize(enclosure.url, base),
+        type: enclosure.type,
+        length: enclosure.length !== undefined ? String(enclosure.length) : undefined,
+      }),
+    )
+  }
+
+  if (item.customXml) ch.push(...item.customXml.map(specToNode))
+
+  // renderAttrs drops undefined values, so xml:lang simply vanishes when language is unset.
+  return el('entry', { 'xml:lang': item.language }, ch)
 }

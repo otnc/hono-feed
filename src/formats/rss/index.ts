@@ -5,6 +5,8 @@ import { toRSS10 } from './rss10'
 import { toRSS11 } from './rss11'
 import { toRSS090 } from './rss090'
 
+export { validateInput } from '../../validate'
+
 // RSS versions superseded by RSS 2.0; selecting one logs a deprecation warning.
 const OBSOLETE_RSS = new Set(['0.90', '0.91', '0.92', '0.93', '0.94'])
 

@@ -1,6 +1,6 @@
 {
   "name": "hono-feed",
-  "version": "0.4.1",
+  "version": "0.7.1",
   "description": "RSS 2.0 / Atom 1.0 / JSON Feed 1.1 response helper for Hono",
   "keywords": [
     "hono",
@@ -27,34 +27,74 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./middleware": {
-      "types": "./dist/middleware/index.d.ts",
-      "import": "./dist/middleware/index.js",
-      "require": "./dist/middleware/index.cjs"
+      "import": {
+        "types": "./dist/middleware/index.d.ts",
+        "default": "./dist/middleware/index.js"
+      },
+      "require": {
+        "types": "./dist/middleware/index.d.cts",
+        "default": "./dist/middleware/index.cjs"
+      }
     },
     "./renderer": {
-      "types": "./dist/renderer/index.d.ts",
-      "import": "./dist/renderer/index.js",
-      "require": "./dist/renderer/index.cjs"
+      "import": {
+        "types": "./dist/renderer/index.d.ts",
+        "default": "./dist/renderer/index.js"
+      },
+      "require": {
+        "types": "./dist/renderer/index.d.cts",
+        "default": "./dist/renderer/index.cjs"
+      }
+    },
+    "./discovery": {
+      "import": {
+        "types": "./dist/discovery/index.d.ts",
+        "default": "./dist/discovery/index.js"
+      },
+      "require": {
+        "types": "./dist/discovery/index.d.cts",
+        "default": "./dist/discovery/index.cjs"
+      }
     },
     "./rss": {
-      "types": "./dist/formats/rss.d.ts",
-      "import": "./dist/formats/rss.js",
-      "require": "./dist/formats/rss.cjs"
+      "import": {
+        "types": "./dist/formats/rss.d.ts",
+        "default": "./dist/formats/rss.js"
+      },
+      "require": {
+        "types": "./dist/formats/rss.d.cts",
+        "default": "./dist/formats/rss.cjs"
+      }
     },
     "./atom": {
-      "types": "./dist/formats/atom.d.ts",
-      "import": "./dist/formats/atom.js",
-      "require": "./dist/formats/atom.cjs"
+      "import": {
+        "types": "./dist/formats/atom.d.ts",
+        "default": "./dist/formats/atom.js"
+      },
+      "require": {
+        "types": "./dist/formats/atom.d.cts",
+        "default": "./dist/formats/atom.cjs"
+      }
     },
     "./json": {
-      "types": "./dist/formats/json.d.ts",
-      "import": "./dist/formats/json.js",
-      "require": "./dist/formats/json.cjs"
+      "import": {
+        "types": "./dist/formats/json.d.ts",
+        "default": "./dist/formats/json.js"
+      },
+      "require": {
+        "types": "./dist/formats/json.d.cts",
+        "default": "./dist/formats/json.cjs"
+      }
     },
     "./package.json": "./package.json"
   },
@@ -71,7 +111,8 @@
     "format": "biome format --write .",
     "check": "biome check --write . && tsc --noEmit",
     "ci": "biome ci .",
-    "prepublishOnly": "pnpm build"
+    "check:package": "pnpm build && publint && attw --pack . --ignore-rules no-resolution && node scripts/smoke.mjs",
+    "prepublishOnly": "pnpm check:package"
   },
   "engines": {
     "node": ">=20"
@@ -84,11 +125,13 @@
     "hono": ">=4.0.0"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.4",
     "@biomejs/biome": "2.5.1",
-    "@vitest/coverage-v8": "^4.1.9",
-    "hono": "^4.12.27",
+    "@vitest/coverage-v8": "^4.1.10",
+    "hono": "^4.12.28",
+    "publint": "^0.3.21",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.10"
   }
 }

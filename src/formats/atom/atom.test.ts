@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FeedInput } from '../../types'
-import { toAtom } from './index'
+import { toAtom, validateInput } from './index'
 
 const input: FeedInput = {
   options: {
@@ -180,6 +180,64 @@ describe('toAtom', () => {
       expect(out).toContain('<uri>https://example.com/two</uri>')
     })
 
+    it('renders feed and per-item contributors as <contributor> elements', () => {
+      const out = toAtom({
+        options: {
+          title: 't',
+          link: 'https://example.com/',
+          contributors: [{ name: 'feed-contributor', email: 'fc@example.com' }],
+        },
+        items: [
+          {
+            title: 'a',
+            link: 'https://example.com/1',
+            updated: new Date('2026-06-29T00:00:00Z'),
+            contributors: [{ name: 'item-contributor', url: 'https://example.com/ic' }],
+          },
+        ],
+      })
+      expect(out).toMatch(
+        /<contributor><name>feed-contributor<\/name><email>fc@example.com<\/email><\/contributor>/,
+      )
+      const entry = out.match(/<entry[^>]*>([\s\S]*?)<\/entry>/)?.[1] ?? ''
+      expect(entry).toContain('<contributor>')
+      expect(entry).toContain('<name>item-contributor</name>')
+      expect(entry).toContain('<uri>https://example.com/ic</uri>')
+      expect(out).not.toContain('<author><name>feed-contributor')
+    })
+
+    it('omits contributors when unset', () => {
+      const out = toAtom({
+        options: { title: 't', link: 'https://example.com/' },
+        items: [
+          { title: 'a', link: 'https://example.com/1', updated: new Date('2026-06-29T00:00:00Z') },
+        ],
+      })
+      expect(out).not.toContain('<contributor>')
+    })
+
+    it('sets xml:lang on <entry> from item.language, omitting it when unset', () => {
+      const out = toAtom({
+        options: { title: 't', link: 'https://example.com/' },
+        items: [
+          {
+            title: 'a',
+            link: 'https://example.com/1',
+            updated: new Date('2026-06-29T00:00:00Z'),
+            language: 'ja',
+          },
+          {
+            title: 'b',
+            link: 'https://example.com/2',
+            updated: new Date('2026-06-29T00:00:00Z'),
+          },
+        ],
+      })
+      const entries = out.match(/<entry[^>]*>[\s\S]*?<\/entry>/g) ?? []
+      expect(entries[0]).toMatch(/^<entry xml:lang="ja">/)
+      expect(entries[1]?.startsWith('<entry>')).toBe(true)
+    })
+
     it('falls back to "now" for entry <updated> when neither updated nor published is set', () => {
       const out = toAtom({
         options: { title: 't', link: 'https://example.com/' },
@@ -293,5 +351,13 @@ describe('toAtom', () => {
       expect(out).toContain('<name>two</name>')
       expect(out).toContain('<url>https://example.com/two</url>')
     })
+  })
+})
+
+describe('validateInput (re-exported for this subpath)', () => {
+  it('is importable alongside toAtom', () => {
+    expect(() => validateInput({ options: { title: '' }, items: [] }, 'atom')).toThrow(
+      /feed "title" is required/,
+    )
   })
 })

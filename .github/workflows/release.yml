@@ -48,10 +48,9 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Publish to npm
-        run: pnpm publish --no-git-checks --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # pnpm doesn't do the OIDC exchange, so publish uses npm directly
+      - run: npm install -g npm@11
+      - run: npm publish --access public --provenance
 
       - name: Commit, tag and push
         run: |

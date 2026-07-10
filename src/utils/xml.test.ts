@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { cdata, el, escapeAttr, escapeText, raw, stripInvalidXmlChars, xmlDocument } from './xml'
+import {
+  cdata,
+  el,
+  escapeAttr,
+  escapeText,
+  raw,
+  specToNode,
+  stripInvalidXmlChars,
+  xmlDocument,
+} from './xml'
 
 // Returns true if the string contains any character forbidden by the XML 1.0 Char production.
 function hasInvalidXmlChar(s: string): boolean {
@@ -27,8 +36,10 @@ describe('xml utils', () => {
     expect(xmlDocument(doc, { version: '1.1' }).startsWith('<?xml version="1.1"')).toBe(true)
   })
 
-  it('omits null/undefined/false attributes and renders boolean true bare', () => {
-    expect(xmlDocument(el('x', { a: undefined, b: false, c: true, d: null }))).toContain('<x c/>')
+  it('omits null/undefined/false attributes and renders boolean true as ="true"', () => {
+    expect(xmlDocument(el('x', { a: undefined, b: false, c: true, d: null }))).toContain(
+      '<x c="true"/>',
+    )
   })
 })
 
@@ -50,8 +61,16 @@ describe('escapeText', () => {
     expect(escapeText(`"'`)).toBe(`"'`)
   })
 
-  it('preserves tab, newline and carriage return in text', () => {
-    expect(escapeText('a\tb\nc\rd')).toBe('a\tb\nc\rd')
+  it('preserves tab and newline literally (unaffected by XML 1.0 §2.11)', () => {
+    expect(escapeText('a\tb\nc')).toBe('a\tb\nc')
+  })
+
+  it('escapes carriage return as a numeric reference, so it survives §2.11 normalization', () => {
+    expect(escapeText('a\rb')).toBe('a&#xD;b')
+  })
+
+  it('escapes the CR half of a CRLF pair too', () => {
+    expect(escapeText('a\r\nb')).toBe('a&#xD;\nb')
   })
 
   it('keeps multi-byte and astral (emoji) characters intact', () => {
@@ -142,5 +161,60 @@ describe('invalid characters cannot escape through any path', () => {
   it('produces a document with no invalid characters anywhere', () => {
     const doc = xmlDocument(el('item', { title: dirty }, [el('body', undefined, dirty)]))
     expect(hasInvalidXmlChar(doc)).toBe(false)
+  })
+})
+
+describe('specToNode', () => {
+  it('renders a leaf spec with attrs and text, escaped like a built-in element', () => {
+    const node = specToNode({ name: 'itunes:image', attrs: { href: 'a & b' }, text: '<x>' })
+    expect(xmlDocument(node)).toBe(
+      '<?xml version="1.0" encoding="utf-8"?><itunes:image href="a &amp; b">&lt;x&gt;</itunes:image>',
+    )
+  })
+
+  it('renders nested children recursively', () => {
+    const node = specToNode({
+      name: 'parent',
+      children: [
+        { name: 'child', text: 'a' },
+        { name: 'child', text: 'b' },
+      ],
+    })
+    expect(xmlDocument(node)).toBe(
+      '<?xml version="1.0" encoding="utf-8"?><parent><child>a</child><child>b</child></parent>',
+    )
+  })
+
+  it('ignores text when children is set', () => {
+    const node = specToNode({ name: 'x', children: [{ name: 'y' }], text: 'ignored' })
+    expect(xmlDocument(node)).not.toContain('ignored')
+  })
+
+  it('renders a self-closing element when neither children nor text is set', () => {
+    expect(xmlDocument(specToNode({ name: 'x' }))).toBe(
+      '<?xml version="1.0" encoding="utf-8"?><x/>',
+    )
+  })
+
+  it('accepts valid XML names, including namespaced and underscore-led ones', () => {
+    expect(() => specToNode({ name: 'itunes:author' })).not.toThrow()
+    expect(() => specToNode({ name: 'media-thumb' })).not.toThrow()
+    expect(() => specToNode({ name: '_x' })).not.toThrow()
+    expect(() => specToNode({ name: 'x', attrs: { 'data-foo': '1' } })).not.toThrow()
+  })
+
+  it('rejects an element name that is not a valid XML Name', () => {
+    expect(() => specToNode({ name: 'x><script>alert(1)</script><x' })).toThrow(TypeError)
+    expect(() => specToNode({ name: 'a b' })).toThrow(TypeError)
+    expect(() => specToNode({ name: '1abc' })).toThrow(TypeError)
+    expect(() => specToNode({ name: 'a:b:c' })).toThrow(TypeError)
+  })
+
+  it('rejects an attribute key that is not a valid XML Name', () => {
+    expect(() => specToNode({ name: 'x', attrs: { 'a="1" onload': 'x' } })).toThrow(TypeError)
+  })
+
+  it('validates nested children too', () => {
+    expect(() => specToNode({ name: 'parent', children: [{ name: 'a b' }] })).toThrow(TypeError)
   })
 })
