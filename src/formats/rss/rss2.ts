@@ -53,8 +53,8 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   channel.push(el('description', undefined, options.description ?? ''))
   if (options.language) channel.push(el('language', undefined, options.language))
   if (options.copyright) channel.push(el('copyright', undefined, options.copyright))
-  // Channel <category> arrived in 0.92 alongside the item-level element (same rules apply).
-  if (caps.itemRich092 && options.categories) {
+  // Channel <category> is RSS 2.0-only; 0.92 only added the item-level element (see below).
+  if (caps.rss20 && options.categories) {
     for (const cat of options.categories) {
       channel.push(el('category', { domain: cat.scheme }, cat.term))
     }
@@ -192,7 +192,8 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
   if (item.description) ch.push(el('description', undefined, raw(cdata(item.description))))
   if (caps.rss20 && item.content)
     ch.push(el('content:encoded', undefined, raw(cdata(item.content))))
-  if (caps.itemRich092 && item.comments) {
+  // <comments> was introduced in RSS 2.0 (not 0.92, unlike category/enclosure below).
+  if (caps.rss20 && item.comments) {
     ch.push(el('comments', undefined, absolutize(item.comments, base)))
   }
 
