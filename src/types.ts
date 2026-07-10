@@ -353,7 +353,12 @@ export interface ServeFeedOptions {
    * Default false.
    */
   detectFromQuery?: boolean
-  /** Detect format from `?format=`. Defaults to `detectFromQuery`. */
+  /**
+   * Detect format from `?format=`. Defaults to `detectFromQuery`. An unrecognized value is
+   * silently ignored rather than rejected — format has a legitimate fallback chain (query →
+   * extension → Accept header), so there's always a next candidate to try. Contrast with
+   * `?version=`, which has no such fallback and answers 400 on an unrecognized value instead.
+   */
   detectFormatFromQuery?: boolean
   /** Detect version (e.g. `rssVersion`) from `?version=`. Defaults to `detectFromQuery`. */
   detectVersionFromQuery?: boolean
