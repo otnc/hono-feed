@@ -18,7 +18,7 @@
     "type": "git",
     "url": "git+https://github.com/otnc/hono-feed.git"
   },
-  "license": "Apache-2.0",
+  "license": "MIT",
   "author": "otoneko. (https://github.com/otnc)",
   "type": "module",
   "sideEffects": false,

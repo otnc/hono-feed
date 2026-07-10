@@ -717,4 +717,4 @@ otoneko. https://github.com/otnc
 
 ## License
 
-Distributed under the Apache-2.0. See [LICENSE](./LICENSE) for more information.
+Distributed under the MIT License. See [LICENSE](./LICENSE) for more information.

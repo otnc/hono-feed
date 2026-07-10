@@ -74,4 +74,4 @@ It needs an `NPM_TOKEN` secret and write access for the default `GITHUB_TOKEN`.
 
 ## License
 
-By contributing, you agree that your contributions are licensed under the [Apache-2.0](./LICENSE) license.
+By contributing, you agree that your contributions are licensed under the [MIT License](./LICENSE) license.
