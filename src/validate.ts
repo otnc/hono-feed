@@ -15,6 +15,7 @@ export function validateInput(input: FeedInput, format: FeedFormat): void {
     throw new TypeError('hono-feed: feed "title" is required')
   }
   assertValidDate(options.updated, 'feed.updated')
+  assertValidDate(options.published, 'feed.published')
 
   // RFC 5005 defines <fh:complete/> (§2, "this is the whole feed") and <fh:archive/> (§4,
   // "this page never changes") for different document types — a page can't be both at once.

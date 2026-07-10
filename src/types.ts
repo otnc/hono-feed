@@ -154,6 +154,8 @@ export interface FeedOptions {
   language?: string
   /** RSS lastBuildDate / Atom updated. JSON derives it from items. */
   updated?: Date
+  /** RSS channel `<pubDate>` (0.91+). No Atom/JSON feed-level equivalent (Atom has no feed-level published). */
+  published?: Date
   /** RSS managingEditor (email required) / Atom author / JSON authors. */
   author?: Author
   /** Atom `<contributor>` (RFC 4287 §4.2.3). No RSS/JSON equivalent. */

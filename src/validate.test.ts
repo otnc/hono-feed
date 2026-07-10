@@ -39,6 +39,14 @@ describe('validateInput', () => {
     expect(() => validateInput(bad, 'rss')).toThrow(/valid Date/)
   })
 
+  it('rejects an invalid feed-level "published" date', () => {
+    const bad: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', published: new Date('nope') },
+      items: [],
+    }
+    expect(() => validateInput(bad, 'rss')).toThrow(/feed\.published.*valid Date/)
+  })
+
   it('requires link or feedUrl for RSS (channel <link> is mandatory)', () => {
     expect(() => validateInput({ options: { title: 't' }, items: [] }, 'rss')).toThrow(
       /RSS feed requires "link"/,
