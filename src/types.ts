@@ -29,6 +29,8 @@ export interface Author {
   name: string
   email?: string
   url?: string
+  /** Author image URL. JSON Feed `avatar`; no RSS/Atom equivalent. */
+  avatar?: string
 }
 
 export interface Category {
@@ -169,6 +171,8 @@ export interface FeedOptions {
   hub?: string | string[]
   /** JSON Feed `expired` — true tells readers the feed will never update again. */
   expired?: boolean
+  /** JSON Feed `user_comment` — a human-readable note about the feed. No RSS/Atom equivalent. */
+  userComment?: string
   /**
    * Pagination links for a paged feed (RFC 5005 §3 via `link rel`; JSON Feed `next_url`).
    * RSS/Atom emit one `link`/`atom:link` per set field; JSON Feed only maps `next`.
