@@ -115,6 +115,19 @@ describe('serveFeed', () => {
     expect(await res.text()).toBe('')
   })
 
+  it('ignores If-None-Match on a POST request, per RFC 9110 §13.1.2/§13.1.3 (GET/HEAD only)', async () => {
+    const a = new Hono()
+    a.post('/feed', (c) => serveFeed(c, buildFeed()))
+    const first = await a.request('/feed', { method: 'POST' })
+    const etag = first.headers.get('etag') as string
+    expect(etag).toMatch(/^W\//)
+    const res = await a.request('/feed', {
+      method: 'POST',
+      headers: { 'if-none-match': etag },
+    })
+    expect(res.status).toBe(200)
+  })
+
   it('returns an empty body with Content-Length for HEAD', async () => {
     const res = await app().request('/feed', { method: 'HEAD' })
     expect(res.status).toBe(200)
@@ -579,6 +592,18 @@ describe('serveFeed: etagFrom', () => {
     expect(res.status).toBe(304)
     expect(await res.text()).toBe('')
     expect(inputFn).not.toHaveBeenCalled()
+  })
+
+  it('ignores If-None-Match on a POST request and resolves input normally (etagFrom path)', async () => {
+    const inputFn = vi.fn(() => buildFeed())
+    const a = new Hono()
+    a.post('/feed', (c) => serveFeed(c, inputFn, { etagFrom: () => 'rev-post' }))
+    const res = await a.request('/feed', {
+      method: 'POST',
+      headers: { 'if-none-match': 'W/"rev-post"' },
+    })
+    expect(res.status).toBe(200)
+    expect(inputFn).toHaveBeenCalled()
   })
 
   it('carries Vary: Accept on the 304 short-circuit when the format was negotiated', async () => {
