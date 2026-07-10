@@ -156,6 +156,8 @@ export interface FeedOptions {
   updated?: Date
   /** RSS managingEditor (email required) / Atom author / JSON authors. */
   author?: Author
+  /** Atom `<contributor>` (RFC 4287 §4.2.3). No RSS/JSON equivalent. */
+  contributors?: Author[]
   copyright?: string
   /** RSS channel category / Atom feed category / RDF dc:subject. No JSON Feed equivalent. */
   categories?: Category[]
@@ -246,6 +248,8 @@ export interface FeedItem {
   /** Body HTML (RSS content:encoded / Atom content / JSON content_html). */
   content?: string
   author?: Author | Author[]
+  /** Atom `<contributor>` (RFC 4287 §4.2.3). No RSS/JSON equivalent. */
+  contributors?: Author[]
   /** RSS pubDate / Atom published / JSON date_published. */
   published?: Date
   /** Atom updated / JSON date_modified. */
@@ -261,7 +265,7 @@ export interface FeedItem {
   externalUrl?: string
   /** JSON `banner_image`. */
   bannerImage?: string
-  /** Per-item language override (JSON Feed 1.1 only). */
+  /** Per-item language override. Atom `xml:lang` on `<entry>` (1.0 only) / JSON Feed 1.1 `language`. */
   language?: string
   /** Extra elements appended after the built-in item/entry elements (XML formats only). */
   customXml?: XmlElementSpec[]
