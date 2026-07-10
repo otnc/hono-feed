@@ -59,8 +59,11 @@ describe('lintInput', () => {
 
   it('warns about a missing Atom id/link/feedUrl, only for atom', () => {
     const noLink: FeedInput = { ...clean, options: { ...clean.options, link: undefined } }
+    // Both the id-fallback rule and the separate rel="alternate" rule fire when link is
+    // entirely absent (id/feedUrl are unset too).
     expect(lintInput(noLink, 'atom')).toEqual([
       expect.stringMatching(/no "id" \(or "link"\/"feedUrl"\)/),
+      expect.stringMatching(/no "link".*rel="alternate"/),
     ])
     expect(lintInput(noLink, 'rss')).toEqual([])
 
@@ -68,7 +71,41 @@ describe('lintInput', () => {
       ...clean,
       options: { ...clean.options, link: undefined, feedUrl: 'https://example.com/feed' },
     }
-    expect(lintInput(withFeedUrl, 'atom')).toEqual([])
+    // id fallback is satisfied via feedUrl, but the rel="alternate" rule still fires since
+    // link itself is still unset.
+    expect(lintInput(withFeedUrl, 'atom')).toEqual([
+      expect.stringMatching(/no "link".*rel="alternate"/),
+    ])
+  })
+
+  it('warns about a missing Atom rel="alternate" link, only for atom', () => {
+    const noLink: FeedInput = {
+      ...clean,
+      options: { ...clean.options, link: undefined, id: 'urn:uuid:1225c695-cfb8' },
+    }
+    expect(lintInput(noLink, 'atom')).toEqual([expect.stringMatching(/rel="alternate"/)])
+    expect(lintInput(noLink, 'rss')).toEqual([])
+    expect(lintInput(noLink, 'json')).toEqual([])
+  })
+
+  it('warns about paging.archive set without paging.current, for rss/atom but not json', () => {
+    const archiveOnly: FeedInput = {
+      ...clean,
+      options: { ...clean.options, paging: { archive: true } },
+    }
+    expect(lintInput(archiveOnly, 'rss')).toEqual([
+      expect.stringMatching(/"archive" is set without "current"/),
+    ])
+    expect(lintInput(archiveOnly, 'atom')).toEqual([
+      expect.stringMatching(/"archive" is set without "current"/),
+    ])
+    expect(lintInput(archiveOnly, 'json')).toEqual([])
+
+    const withCurrent: FeedInput = {
+      ...clean,
+      options: { ...clean.options, paging: { archive: true, current: 'https://example.com/' } },
+    }
+    expect(lintInput(withCurrent, 'rss')).toEqual([])
   })
 
   it('warns about missing Apple Podcasts fields, only when podcast is opted in', () => {
