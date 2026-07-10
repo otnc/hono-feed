@@ -226,7 +226,7 @@ describe('toRSS', () => {
     )
   })
 
-  it('emits channel <category> per feed-level category, gated like item categories (0.92+)', () => {
+  it('emits channel <category> per feed-level category (RSS 2.0 only — 0.92 only added the item-level element)', () => {
     const withFeedCategories: FeedInput = {
       options: {
         title: 't',
@@ -244,6 +244,9 @@ describe('toRSS', () => {
       { rssVersion: '0.91' },
     )
     expect(out091).not.toContain('<category')
+
+    const out092 = toRSS(withFeedCategories, { rssVersion: '0.92' })
+    expect(out092).not.toContain('<category')
   })
 
   it('emits channel managingEditor from options.author when email is present', () => {
@@ -366,7 +369,7 @@ describe('toRSS', () => {
     expect(out).not.toContain('<skipDays>')
   })
 
-  it('emits item <comments>, absolutized, gated the same as category/enclosure (0.92+)', () => {
+  it('emits item <comments>, absolutized, gated to RSS 2.0 only (introduced in 2.0, not 0.92)', () => {
     const withComments: FeedInput = {
       options: { title: 't', link: 'https://example.com/', language: 'en' },
       items: [{ title: 'a', link: 'https://example.com/1', comments: '/1#comments' }],
@@ -376,6 +379,9 @@ describe('toRSS', () => {
 
     const out091 = toRSS(withComments, { rssVersion: '0.91' })
     expect(out091).not.toContain('<comments>')
+
+    const out092 = toRSS(withComments, { rssVersion: '0.92', baseUrl: 'https://example.com' })
+    expect(out092).not.toContain('<comments>')
   })
 
   it('honours xmlVersion and rssVersion', () => {
