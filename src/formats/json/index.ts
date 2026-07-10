@@ -33,14 +33,15 @@ export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): strin
   const self = selfUrl(opts, options)
   if (self) feed.feed_url = self
   if (options.description) feed.description = options.description
+  if (options.userComment) feed.user_comment = options.userComment
   if (options.language && !v1) feed.language = options.language
   if (options.image) feed.icon = absolutize(options.image, base)
   if (options.favicon) feed.favicon = absolutize(options.favicon, base)
   // JSON Feed only has next_url; there's no equivalent for prev/first/last.
   if (options.paging?.next) feed.next_url = absolutize(options.paging.next, base)
   if (options.author) {
-    if (v1) feed.author = jsonAuthor(options.author)
-    else feed.authors = [jsonAuthor(options.author)]
+    if (v1) feed.author = jsonAuthor(options.author, base)
+    else feed.authors = [jsonAuthor(options.author, base)]
   }
   const hubs = hubList(options.hub)
   if (hubs.length) {
@@ -55,9 +56,11 @@ export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): strin
   return JSON.stringify(feed, null, opts.pretty ? 2 : undefined)
 }
 
-function jsonAuthor(a: Author): Record<string, string> {
+function jsonAuthor(a: Author, base?: string): Record<string, string> {
   const o: Record<string, string> = { name: a.name }
   if (a.url) o.url = a.url
+  // absolutize() only returns undefined for a falsy url, which a.avatar isn't here.
+  if (a.avatar) o.avatar = absolutize(a.avatar, base) as string
   return o
 }
 
@@ -87,8 +90,8 @@ function jsonItem(item: FeedItem, v1: boolean, base?: string): Record<string, un
 
   const authors = authorList(item.author)
   if (authors.length) {
-    if (v1) o.author = jsonAuthor(authors[0])
-    else o.authors = authors.map(jsonAuthor)
+    if (v1) o.author = jsonAuthor(authors[0], base)
+    else o.authors = authors.map((author) => jsonAuthor(author, base))
   }
   if (item.categories?.length) o.tags = item.categories.map((c) => c.term)
   if (item.image) o.image = absolutize(item.image, base)
