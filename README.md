@@ -666,6 +666,17 @@ validateInput({ options, items }, 'atom') // throws TypeError with the same mess
 const xml = toAtom({ options, items }, { baseUrl: 'https://example.com' })
 ```
 
+## Linting
+
+`validateInput` only enforces what breaks the document (a missing title, a missing Atom author, …). `lintInput` goes further: it flags fields that are optional per spec but expected by real readers and directories — a missing feed `description`/`language`/`image`, an item with no `id`, `author`, or date, incomplete Podcast metadata once `podcast` is set, and so on. It never throws and returns a plain `string[]` of warnings (empty when clean), and `serveFeed` never calls it — it's for tests and CI, not the serve path:
+
+```ts
+import { lintInput } from 'hono-feed'
+
+const warnings = lintInput({ options, items }, 'rss')
+// e.g. expect(lintInput({ options, items }, 'rss')).toEqual([]) in a CI check
+```
+
 ## Contributing
 
 Contributions Welcome! You can contribute in the following ways.
