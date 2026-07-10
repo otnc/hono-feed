@@ -20,6 +20,11 @@ describe('RSS 2.0 podcast namespaces (iTunes / Podcasting 2.0)', () => {
           image: 'https://example.com/cover.jpg',
           owner: { name: 'otnc', email: 'otnc@example.com' },
           type: 'episodic',
+          subtitle: 'a short subtitle',
+          summary: 'a longer summary',
+          block: true,
+          complete: true,
+          newFeedUrl: 'https://example.com/new-feed.xml',
         },
       },
     })
@@ -33,6 +38,23 @@ describe('RSS 2.0 podcast namespaces (iTunes / Podcasting 2.0)', () => {
       '<itunes:owner><itunes:name>otnc</itunes:name><itunes:email>otnc@example.com</itunes:email></itunes:owner>',
     )
     expect(out).toContain('<itunes:type>episodic</itunes:type>')
+    expect(out).toContain('<itunes:subtitle>a short subtitle</itunes:subtitle>')
+    expect(out).toContain('<itunes:summary>a longer summary</itunes:summary>')
+    expect(out).toContain('<itunes:block>Yes</itunes:block>')
+    expect(out).toContain('<itunes:complete>Yes</itunes:complete>')
+    expect(out).toContain(
+      '<itunes:new-feed-url>https://example.com/new-feed.xml</itunes:new-feed-url>',
+    )
+  })
+
+  it('omits itunes:block/itunes:complete (and xmlns:itunes) when block/complete are false or unset', () => {
+    const out = toRSS({
+      ...base,
+      options: { ...base.options, podcast: { block: false, complete: false } },
+    })
+    expect(out).not.toContain('<itunes:block>')
+    expect(out).not.toContain('<itunes:complete>')
+    expect(out).not.toContain('xmlns:itunes')
   })
 
   it('emits every feed-level Podcasting 2.0 element and declares xmlns:podcast', () => {
@@ -92,6 +114,8 @@ describe('RSS 2.0 podcast namespaces (iTunes / Podcasting 2.0)', () => {
             season: 2,
             episodeType: 'full',
             image: 'https://example.com/ep5.jpg',
+            title: 'Episode Five',
+            block: true,
           },
         },
       ],
@@ -102,6 +126,16 @@ describe('RSS 2.0 podcast namespaces (iTunes / Podcasting 2.0)', () => {
     expect(out).toContain('<itunes:season>2</itunes:season>')
     expect(out).toContain('<itunes:episodeType>full</itunes:episodeType>')
     expect(out).toContain('<itunes:image href="https://example.com/ep5.jpg"/>')
+    expect(out).toContain('<itunes:title>Episode Five</itunes:title>')
+    expect(out).toContain('<itunes:block>Yes</itunes:block>')
+  })
+
+  it('omits item-level itunes:block when false or unset', () => {
+    const out = toRSS({
+      ...base,
+      items: [{ ...base.items[0], podcast: { block: false } }],
+    })
+    expect(out).not.toContain('<itunes:block>')
   })
 
   it('emits every item-level Podcasting 2.0 element', () => {
@@ -231,6 +265,16 @@ describe('RSS 2.0 podcast namespaces (iTunes / Podcasting 2.0)', () => {
     )
     expect(out).toContain('<itunes:image href="https://example.com/cover.jpg"/>')
     expect(out).toContain('<podcast:funding url="https://example.com/fund"/>')
+  })
+
+  it('absolutizes itunes:new-feed-url', () => {
+    const out = toRSS(
+      { ...base, options: { ...base.options, podcast: { newFeedUrl: '/new-feed.xml' } } },
+      { baseUrl: 'https://example.com' },
+    )
+    expect(out).toContain(
+      '<itunes:new-feed-url>https://example.com/new-feed.xml</itunes:new-feed-url>',
+    )
   })
 
   it('podcast:funding omits text when unset (self-closing element)', () => {
