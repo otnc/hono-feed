@@ -35,6 +35,9 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
     if (marker) feed.push(el(`fh:${marker}`))
   }
   if (options.author) feed.push(atomAuthorEl(options.author, 'uri'))
+  if (options.contributors) {
+    for (const c of options.contributors) feed.push(atomAuthorEl(c, 'uri', 'contributor'))
+  }
   feed.push(el('generator', undefined, options.generator ?? 'hono-feed'))
   if (options.copyright) feed.push(el('rights', undefined, options.copyright))
   if (options.categories) {
@@ -77,6 +80,9 @@ function atomEntry10(item: FeedItem, base?: string): Node {
   if (item.content) ch.push(el('content', { type: 'html' }, item.content))
 
   for (const a of authorList(item.author)) ch.push(atomAuthorEl(a, 'uri'))
+  if (item.contributors) {
+    for (const c of item.contributors) ch.push(atomAuthorEl(c, 'uri', 'contributor'))
+  }
 
   if (item.categories) {
     for (const cat of item.categories) {
@@ -100,5 +106,6 @@ function atomEntry10(item: FeedItem, base?: string): Node {
 
   if (item.customXml) ch.push(...item.customXml.map(specToNode))
 
-  return el('entry', undefined, ch)
+  // renderAttrs drops undefined values, so xml:lang simply vanishes when language is unset.
+  return el('entry', { 'xml:lang': item.language }, ch)
 }
