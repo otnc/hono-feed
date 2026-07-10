@@ -477,6 +477,13 @@ const feed = new Feed({
     image: 'https://example.com/cover.jpg',
     owner: { name: 'Ada', email: 'ada@example.com' },
     type: 'episodic',
+    subtitle: 'A show about things',
+    summary: 'A longer description of the show, shown in place of <description> by some apps.',
+    // block/complete only emit an element when true — Apple's documented value is "Yes";
+    // absence (false/unset) means no.
+    block: false,
+    complete: false,
+    // newFeedUrl: 'https://example.com/new-feed.xml', // set only once the feed has moved
     // Podcasting 2.0:
     guid: '917393e3-1b1e-5cef-ace4-edaa54e1f810',
     locked: true,
@@ -493,6 +500,8 @@ feed.addItem({
     episode: 1,
     season: 1,
     episodeType: 'full',
+    title: 'Pilot', // itunes:title — episode title without numbering
+    block: false,
     // Podcasting 2.0:
     transcript: [{ url: 'https://example.com/1.vtt', type: 'text/vtt' }],
     chapters: { url: 'https://example.com/1-chapters.json' },
