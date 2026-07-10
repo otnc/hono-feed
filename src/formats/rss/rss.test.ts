@@ -437,6 +437,53 @@ describe('toRSS', () => {
     expect(out).toContain('<author>otnc@example.com</author>')
   })
 
+  it('falls back to <dc:creator> for a name-only item author (no email), declaring xmlns:dc', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a', link: 'https://example.com/1', author: { name: 'Ada' } }],
+    })
+    expect(out).toContain('xmlns:dc="http://purl.org/dc/elements/1.1/"')
+    expect(out).toContain('<dc:creator>Ada</dc:creator>')
+    expect(out).not.toContain('<author>')
+  })
+
+  it('prefers <author> over <dc:creator> when the item author has an email', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [
+        {
+          title: 'a',
+          link: 'https://example.com/1',
+          author: { name: 'Ada', email: 'ada@example.com' },
+        },
+      ],
+    })
+    expect(out).toContain('<author>ada@example.com (Ada)</author>')
+    expect(out).not.toContain('<dc:creator>')
+    expect(out).not.toContain('xmlns:dc')
+  })
+
+  it('omits xmlns:dc when no item needs the dc:creator fallback', () => {
+    const out = toRSS({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a', link: 'https://example.com/1' }],
+    })
+    expect(out).not.toContain('xmlns:dc')
+    expect(out).not.toContain('dc:creator')
+  })
+
+  it('does not emit dc:creator outside RSS 2.0 (item author is 2.0-gated)', () => {
+    const out = toRSS(
+      {
+        options: { title: 't', link: 'https://example.com/', language: 'en' },
+        items: [{ title: 'a', link: 'https://example.com/1', author: { name: 'Ada' } }],
+      },
+      { rssVersion: '0.91' },
+    )
+    expect(out).not.toContain('dc:creator')
+    expect(out).not.toContain('xmlns:dc')
+  })
+
   it('emits only the first enclosure when given an array (RSS supports at most one)', () => {
     const out = toRSS({
       options: { title: 't', link: 'https://example.com/' },
