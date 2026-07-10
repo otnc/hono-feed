@@ -126,7 +126,7 @@ function serveWithEtagFrom(
 ): Response | Promise<Response> {
   const etagValue = resolveEtag('', () => tag)
   const inm = c.req.header('if-none-match')
-  if (inm !== undefined && etagMatches(inm, etagValue)) {
+  if (isConditionalMethod(c) && inm !== undefined && etagMatches(inm, etagValue)) {
     const { cacheControl = 'public, max-age=3600' } = options
     const headers: Record<string, string> = { ETag: etagValue }
     if (cacheControl !== false) {
@@ -346,6 +346,10 @@ function isNotModified(
   etagValue: string | undefined,
   updatedDate: Date | undefined,
 ): boolean {
+  // RFC 9110 §13.1.2/§13.1.3: a recipient MUST ignore If-None-Match/If-Modified-Since when the
+  // request method is neither GET nor HEAD.
+  if (!isConditionalMethod(c)) return false
+
   const inm = c.req.header('if-none-match')
   // RFC 9110 §13.1.3: a recipient MUST ignore If-Modified-Since when the request contains
   // If-None-Match — even if there's no ETag on our side to compare it against.
@@ -361,6 +365,11 @@ function isNotModified(
     }
   }
   return false
+}
+
+// RFC 9110 §13.1.2/§13.1.3: conditional request headers only govern GET/HEAD requests.
+function isConditionalMethod(c: Context): boolean {
+  return c.req.method === 'GET' || c.req.method === 'HEAD'
 }
 
 // An entity-tag per RFC 9110 §8.8.3: `[ "W/" ] DQUOTE *etagc DQUOTE`. `etagc` legally includes
