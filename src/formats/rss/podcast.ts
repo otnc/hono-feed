@@ -13,7 +13,13 @@ function hasItunesFeedFields(p: NonNullable<FeedOptions['podcast']>): boolean {
     p.explicit !== undefined ||
     p.image !== undefined ||
     p.owner !== undefined ||
-    p.type !== undefined
+    p.type !== undefined ||
+    p.subtitle !== undefined ||
+    p.summary !== undefined ||
+    // block/complete only emit an element when true (absence means no — see podcastChannelNodes).
+    p.block === true ||
+    p.complete === true ||
+    p.newFeedUrl !== undefined
   )
 }
 
@@ -28,7 +34,10 @@ function hasItunesItemFields(p: ItemPodcast): boolean {
     p.episode !== undefined ||
     p.season !== undefined ||
     p.episodeType !== undefined ||
-    p.image !== undefined
+    p.image !== undefined ||
+    p.title !== undefined ||
+    // block only emits an element when true (absence means no — see podcastItemNodes).
+    p.block === true
   )
 }
 
@@ -90,6 +99,12 @@ export function podcastChannelNodes(p: FeedOptions['podcast'], base: string | un
     )
   }
   if (p.type) nodes.push(el('itunes:type', undefined, p.type))
+  if (p.subtitle) nodes.push(el('itunes:subtitle', undefined, p.subtitle))
+  if (p.summary) nodes.push(el('itunes:summary', undefined, p.summary))
+  // Apple's documented value is "Yes"; absence (false/unset) means no, so there's no "No" to emit.
+  if (p.block) nodes.push(el('itunes:block', undefined, 'Yes'))
+  if (p.complete) nodes.push(el('itunes:complete', undefined, 'Yes'))
+  if (p.newFeedUrl) nodes.push(el('itunes:new-feed-url', undefined, absolutize(p.newFeedUrl, base)))
   if (p.guid) nodes.push(el('podcast:guid', undefined, p.guid))
   if (p.locked !== undefined) {
     nodes.push(el('podcast:locked', undefined, p.locked ? 'yes' : 'no'))
@@ -127,6 +142,9 @@ export function podcastItemNodes(
   }
   if (podcast.episodeType) nodes.push(el('itunes:episodeType', undefined, podcast.episodeType))
   if (podcast.image) nodes.push(el('itunes:image', { href: absolutize(podcast.image, base) }))
+  if (podcast.title) nodes.push(el('itunes:title', undefined, podcast.title))
+  // Apple's documented value is "Yes"; absence (false/unset) means no, so there's no "No" to emit.
+  if (podcast.block) nodes.push(el('itunes:block', undefined, 'Yes'))
   if (podcast.transcript) {
     for (const t of podcast.transcript) {
       nodes.push(el('podcast:transcript', { url: absolutize(t.url, base), type: t.type }))

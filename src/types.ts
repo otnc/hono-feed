@@ -103,6 +103,16 @@ export interface FeedPodcast {
   locked?: boolean
   /** `podcast:funding` — one element per entry. */
   funding?: PodcastFunding[]
+  /** `itunes:subtitle` — short show description shown in some directories. */
+  subtitle?: string
+  /** `itunes:summary` — longer show description (Apple falls back to `<description>`). */
+  summary?: string
+  /** `itunes:block` — `true` hides the show from Apple Podcasts. */
+  block?: boolean
+  /** `itunes:complete` — `true` marks the show as finished (no more episodes ever). */
+  complete?: boolean
+  /** `itunes:new-feed-url` — feed moved; directories should re-point to this URL. */
+  newFeedUrl?: string
 }
 
 /** Podcast metadata for a single episode (RSS 2.0 only — see `FeedPodcast`). */
@@ -123,6 +133,10 @@ export interface ItemPodcast {
   transcript?: PodcastTranscript[]
   /** `podcast:chapters`. */
   chapters?: PodcastChapters
+  /** `itunes:title` — episode title without numbering (Apple shows episode/season separately). */
+  title?: string
+  /** `itunes:block` — `true` hides this episode from Apple Podcasts. */
+  block?: boolean
 }
 
 /**
