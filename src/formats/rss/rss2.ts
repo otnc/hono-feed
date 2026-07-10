@@ -134,6 +134,13 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   for (const item of items) channel.push(rssItem(item, caps, base))
 
   const hasContent = caps.rss20 && items.some((item) => item.content)
+  // <dc:creator> is emitted for any item author with a name but no email (see rssItem).
+  const hasDcCreator =
+    caps.rss20 &&
+    items.some((item) => {
+      const author = firstAuthor(item.author)
+      return !author?.email && !!author?.name
+    })
   const podcastNs = caps.rss20
     ? podcastNamespacesUsed(options, items)
     : { itunes: false, podcast: false }
@@ -144,6 +151,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
       version,
       'xmlns:atom': caps.rss20 ? 'http://www.w3.org/2005/Atom' : undefined,
       'xmlns:content': hasContent ? 'http://purl.org/rss/1.0/modules/content/' : undefined,
+      'xmlns:dc': hasDcCreator ? 'http://purl.org/dc/elements/1.1/' : undefined,
       'xmlns:itunes': podcastNs.itunes ? ITUNES_NS : undefined,
       'xmlns:podcast': podcastNs.podcast ? PODCAST_NS : undefined,
       'xmlns:fh': hasFh ? 'http://purl.org/syndication/history/1.0' : undefined,
@@ -187,11 +195,14 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
     ch.push(el('comments', undefined, absolutize(item.comments, base)))
   }
 
-  // RSS author requires an email; skip when absent.
+  // RSS <author> requires an email; when it's absent, fall back to Dublin Core <dc:creator>
+  // so a name-only author still appears (matching the RDF serializers and Atom/JSON output).
   if (caps.rss20) {
     const author = firstAuthor(item.author)
     if (author?.email) {
       ch.push(el('author', undefined, emailLine(author.email, author.name)))
+    } else if (author?.name) {
+      ch.push(el('dc:creator', undefined, author.name))
     }
   }
 
