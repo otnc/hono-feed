@@ -256,4 +256,26 @@ describe('validateInput', () => {
     }
     expect(() => validateInput(valid, 'rss')).not.toThrow()
   })
+
+  it('rejects a negative or non-integer ttl', () => {
+    const negative: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', ttl: -5 },
+      items: [],
+    }
+    expect(() => validateInput(negative, 'rss')).toThrow(/"ttl"/)
+
+    const nonInteger: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', ttl: 1.5 },
+      items: [],
+    }
+    expect(() => validateInput(nonInteger, 'rss')).toThrow(/"ttl"/)
+  })
+
+  it('allows a non-negative integer ttl, including zero', () => {
+    const valid: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', ttl: 0 },
+      items: [],
+    }
+    expect(() => validateInput(valid, 'rss')).not.toThrow()
+  })
 })
