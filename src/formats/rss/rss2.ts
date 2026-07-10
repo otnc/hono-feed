@@ -59,6 +59,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
       channel.push(el('category', { domain: cat.scheme }, cat.term))
     }
   }
+  if (options.published) channel.push(el('pubDate', undefined, rfc822(options.published)))
   if (options.updated) channel.push(el('lastBuildDate', undefined, rfc822(options.updated)))
   // managingEditor/webMaster/docs/skipHours/skipDays are all part of the format since Netscape
   // 0.91; ungated here like language/copyright above.
