@@ -43,6 +43,20 @@ function lintFeed(options: FeedOptions, format: FeedFormat, warnings: string[]):
       'feed: no "id" (or "link"/"feedUrl") — Atom id falls back to the request URL, so the feed identity is unstable across hosts',
     )
   }
+  // RFC 4287 §4.1.1: an Atom feed SHOULD carry a rel="alternate" link to a human-readable page.
+  if (format === 'atom' && !options.link) {
+    warnings.push(
+      'feed: no "link" — Atom SHOULD have a rel="alternate" link to a human-readable page (RFC 4287 §4.1.1)',
+    )
+  }
+
+  // RFC 5005 §4: an archive page SHOULD carry rel="current" back to the always-up-to-date
+  // document. Only RSS/Atom emit fh:archive/rel="current" at all — JSON Feed has no mapping.
+  if (format !== 'json' && options.paging?.archive && !options.paging?.current) {
+    warnings.push(
+      'feed.paging: "archive" is set without "current" — RFC 5005 §4 recommends pointing archive pages at the current document',
+    )
+  }
 
   // Apple Podcasts won't list a show missing these; only worth flagging once podcast is opted in.
   if (format === 'rss' && options.podcast) {
