@@ -30,6 +30,11 @@ export function validateInput(input: FeedInput, format: FeedFormat): void {
     throw new TypeError('hono-feed: "skipHours" values must be integers between 0 and 23')
   }
 
+  // RSS <ttl> is a number of minutes; negative or fractional values are meaningless.
+  if (options.ttl !== undefined && (!Number.isInteger(options.ttl) || options.ttl < 0)) {
+    throw new TypeError('hono-feed: "ttl" must be a non-negative integer')
+  }
+
   if (format === 'atom') {
     if (!options.id && !options.link && !options.feedUrl) {
       throw new TypeError('hono-feed: Atom feed requires "id" (or "link" / "feedUrl")')
