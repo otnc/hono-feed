@@ -188,6 +188,21 @@ describe('toAtom', () => {
       expect(entry).not.toContain('<link')
     })
 
+    it('renders multiple feed-level authors as one <author> element each (RFC 4287 §4.1.1)', () => {
+      const out = toAtom({
+        options: {
+          title: 't',
+          link: 'https://example.com/',
+          author: [{ name: 'one' }, { name: 'two', url: 'https://example.com/two' }],
+        },
+        items: [],
+      })
+      const feedLevel = out.split('<entry')[0]
+      expect(feedLevel.match(/<author>/g)).toHaveLength(2)
+      expect(feedLevel).toContain('<name>one</name>')
+      expect(feedLevel).toContain('<uri>https://example.com/two</uri>')
+    })
+
     it('renders per-item authors as <author> elements', () => {
       const out = toAtom({
         options: { title: 't', link: 'https://example.com/' },

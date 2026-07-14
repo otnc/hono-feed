@@ -137,6 +137,17 @@ describe('validateInput', () => {
       items: [{ ...noAuthor.items[0], author: [{ name: 'a' }] }],
     }
     expect(() => validateInput(nonEmptyAuthorArray, 'atom')).not.toThrow()
+
+    // A feed-level author array satisfies the rule too, but an empty one doesn't count —
+    // matching the item-level array checks above.
+    const feedAuthorArray = {
+      ...noAuthor,
+      options: { ...noAuthor.options, author: [{ name: 'a' }] },
+    }
+    expect(() => validateInput(feedAuthorArray, 'atom')).not.toThrow()
+
+    const emptyFeedAuthorArray = { ...noAuthor, options: { ...noAuthor.options, author: [] } }
+    expect(() => validateInput(emptyFeedAuthorArray, 'atom')).toThrow(/requires an "author"/)
   })
 
   it('requires Atom ids to be absolute IRIs (RFC 4287 §4.2.6)', () => {

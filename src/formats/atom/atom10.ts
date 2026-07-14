@@ -34,7 +34,7 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
     const marker = pagingMarker(options.paging)
     if (marker) feed.push(el(`fh:${marker}`))
   }
-  if (options.author) feed.push(atomAuthorEl(options.author, 'uri'))
+  for (const a of authorList(options.author)) feed.push(atomAuthorEl(a, 'uri'))
   if (options.contributors) {
     for (const c of options.contributors) feed.push(atomAuthorEl(c, 'uri', 'contributor'))
   }

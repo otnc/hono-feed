@@ -1,4 +1,5 @@
-import type { FeedFormat, FeedInput, FeedItem } from './types'
+import type { FeedFormat, FeedInput } from './types'
+import { hasAuthor } from './utils/author'
 import { hasIriScheme } from './utils/url'
 
 /**
@@ -50,8 +51,8 @@ export function validateInput(input: FeedInput, format: FeedFormat): void {
       throw new TypeError('hono-feed: Atom feed requires "updated" when it has no items')
     }
     // RFC 4287 §4.1.1: the feed needs an author unless every entry carries one.
-    if (!options.author) {
-      const missing = items.findIndex((item) => !hasAuthor(item))
+    if (!hasAuthor(options.author)) {
+      const missing = items.findIndex((item) => !hasAuthor(item.author))
       if (missing !== -1) {
         throw new TypeError(
           `hono-feed: Atom requires an "author" on the feed or on every item (item[${missing}] has none)`,
@@ -101,10 +102,6 @@ export function validateInput(input: FeedInput, format: FeedFormat): void {
       }
     }
   })
-}
-
-function hasAuthor(item: FeedItem): boolean {
-  return Array.isArray(item.author) ? item.author.length > 0 : item.author !== undefined
 }
 
 function assertValidDate(d: Date | undefined, label: string): void {

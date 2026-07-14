@@ -169,6 +169,39 @@ describe('toJSONFeed', () => {
     ])
   })
 
+  it('maps multiple feed-level authors to the 1.1 "authors" array', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: {
+          title: 't',
+          link: 'https://example.com/',
+          author: [{ name: 'one' }, { name: 'two', url: 'https://example.com/two' }],
+        },
+        items: [],
+      }),
+    )
+    expect(json.authors).toEqual([{ name: 'one' }, { name: 'two', url: 'https://example.com/two' }])
+    expect(json.author).toBeUndefined()
+  })
+
+  it('collapses multiple feed-level authors to the first for jsonFeedVersion 1', () => {
+    const json = JSON.parse(
+      toJSONFeed(
+        {
+          options: {
+            title: 't',
+            link: 'https://example.com/',
+            author: [{ name: 'one' }, { name: 'two' }],
+          },
+          items: [],
+        },
+        { jsonFeedVersion: '1', suppressDeprecationWarnings: true },
+      ),
+    )
+    expect(json.author).toEqual({ name: 'one' })
+    expect(json.authors).toBeUndefined()
+  })
+
   it('maps multiple attachments from an enclosure array; RSS-style single object still works', () => {
     const json = JSON.parse(
       toJSONFeed({

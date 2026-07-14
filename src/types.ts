@@ -170,8 +170,11 @@ export interface FeedOptions {
   updated?: Date
   /** RSS channel `<pubDate>` (0.91+). No Atom/JSON feed-level equivalent (Atom has no feed-level published). */
   published?: Date
-  /** RSS managingEditor (email required) / Atom author / JSON authors. */
-  author?: Author
+  /**
+   * RSS managingEditor (email required, collapses to the first author) / Atom author
+   * (RFC 4287 §4.1.1 allows more than one) / JSON Feed authors.
+   */
+  author?: Author | Author[]
   /** Atom `<contributor>` (RFC 4287 §4.2.3). No RSS/JSON equivalent. */
   contributors?: Author[]
   copyright?: string

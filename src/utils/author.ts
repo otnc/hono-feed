@@ -10,3 +10,8 @@ export function authorList(author: Author | Author[] | undefined): Author[] {
   if (!author) return []
   return Array.isArray(author) ? author : [author]
 }
+
+/** Whether an author value is actually present — an empty array doesn't count. */
+export function hasAuthor(author: Author | Author[] | undefined): boolean {
+  return Array.isArray(author) ? author.length > 0 : author !== undefined
+}
