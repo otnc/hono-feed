@@ -62,7 +62,7 @@ const HEADER_ENCODER = new TextEncoder()
 // would double-encode them). Anything else — spaces, `<`/`>`/`"`, and every non-ASCII
 // character — is UTF-8 percent-encoded: HTTP header values are ByteStrings, so a raw non-ASCII
 // character wouldn't just be malformed, it would make `Headers.append` throw.
-const HREF_UNSAFE = /[^A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]/g
+const HREF_UNSAFE = /[^A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]/gu
 
 function encodeHref(href: string): string {
   return href.replace(HREF_UNSAFE, (ch) =>
