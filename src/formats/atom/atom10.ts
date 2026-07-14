@@ -42,7 +42,7 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
   if (options.copyright) feed.push(el('rights', undefined, options.copyright))
   if (options.categories) {
     for (const cat of options.categories) {
-      feed.push(el('category', { term: cat.term, scheme: cat.scheme }))
+      feed.push(el('category', { term: cat.term, scheme: cat.scheme, label: cat.label }))
     }
   }
   // RFC 4287 §4.2.8: icon is a small square, logo a 2:1 image — same roles as RSS <image>
@@ -94,7 +94,7 @@ function atomEntry10(item: FeedItem, base?: string): Node {
 
   if (item.categories) {
     for (const cat of item.categories) {
-      ch.push(el('category', { term: cat.term, scheme: cat.scheme }))
+      ch.push(el('category', { term: cat.term, scheme: cat.scheme, label: cat.label }))
     }
   }
 

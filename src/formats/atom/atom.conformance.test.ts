@@ -286,6 +286,28 @@ describe('Atom feed-level category (RFC 4287 §4.1.1, same element as §4.2.2)',
     const feedLevel = toAtom(complete).split('<entry>')[0]
     expect(feedLevel).not.toContain('<category')
   })
+
+  it('emits label (§4.2.2.3), the last category attribute the model can express', () => {
+    const withLabel: FeedInput = {
+      ...complete,
+      options: {
+        ...complete.options,
+        categories: [{ term: 'tech', scheme: 'https://example.com/cats', label: 'Technology' }],
+      },
+    }
+    const xml = toAtom(withLabel)
+    expect(xml).toContain(
+      '<category term="tech" scheme="https://example.com/cats" label="Technology"/>',
+    )
+  })
+
+  it('omits label when unset', () => {
+    const withoutLabel: FeedInput = {
+      ...complete,
+      options: { ...complete.options, categories: [{ term: 'tech' }] },
+    }
+    expect(toAtom(withoutLabel)).not.toContain('label=')
+  })
 })
 
 describe('Atom icon/logo mapping (RFC 4287 §4.2.8)', () => {
