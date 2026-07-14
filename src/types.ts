@@ -87,8 +87,12 @@ export interface PodcastChapters {
 export interface FeedPodcast {
   /** `itunes:author` — independent of the feed-level `author`, which iTunes doesn't read. */
   author?: string
-  /** `itunes:category` — one `<itunes:category text="…"/>` per entry. */
-  category?: string[]
+  /**
+   * `itunes:category` — one entry per top-level category; a `{ text, subcategory }` entry
+   * nests a second `<itunes:category>` inside it for Apple's two-level taxonomy
+   * (e.g. "Society & Culture" → "Documentary").
+   */
+  category?: Array<string | { text: string; subcategory?: string }>
   /** `itunes:explicit`. */
   explicit?: boolean
   /** `itunes:image` `href`. */

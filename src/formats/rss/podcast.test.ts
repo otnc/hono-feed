@@ -47,6 +47,31 @@ describe('RSS 2.0 podcast namespaces (iTunes / Podcasting 2.0)', () => {
     )
   })
 
+  it("nests a subcategory for Apple's two-level taxonomy ({ text, subcategory })", () => {
+    const out = toRSS({
+      ...base,
+      options: {
+        ...base.options,
+        podcast: {
+          category: ['Technology', { text: 'Society & Culture', subcategory: 'Documentary' }],
+        },
+      },
+    })
+    expect(out).toContain('<itunes:category text="Technology"/>')
+    expect(out).toContain(
+      '<itunes:category text="Society &amp; Culture"><itunes:category text="Documentary"/></itunes:category>',
+    )
+  })
+
+  it('omits the nested category when subcategory is unset ({ text } with no subcategory)', () => {
+    const out = toRSS({
+      ...base,
+      options: { ...base.options, podcast: { category: [{ text: 'Technology' }] } },
+    })
+    expect(out).toContain('<itunes:category text="Technology"/>')
+    expect(out).not.toMatch(/<itunes:category text="Technology">/)
+  })
+
   it('omits itunes:block/itunes:complete (and xmlns:itunes) when block/complete are false or unset', () => {
     const out = toRSS({
       ...base,
