@@ -38,6 +38,8 @@ export interface Category {
   term: string
   /** Atom `scheme` / RSS `domain`. */
   scheme?: string
+  /** Atom `label` (RFC 4287 §4.2.2.3) — human-readable display text. No RSS/JSON equivalent. */
+  label?: string
 }
 
 export interface Enclosure {
