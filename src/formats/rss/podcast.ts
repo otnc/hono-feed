@@ -84,7 +84,21 @@ export function podcastChannelNodes(p: FeedOptions['podcast'], base: string | un
   const nodes: Node[] = []
   if (p.author) nodes.push(el('itunes:author', undefined, p.author))
   if (p.category) {
-    for (const category of p.category) nodes.push(el('itunes:category', { text: category }))
+    for (const category of p.category) {
+      if (typeof category === 'string') {
+        nodes.push(el('itunes:category', { text: category }))
+      } else {
+        nodes.push(
+          el(
+            'itunes:category',
+            { text: category.text },
+            category.subcategory
+              ? [el('itunes:category', { text: category.subcategory })]
+              : undefined,
+          ),
+        )
+      }
+    }
   }
   if (p.explicit !== undefined) {
     nodes.push(el('itunes:explicit', undefined, p.explicit ? 'true' : 'false'))
