@@ -4,7 +4,7 @@ import { latestDate, rfc3339 } from '../../utils/date'
 import { firstEnclosure } from '../../utils/enclosure'
 import { hubList } from '../../utils/hub'
 import { pagingMarker, pagingRels } from '../../utils/paging'
-import { absolutize } from '../../utils/url'
+import { absolutize, hasIriScheme } from '../../utils/url'
 import { el, type Node, specToNode, xmlDocument } from '../../utils/xml'
 import { atomAuthorEl } from './author'
 import { atomFeedIdentity } from './identity'
@@ -68,6 +68,14 @@ function atomEntry10(item: FeedItem, base?: string): Node {
   const link = absolutize(item.link, base)
   const id = item.id ?? link
   if (!id) throw new TypeError('hono-feed: Atom entry requires an id')
+  // RFC 4287 §4.2.6: atom:id MUST be an absolute IRI. An explicit id is checked by
+  // validateInput; the link fallback isn't, so a relative link with no baseUrl could
+  // otherwise reach the document unchecked.
+  if (!hasIriScheme(id)) {
+    throw new TypeError(
+      'hono-feed: Atom entry id must be an absolute IRI (RFC 4287 §4.2.6) — set "baseUrl" or an absolute "id"/"link"',
+    )
+  }
 
   const ch: Node[] = []
   ch.push(el('id', undefined, id))

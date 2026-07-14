@@ -98,6 +98,31 @@ describe('toAtom', () => {
     expect(() => toAtom(noEntryId, { atomVersion: '0.3' })).toThrow(/Atom 0.3 entry requires an id/)
   })
 
+  it('throws when the feed id falls back to a relative link with no baseUrl (RFC 4287 §4.2.6)', () => {
+    const relativeLink = {
+      options: { title: 't', link: '/blog', author: { name: 'a' }, updated: new Date() },
+      items: [],
+    }
+    expect(() => toAtom(relativeLink)).toThrow(/feed id must be an absolute IRI/)
+    expect(() => toAtom(relativeLink, { atomVersion: '0.3' })).toThrow(
+      /feed id must be an absolute IRI/,
+    )
+    // Setting baseUrl resolves the fallback to an absolute IRI, so it succeeds.
+    expect(() => toAtom(relativeLink, { baseUrl: 'https://example.com' })).not.toThrow()
+  })
+
+  it('throws when an entry id falls back to a relative link with no baseUrl (RFC 4287 §4.2.6)', () => {
+    const relativeEntryLink = {
+      options: { title: 't', link: 'https://example.com/', updated: new Date() },
+      items: [{ title: 'a', link: '/1', updated: new Date() }],
+    }
+    expect(() => toAtom(relativeEntryLink)).toThrow(/entry id must be an absolute IRI/)
+    expect(() => toAtom(relativeEntryLink, { atomVersion: '0.3' })).toThrow(
+      /entry id must be an absolute IRI/,
+    )
+    expect(() => toAtom(relativeEntryLink, { baseUrl: 'https://example.com' })).not.toThrow()
+  })
+
   describe('Atom 1.0 optional fields', () => {
     it('emits rights, subtitle and a category without a scheme', () => {
       const out = toAtom({
