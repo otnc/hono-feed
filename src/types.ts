@@ -48,6 +48,8 @@ export interface Enclosure {
   length?: number
   /** Duration in seconds. JSON Feed `duration_in_seconds`; no RSS/Atom enclosure equivalent. */
   duration?: number
+  /** Attachment name. JSON Feed `title`; Atom link `title`; no RSS equivalent. */
+  title?: string
 }
 
 /** `itunes:owner` — the podcast's admin contact, shown only to Apple Podcasts, never in the UI. */
