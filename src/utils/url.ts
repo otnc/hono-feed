@@ -22,3 +22,8 @@ export function selfUrl(
 export function isUrl(s: string): boolean {
   return /^https?:\/\//i.test(s)
 }
+
+/** Whether the string starts with an IRI scheme (RFC 3987); this intentionally checks no further. */
+export function hasIriScheme(s: string): boolean {
+  return /^[A-Za-z][A-Za-z0-9+.-]*:/.test(s)
+}

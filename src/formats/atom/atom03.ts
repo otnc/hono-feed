@@ -2,7 +2,7 @@ import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
 import { authorList } from '../../utils/author'
 import { latestDate, rfc3339 } from '../../utils/date'
 import { firstEnclosure } from '../../utils/enclosure'
-import { absolutize } from '../../utils/url'
+import { absolutize, hasIriScheme } from '../../utils/url'
 import { el, type Node, xmlDocument } from '../../utils/xml'
 import { atomAuthorEl } from './author'
 import { atomFeedIdentity } from './identity'
@@ -35,6 +35,14 @@ function atomEntry03(item: FeedItem, base?: string): Node {
   const link = absolutize(item.link, base)
   const id = item.id ?? link
   if (!id) throw new TypeError('hono-feed: Atom 0.3 entry requires an id')
+  // RFC 4287 §4.2.6: atom:id MUST be an absolute IRI. An explicit id is checked by
+  // validateInput; the link fallback isn't, so a relative link with no baseUrl could
+  // otherwise reach the document unchecked.
+  if (!hasIriScheme(id)) {
+    throw new TypeError(
+      'hono-feed: Atom 0.3 entry id must be an absolute IRI (RFC 4287 §4.2.6) — set "baseUrl" or an absolute "id"/"link"',
+    )
+  }
 
   const ch: Node[] = [el('title', undefined, item.title)]
   if (link) ch.push(el('link', { rel: 'alternate', type: 'text/html', href: link }))

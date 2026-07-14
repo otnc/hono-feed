@@ -1,4 +1,5 @@
 import type { FeedFormat, FeedInput, FeedItem } from './types'
+import { hasIriScheme } from './utils/url'
 
 /**
  * Minimal validation after the format is decided. Invalid input throws `TypeError`.
@@ -100,11 +101,6 @@ export function validateInput(input: FeedInput, format: FeedFormat): void {
       }
     }
   })
-}
-
-// Absolute IRIs start with a scheme (RFC 3987); this intentionally checks no further.
-function hasIriScheme(s: string): boolean {
-  return /^[A-Za-z][A-Za-z0-9+.-]*:/.test(s)
 }
 
 function hasAuthor(item: FeedItem): boolean {
