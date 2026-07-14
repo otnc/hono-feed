@@ -39,9 +39,10 @@ export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): strin
   if (options.favicon) feed.favicon = absolutize(options.favicon, base)
   // JSON Feed only has next_url; there's no equivalent for prev/first/last.
   if (options.paging?.next) feed.next_url = absolutize(options.paging.next, base)
-  if (options.author) {
-    if (v1) feed.author = jsonAuthor(options.author, base)
-    else feed.authors = [jsonAuthor(options.author, base)]
+  const feedAuthors = authorList(options.author)
+  if (feedAuthors.length) {
+    if (v1) feed.author = jsonAuthor(feedAuthors[0], base)
+    else feed.authors = feedAuthors.map((a) => jsonAuthor(a, base))
   }
   const hubs = hubList(options.hub)
   if (hubs.length) {

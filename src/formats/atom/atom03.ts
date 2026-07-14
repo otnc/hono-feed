@@ -19,7 +19,7 @@ export function toAtom03(input: FeedInput, opts: SerializeOptions): string {
   if (options.description) feed.push(el('tagline', undefined, options.description))
   if (link) feed.push(el('link', { rel: 'alternate', type: 'text/html', href: link }))
   feed.push(el('modified', undefined, rfc3339(options.updated ?? latestDate(items) ?? new Date())))
-  if (options.author) feed.push(atomAuthorEl(options.author, 'url'))
+  for (const a of authorList(options.author)) feed.push(atomAuthorEl(a, 'url'))
   feed.push(el('generator', undefined, options.generator ?? 'hono-feed'))
   if (options.copyright) feed.push(el('copyright', undefined, options.copyright))
   feed.push(el('id', undefined, feedId))
