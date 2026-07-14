@@ -168,6 +168,16 @@ describe('feedLinkHeader', () => {
     )
   })
 
+  it('percent-encodes a non-BMP character (surrogate pair) as its real code point, not U+FFFD', async () => {
+    const app = new Hono()
+    app.use('*', feedLinkHeader({ rss: 'https://example.com/😀/feed.rss' }))
+    app.get('/page', (c) => c.html('<p>hi</p>'))
+    const res = await app.request('/page')
+    expect(res.headers.get('link')).toBe(
+      '<https://example.com/%F0%9F%98%80/feed.rss>; rel="alternate"; type="application/rss+xml"',
+    )
+  })
+
   it('percent-encodes a space in the href so the <URI-Reference> framing stays legal', async () => {
     const app = new Hono()
     app.use('*', feedLinkHeader({ rss: '/my feed.rss' }))
