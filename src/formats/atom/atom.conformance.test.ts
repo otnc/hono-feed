@@ -412,4 +412,24 @@ describe('Atom enclosure mapping (RFC 4287 §4.2.7.2)', () => {
     )
     expect(xml).not.toContain('1800')
   })
+
+  it('ignores enclosure.title (JSON Feed-only attachment field, no Atom mapping)', () => {
+    const xml = toAtom({
+      ...withEnclosure,
+      items: [
+        {
+          ...withEnclosure.items[0],
+          enclosure: {
+            url: 'https://example.com/ep1.mp3',
+            type: 'audio/mpeg',
+            title: 'Episode 1',
+          },
+        },
+      ],
+    })
+    expect(xml).toContain(
+      '<link rel="enclosure" href="https://example.com/ep1.mp3" type="audio/mpeg"/>',
+    )
+    expect(xml).not.toContain('Episode 1')
+  })
 })

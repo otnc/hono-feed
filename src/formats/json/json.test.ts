@@ -487,6 +487,44 @@ describe('toJSONFeed', () => {
     expect(json.items[0].attachments[0].duration_in_seconds).toBeUndefined()
   })
 
+  it('maps enclosure.title to the attachment title', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: { title: 't', link: 'https://example.com/' },
+        items: [
+          {
+            title: 'a',
+            link: 'https://example.com/1',
+            content: '<p>b</p>',
+            enclosure: {
+              url: 'https://example.com/a.mp3',
+              type: 'audio/mpeg',
+              title: 'Episode 1',
+            },
+          },
+        ],
+      }),
+    )
+    expect(json.items[0].attachments[0].title).toBe('Episode 1')
+  })
+
+  it('omits the attachment title when the enclosure has no title', () => {
+    const json = JSON.parse(
+      toJSONFeed({
+        options: { title: 't', link: 'https://example.com/' },
+        items: [
+          {
+            title: 'a',
+            link: 'https://example.com/1',
+            content: '<p>b</p>',
+            enclosure: { url: 'https://example.com/a.mp3', type: 'audio/mpeg' },
+          },
+        ],
+      }),
+    )
+    expect(json.items[0].attachments[0].title).toBeUndefined()
+  })
+
   it('pretty-prints with 2-space indentation', () => {
     const out = toJSONFeed(
       { options: { title: 't', link: 'https://example.com/' }, items: [] },
