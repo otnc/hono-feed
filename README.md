@@ -577,6 +577,33 @@ app.use('*', feedLinkHeader({ rss: '/feed.rss' }))
 // Link: </feed.rss>; rel="alternate"; type="application/rss+xml"
 ```
 
+## OPML
+
+Sites that publish several feeds, or aggregate other people's, can offer an [OPML](http://opml.org/spec2.opml) subscription list — the file feed readers import to subscribe in one step.  
+`serveOpml` serves it with the same caching behavior as `serveFeed` (`Cache-Control`, a weak `ETag`, `Last-Modified` from `dateModified`, `304` and `HEAD`), and `toOPML` returns just the string:
+
+```ts
+import { serveOpml } from 'hono-feed'
+
+app.get('/subscriptions.opml', (c) =>
+  serveOpml(c, {
+    title: 'My subscriptions',
+    ownerName: 'Ada',
+    dateModified: new Date('2026-06-29'),
+    outlines: [
+      { text: 'Example Blog', xmlUrl: '/feed.xml', htmlUrl: '/' }, // type defaults to "rss"
+      {
+        text: 'Tech', // an outline with children is a folder
+        children: [{ text: 'Another', type: 'atom', xmlUrl: 'https://a.example/atom' }],
+      },
+    ],
+  }),
+)
+```
+
+Relative `xmlUrl`/`htmlUrl`/`ownerId` are absolutized against `baseUrl` (default: the request origin), and every outline needs `text`.  
+`feedExtensionMap` maps `text/x-opml` to `.opml`, so the route also works with [static site generation](#static-site-generation).
+
 ## WebSub
 
 Two independent halves make up [WebSub](https://www.w3.org/TR/websub/) (formerly PubSubHubbub) support — subscribing readers can discover a hub, and you can tell that hub about new content.
