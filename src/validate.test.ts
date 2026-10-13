@@ -288,4 +288,18 @@ describe('validateInput', () => {
     }
     expect(() => validateInput(valid, 'rss')).not.toThrow()
   })
+
+  it('requires both title and url on an item source', () => {
+    const withSource = (source: { title: string; url: string }): FeedInput => ({
+      options: { title: 't', link: 'https://example.com/' },
+      items: [{ title: 'a', link: 'https://example.com/1', source }],
+    })
+    expect(() =>
+      validateInput(withSource({ title: '', url: 'https://o.example/f' }), 'rss'),
+    ).toThrow(/item\[0\] "source" requires both "title" and "url"/)
+    expect(() => validateInput(withSource({ title: 'T', url: '' }), 'rss')).toThrow(/"source"/)
+    expect(() =>
+      validateInput(withSource({ title: 'T', url: 'https://o.example/f' }), 'rss'),
+    ).not.toThrow()
+  })
 })

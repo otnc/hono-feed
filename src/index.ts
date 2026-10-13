@@ -17,6 +17,7 @@ export type {
   FeedOptions,
   FeedPodcast,
   ItemPodcast,
+  ItemSource,
   JsonFeedVersion,
   PodcastChapters,
   PodcastFunding,
