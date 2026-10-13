@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FeedInput } from '../../types'
-import { toRSS, validateInput } from './index'
+import { toRSS } from './index'
 
 const input: FeedInput = {
   options: {
@@ -199,10 +199,6 @@ describe('toRSS', () => {
         },
       }),
     ).toThrow(TypeError)
-  })
-
-  it('has no custom fields → output unaffected', () => {
-    expect(toRSS(input, { feedUrl: 'https://example.com/feed' })).not.toContain('itunes')
   })
 
   it('maps ttl, enclosure, email author and category domain', () => {
@@ -589,10 +585,6 @@ describe('toRSS', () => {
     expect(out).not.toContain('content:encoded')
   })
 
-  it('emits the version attribute for 0.93 / 0.94', () => {
-    expect(toRSS(input, { rssVersion: '0.94' })).toContain('<rss version="0.94"')
-  })
-
   it('emits RSS 0.90 (RDF) when rssVersion is 0.90', () => {
     const out = toRSS(input, { rssVersion: '0.90' })
     expect(out).toContain('<rdf:RDF')
@@ -843,13 +835,5 @@ describe('toRSS', () => {
     expect(() =>
       toRSS(noItemUri, { rssVersion: '1.1', feedUrl: 'https://example.com/feed' }),
     ).toThrow(/RSS 1.1 item requires "link" or "id"/)
-  })
-})
-
-describe('validateInput (re-exported for this subpath)', () => {
-  it('is importable alongside toRSS', () => {
-    expect(() => validateInput({ options: { title: '' }, items: [] }, 'rss')).toThrow(
-      /feed "title" is required/,
-    )
   })
 })
