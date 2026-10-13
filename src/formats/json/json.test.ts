@@ -119,15 +119,13 @@ describe('toJSONFeed', () => {
   })
 
   it('escapes JSON string content and stays valid (control chars need no stripping here)', () => {
-    // Unlike XML, JSON has no forbidden characters: quotes, backslashes and control chars are
-    // all representable via escapes, so JSON.stringify keeps them and the output round-trips.
+    // Unlike XML, JSON has no forbidden characters: quotes, backslashes and control chars are all representable via escapes, so JSON.stringify keeps them and the output round-trips.
     const title = 'quote " backslash \\ newline \n tab \t bell \u0007 emoji \u{1F600}'
     const raw = toJSONFeed({
       options: { title: 't', link: 'https://example.com/' },
       items: [{ title, link: 'https://example.com/1' }],
     })
-    // The serialized form must not contain a raw double-quote inside the value or a literal
-    // control character — they have to be escaped.
+    // The serialized form must not contain a raw double-quote inside the value or a literal control character — they have to be escaped.
     expect(raw).toContain('\\"')
     expect(raw).toContain('\\u0007')
     expect(raw).not.toContain('\u0007')

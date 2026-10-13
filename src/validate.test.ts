@@ -138,8 +138,7 @@ describe('validateInput', () => {
     }
     expect(() => validateInput(nonEmptyAuthorArray, 'atom')).not.toThrow()
 
-    // A feed-level author array satisfies the rule too, but an empty one doesn't count —
-    // matching the item-level array checks above.
+    // A feed-level author array satisfies the rule too, but an empty one doesn't count — matching the item-level array checks above.
     const feedAuthorArray = {
       ...noAuthor,
       options: { ...noAuthor.options, author: [{ name: 'a' }] },

@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { FeedInput } from '../../types'
 import { toRSS } from './index'
 
-// A "spec-complete" input: every field a conformant feed needs is filled in, so these
-// tests describe the guarantees hono-feed gives you when you supply everything it asks
-// for — not the behaviour of partially-filled input (see docs/rss-atom-json-audit.md for
-// gaps that only show up when optional-but-spec-required fields are omitted).
+// A "spec-complete" input: every field a conformant feed needs is filled in, so these tests describe the guarantees hono-feed gives you when you supply everything it asks for — not the behaviour of partially-filled input (see docs/rss-atom-json-audit.md for gaps that only show up when optional-but-spec-required fields are omitted).
 const complete: FeedInput = {
   options: {
     title: 'example blog',
@@ -81,9 +78,7 @@ describe('RSS 2.0 conformance (rssboard.org/rss-specification)', () => {
   })
 })
 
-// 0.91-0.94 share the <rss> structure but define far fewer elements than 2.0: item
-// category/enclosure arrived in 0.92, item pubDate in 0.93, and guid/author/generator/
-// ttl/namespaced extensions are 2.0-only. Output is gated accordingly.
+// 0.91-0.94 share the <rss> structure but define far fewer elements than 2.0: item category/enclosure arrived in 0.92, item pubDate in 0.93, and guid/author/generator/ ttl/namespaced extensions are 2.0-only. Output is gated accordingly.
 describe('RSS 0.91-0.94 conformance (shared <rss> lineage requirements only)', () => {
   for (const rssVersion of ['0.94', '0.93', '0.92', '0.91'] as const) {
     it(`${rssVersion}: channel carries title/link/description and the version attribute`, () => {

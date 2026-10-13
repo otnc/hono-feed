@@ -17,10 +17,7 @@ function suppressedGlobally(): boolean {
 }
 
 /**
- * Emit a deprecation warning once per process per `key` (discord.js style), tagged with a
- * stable `code`. Uses Node's `process.emitWarning` when available, otherwise `console.warn`
- * (edge-runtime safe). Globally suppressed by `process.noDeprecation` (`--no-deprecation`)
- * or the `HONO_FEED_NO_DEPRECATION` env var.
+ * Emit a deprecation warning once per process per `key` (discord.js style), tagged with a stable `code`. Uses Node's `process.emitWarning` when available, otherwise `console.warn` (edge-runtime safe). Globally suppressed by `process.noDeprecation` (`--no-deprecation`) or the `HONO_FEED_NO_DEPRECATION` env var.
  */
 export function warnDeprecated(key: string, message: string, code: string): void {
   if (warned.has(key) || suppressedGlobally()) return

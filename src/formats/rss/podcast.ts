@@ -46,9 +46,7 @@ function hasPodcastNsItemFields(p: ItemPodcast): boolean {
 }
 
 /**
- * Whether `xmlns:itunes` / `xmlns:podcast` are needed, across the feed and every item —
- * `itunes:duration`'s `enclosure.duration` fallback (see `podcastItemNodes`) means an item can
- * need `xmlns:itunes` from its enclosure alone, with no `item.podcast` at all.
+ * Whether `xmlns:itunes` / `xmlns:podcast` are needed, across the feed and every item — `itunes:duration`'s `enclosure.duration` fallback (see `podcastItemNodes`) means an item can need `xmlns:itunes` from its enclosure alone, with no `item.podcast` at all.
  */
 export function podcastNamespacesUsed(
   options: FeedOptions,
@@ -68,9 +66,7 @@ export function podcastNamespacesUsed(
   return { itunes, podcast: podcastNs }
 }
 
-// itunes:duration prefers item.podcast.duration; falling back to the (first) enclosure's
-// duration means a plain Enclosure.duration (#71) still reaches podcast directories without
-// requiring a caller to also set item.podcast.
+// itunes:duration prefers item.podcast.duration; falling back to the (first) enclosure's duration means a plain Enclosure.duration (#71) still reaches podcast directories without requiring a caller to also set item.podcast.
 function itunesDuration(
   podcast: ItemPodcast | undefined,
   enclosure: Enclosure | undefined,
@@ -132,8 +128,7 @@ export function podcastChannelNodes(p: FeedOptions['podcast'], base: string | un
 }
 
 /**
- * Build the item-level podcast elements (iTunes + Podcasting 2.0). RSS 2.0 only.
- * `itunes:duration` prefers `item.podcast.duration`, falling back to `enclosure.duration`.
+ * Build the item-level podcast elements (iTunes + Podcasting 2.0). RSS 2.0 only. `itunes:duration` prefers `item.podcast.duration`, falling back to `enclosure.duration`.
  */
 export function podcastItemNodes(
   podcast: ItemPodcast | undefined,

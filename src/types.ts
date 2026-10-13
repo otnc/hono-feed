@@ -1,6 +1,4 @@
-// Each `*_VERSIONS`/`FEED_FORMATS` array is the single source of truth for its type: the
-// type is derived from the array below it, so runtime validation (see negotiate.ts) can
-// import the array instead of re-listing the literals and risking drift.
+// Each `*_VERSIONS`/`FEED_FORMATS` array is the single source of truth for its type: the type is derived from the array below it, so runtime validation (see negotiate.ts) can import the array instead of re-listing the literals and risking drift.
 
 export const FEED_FORMATS = ['rss', 'atom', 'json'] as const
 export type FeedFormat = (typeof FEED_FORMATS)[number]
@@ -82,19 +80,13 @@ export interface PodcastChapters {
 }
 
 /**
- * Podcast metadata for the feed as a whole (RSS 2.0 only — ignored by Atom, JSON Feed, and
- * every other RSS version). Covers the iTunes namespace and the Podcasting 2.0 namespace;
- * `xmlns:itunes` / `xmlns:podcast` are declared automatically, only when a field from that
- * namespace is actually set somewhere in the feed. An explicit `customNamespaces` entry for
- * either prefix always wins over the automatic one.
+ * Podcast metadata for the feed as a whole (RSS 2.0 only — ignored by Atom, JSON Feed, and every other RSS version). Covers the iTunes namespace and the Podcasting 2.0 namespace; `xmlns:itunes` / `xmlns:podcast` are declared automatically, only when a field from that namespace is actually set somewhere in the feed. An explicit `customNamespaces` entry for either prefix always wins over the automatic one.
  */
 export interface FeedPodcast {
   /** `itunes:author` — independent of the feed-level `author`, which iTunes doesn't read. */
   author?: string
   /**
-   * `itunes:category` — one entry per top-level category; a `{ text, subcategory }` entry
-   * nests a second `<itunes:category>` inside it for Apple's two-level taxonomy
-   * (e.g. "Society & Culture" → "Documentary").
+   * `itunes:category` — one entry per top-level category; a `{ text, subcategory }` entry nests a second `<itunes:category>` inside it for Apple's two-level taxonomy (e.g. "Society & Culture" → "Documentary").
    */
   category?: Array<string | { text: string; subcategory?: string }>
   /** `itunes:explicit`. */
@@ -148,10 +140,7 @@ export interface ItemPodcast {
 }
 
 /**
- * A JSON-shaped XML element tree for the `customXml` escape hatch. Attribute values and
- * `text` are escaped exactly like built-in elements — this isn't raw string injection.
- * `name` and attribute keys are structural, not content, so they're validated against the XML
- * `Name` production instead (a `TypeError` on violation) rather than escaped.
+ * A JSON-shaped XML element tree for the `customXml` escape hatch. Attribute values and `text` are escaped exactly like built-in elements — this isn't raw string injection. `name` and attribute keys are structural, not content, so they're validated against the XML `Name` production instead (a `TypeError` on violation) rather than escaped.
  */
 export interface XmlElementSpec {
   /** Element name, e.g. `'itunes:author'`. Must match the XML `Name` production. */
@@ -179,8 +168,7 @@ export interface FeedOptions {
   /** RSS channel `<pubDate>` (0.91+). No Atom/JSON feed-level equivalent (Atom has no feed-level published). */
   published?: Date
   /**
-   * RSS managingEditor (email required, collapses to the first author) / Atom author
-   * (RFC 4287 §4.1.1 allows more than one) / JSON Feed authors.
+   * RSS managingEditor (email required, collapses to the first author) / Atom author (RFC 4287 §4.1.1 allows more than one) / JSON Feed authors.
    */
   author?: Author | Author[]
   /** Atom `<contributor>` (RFC 4287 §4.2.3). No RSS/JSON equivalent. */
@@ -203,8 +191,7 @@ export interface FeedOptions {
   /** JSON Feed `user_comment` — a human-readable note about the feed. No RSS/Atom equivalent. */
   userComment?: string
   /**
-   * Pagination links for a paged feed (RFC 5005 §3 via `link rel`; JSON Feed `next_url`).
-   * RSS/Atom emit one `link`/`atom:link` per set field; JSON Feed only maps `next`.
+   * Pagination links for a paged feed (RFC 5005 §3 via `link rel`; JSON Feed `next_url`). RSS/Atom emit one `link`/`atom:link` per set field; JSON Feed only maps `next`.
    */
   paging?: {
     /** `rel="next"` (RSS/Atom) / JSON `next_url`. */
@@ -216,15 +203,11 @@ export interface FeedOptions {
     /** `rel="last"`. No JSON Feed equivalent. */
     last?: string
     /**
-     * RFC 5005 §2 — this document contains the *entire* feed (readers may drop entries no
-     * longer present). Emits `<fh:complete/>` (RSS 2.0 / Atom 1.0 only). Mutually exclusive
-     * with `archive`.
+     * RFC 5005 §2 — this document contains the *entire* feed (readers may drop entries no longer present). Emits `<fh:complete/>` (RSS 2.0 / Atom 1.0 only). Mutually exclusive with `archive`.
      */
     complete?: boolean
     /**
-     * RFC 5005 §4 — this document is an archive page whose content never changes (pairs
-     * naturally with `cacheControl: { immutable: true }`). Emits `<fh:archive/>` (RSS 2.0 /
-     * Atom 1.0 only). Mutually exclusive with `complete`.
+     * RFC 5005 §4 — this document is an archive page whose content never changes (pairs naturally with `cacheControl: { immutable: true }`). Emits `<fh:archive/>` (RSS 2.0 / Atom 1.0 only). Mutually exclusive with `complete`.
      */
     archive?: boolean
     /** `rel="current"` — used together with `archive` (RFC 5005 §4) to point at the always-up-to-date document. No JSON Feed equivalent. */
@@ -235,16 +218,13 @@ export interface FeedOptions {
     nextArchive?: string
   }
   /**
-   * Extra elements appended after the built-in channel/feed elements (XML formats only) —
-   * escape hatch for namespaced modules (iTunes, Media RSS, Dublin Core, …). RDF (RSS 1.0/1.1)
-   * and legacy RSS 0.9x accept these unconditionally; there's no built-in gating to opt out of.
+   * Extra elements appended after the built-in channel/feed elements (XML formats only) — escape hatch for namespaced modules (iTunes, Media RSS, Dublin Core, …). RDF (RSS 1.0/1.1) and legacy RSS 0.9x accept these unconditionally; there's no built-in gating to opt out of.
    */
   customXml?: XmlElementSpec[]
   /** Extra `xmlns:*` declarations for the root element, e.g. `{ 'xmlns:itunes': '...' }`. */
   customNamespaces?: Record<string, string>
   /**
-   * Extra keys merged into the JSON Feed object. Per the JSON Feed spec, custom keys should
-   * start with `_`. A built-in key always wins on collision — this can only add, not override.
+   * Extra keys merged into the JSON Feed object. Per the JSON Feed spec, custom keys should start with `_`. A built-in key always wins on collision — this can only add, not override.
    */
   customJson?: Record<string, unknown>
   /** Podcast metadata (iTunes + Podcasting 2.0 namespaces). RSS 2.0 only — see `FeedPodcast`. */
@@ -252,9 +232,7 @@ export interface FeedOptions {
   /** RSS `webMaster` (email required, same rule as `author`/`managingEditor`). No Atom/JSON equivalent. Available since RSS 0.91. */
   webmaster?: Author
   /**
-   * RSS `docs` — a URL pointing at the documentation for the RSS format itself (not your feed).
-   * `true` emits the canonical RSS 2.0 spec URL; a string emits that URL as-is. No Atom/JSON
-   * equivalent. Available since RSS 0.91.
+   * RSS `docs` — a URL pointing at the documentation for the RSS format itself (not your feed). `true` emits the canonical RSS 2.0 spec URL; a string emits that URL as-is. No Atom/JSON equivalent. Available since RSS 0.91.
    */
   docs?: boolean | string
   /** RSS `skipHours` — hours (0–23, GMT) when readers can skip polling. No Atom/JSON equivalent. Available since RSS 0.91. */
@@ -338,8 +316,7 @@ export interface SerializeOptions {
   baseUrl?: string
   feedUrl?: string
   /**
-   * XML declaration version (RSS/Atom). Default '1.0'. `'1.1'` is rejected for Atom
-   * (RFC 4287 §2 requires XML 1.0) and RSS 0.90 (its spec pins the exact declaration).
+   * XML declaration version (RSS/Atom). Default '1.0'. `'1.1'` is rejected for Atom (RFC 4287 §2 requires XML 1.0) and RSS 0.90 (its spec pins the exact declaration).
    */
   xmlVersion?: XmlVersion
   /** RSS version / structure. Default '2.0'. */
@@ -360,15 +337,11 @@ export interface ServeFeedOptions {
   /** Detect format from the URL extension. Default true. */
   detectFromExtension?: boolean
   /**
-   * Convenience switch for both `detectFormatFromQuery` and `detectVersionFromQuery`.
-   * Default false.
+   * Convenience switch for both `detectFormatFromQuery` and `detectVersionFromQuery`. Default false.
    */
   detectFromQuery?: boolean
   /**
-   * Detect format from `?format=`. Defaults to `detectFromQuery`. An unrecognized value is
-   * silently ignored rather than rejected — format has a legitimate fallback chain (query →
-   * extension → Accept header), so there's always a next candidate to try. Contrast with
-   * `?version=`, which has no such fallback and answers 400 on an unrecognized value instead.
+   * Detect format from `?format=`. Defaults to `detectFromQuery`. An unrecognized value is silently ignored rather than rejected — format has a legitimate fallback chain (query → extension → Accept header), so there's always a next candidate to try. Contrast with `?version=`, which has no such fallback and answers 400 on an unrecognized value instead.
    */
   detectFormatFromQuery?: boolean
   /** Detect version (e.g. `rssVersion`) from `?version=`. Defaults to `detectFromQuery`. */
@@ -378,22 +351,17 @@ export interface ServeFeedOptions {
   /** Query param name used to detect the version. Default 'version'. */
   versionQueryParam?: string
   /**
-   * When the Accept header explicitly rejects every supported format (every candidate at
-   * `q=0`), answer 406 Not Acceptable instead of falling back to `defaultFormat`. An absent
-   * Accept header, or one that simply doesn't match any format, still falls through to
-   * `defaultFormat` regardless of this option. Default false.
+   * When the Accept header explicitly rejects every supported format (every candidate at `q=0`), answer 406 Not Acceptable instead of falling back to `defaultFormat`. An absent Accept header, or one that simply doesn't match any format, still falls through to `defaultFormat` regardless of this option. Default false.
    */
   strictAccept?: boolean
   /**
-   * Cache-Control value — a raw string, a `CacheControlDirectives` object, or `false` to
-   * omit. Default 'public, max-age=3600'.
+   * Cache-Control value — a raw string, a `CacheControlDirectives` object, or `false` to omit. Default 'public, max-age=3600'.
    */
   cacheControl?: string | CacheControlDirectives | false
   /**
    * Emit an ETag and answer conditional requests with 304.
    * - `true` (default): a weak FNV-1a-64 hash of the body.
-   * - a function: return your own tag for the body (e.g. from a revision you already track).
-   *   Used verbatim if it looks like an ETag (`"…"` / `W/"…"`), otherwise wrapped as `W/"…"`.
+   * - a function: return your own tag for the body (e.g. from a revision you already track). Used verbatim if it looks like an ETag (`"…"` / `W/"…"`), otherwise wrapped as `W/"…"`.
    * - `false`: no ETag.
    */
   etag?: boolean | ((body: string) => string)
@@ -404,8 +372,7 @@ export interface ServeFeedOptions {
   /** Pretty-print the output. Default false. */
   pretty?: boolean
   /**
-   * XML declaration version (RSS/Atom). Default '1.0'. `'1.1'` is rejected for Atom
-   * (RFC 4287 §2 requires XML 1.0) and RSS 0.90 (its spec pins the exact declaration).
+   * XML declaration version (RSS/Atom). Default '1.0'. `'1.1'` is rejected for Atom (RFC 4287 §2 requires XML 1.0) and RSS 0.90 (its spec pins the exact declaration).
    */
   xmlVersion?: XmlVersion
   /** RSS version / structure. Default '2.0'. */
@@ -417,18 +384,9 @@ export interface ServeFeedOptions {
   /** Do not emit deprecation warnings for deprecated versions. Default false. */
   suppressDeprecationWarnings?: boolean
   /**
-   * A validator resolvable *before* the feed input exists — a content revision, a
-   * `max(updated_at)` scalar, … — checked against `If-None-Match` ahead of resolving `input`
-   * or serializing anything, so a match answers 304 without either. Only `If-None-Match` is
-   * checked this early (there's no `updated` date yet for `If-Modified-Since`); per RFC 9110
-   * §13.1.3 a request carrying `If-None-Match` ignores `If-Modified-Since` anyway, so this
-   * still covers the common revalidation case.
-   *
-   * May return synchronously or asynchronously; `serveFeed`'s return type follows suit
-   * (`Response` normally, `Response | Promise<Response>` once `etagFrom` or a lazy `input`
-   * function is used). On a miss, the resolved value is used as the response ETag (the
-   * `etag` option is ignored) — same verbatim-vs-`W/"…"`-wrapping rule as a custom `etag`
-   * function.
+   * A validator resolvable *before* the feed input exists — a content revision, a `max(updated_at)` scalar, … — checked against `If-None-Match` ahead of resolving `input` or serializing anything, so a match answers 304 without either. Only `If-None-Match` is checked this early (there's no `updated` date yet for `If-Modified-Since`); per RFC 9110 §13.1.3 a request carrying `If-None-Match` ignores `If-Modified-Since` anyway, so this still covers the common revalidation case.
+
+   * May return synchronously or asynchronously; `serveFeed`'s return type follows suit (`Response` normally, `Response | Promise<Response>` once `etagFrom` or a lazy `input` function is used). On a miss, the resolved value is used as the response ETag (the `etag` option is ignored) — same verbatim-vs-`W/"…"`-wrapping rule as a custom `etag` function.
    */
   etagFrom?: () => string | Promise<string>
 }

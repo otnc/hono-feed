@@ -4,8 +4,7 @@ import { absolutize, selfUrl } from '../../utils/url'
 import { el, type Node, specToNode, xmlDocument } from '../../utils/xml'
 import { rdfItem } from './rdf-item'
 
-// RSS 1.0 (RDF Site Summary): `<rdf:RDF>` root with an `<items>`/`rdf:Seq` table of
-// contents plus Dublin Core + content modules.
+// RSS 1.0 (RDF Site Summary): `<rdf:RDF>` root with an `<items>`/`rdf:Seq` table of contents plus Dublin Core + content modules.
 export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
   const { options, items } = input
   const base = opts.baseUrl

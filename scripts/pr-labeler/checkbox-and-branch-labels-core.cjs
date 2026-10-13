@@ -1,10 +1,7 @@
-// Shared by checkbox-and-branch-labels.cjs (single PR, event-triggered) and
-// recheck-labels-on-push.cjs (bulk, triggered by a push to a base branch). Keeps two label
-// categories in sync with the PR's current state:
+// Shared by checkbox-and-branch-labels.cjs (single PR, event-triggered) and recheck-labels-on-push.cjs (bulk, triggered by a push to a base branch). Keeps two label categories in sync with the PR's current state:
 //  - bug / enhancement / others, from which PULL_REQUEST_TEMPLATE.md checkbox is checked
 //  - to main / to others, from the PR's base branch
-// Each call reconciles the PR's labels against the desired set below, adding what's missing and
-// removing any of these owned labels that no longer apply. Labels outside this set are untouched.
+// Each call reconciles the PR's labels against the desired set below, adding what's missing and removing any of these owned labels that no longer apply. Labels outside this set are untouched.
 
 // Matches "- [x] Fix bug(s)" (any case/whitespace) against the raw PR body.
 function isChecked(body, label) {

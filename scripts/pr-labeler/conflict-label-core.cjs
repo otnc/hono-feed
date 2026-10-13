@@ -1,11 +1,8 @@
-// Shared by conflict-label.cjs (single PR, event-triggered) and recheck-conflicts-on-push.cjs
-// (bulk, triggered by a push to a base branch). Checks one PR's mergeable state and adds/removes
-// the "conflict" label to match.
+// Shared by conflict-label.cjs (single PR, event-triggered) and recheck-conflicts-on-push.cjs (bulk, triggered by a push to a base branch). Checks one PR's mergeable state and adds/removes the "conflict" label to match.
 
 /**
  * @param {object} params
- * @param {number} params.maxAttempts - poll attempts for `mergeable` (GitHub computes it
- *   asynchronously, so it's briefly null right after a relevant event).
+ * @param {number} params.maxAttempts - poll attempts for `mergeable` (GitHub computes it asynchronously, so it's briefly null right after a relevant event).
  * @param {number} params.pollIntervalMs - delay between attempts.
  */
 async function checkAndLabelConflict({
@@ -26,8 +23,7 @@ async function checkAndLabelConflict({
     }
   }
 
-  // Still unresolved after polling: leave the label alone rather than guessing "no conflict" -
-  // the next event (or the next push to the base branch) will settle it.
+  // Still unresolved after polling: leave the label alone rather than guessing "no conflict" - the next event (or the next push to the base branch) will settle it.
   if (mergeable === null) return
 
   const hasConflict = mergeable === false

@@ -1,5 +1,4 @@
-// Minimal XML builder: build a node tree, then serialize with optional pretty-printing.
-// Text nodes are auto-escaped; raw XML (e.g. CDATA) is inserted via `raw()`.
+// Minimal XML builder: build a node tree, then serialize with optional pretty-printing. Text nodes are auto-escaped; raw XML (e.g. CDATA) is inserted via `raw()`.
 
 import type { XmlElementSpec } from '../types'
 
@@ -21,10 +20,7 @@ export interface ElNode {
   children?: Node[]
 }
 
-// Characters forbidden in XML 1.0: the C0 controls except tab/LF/CR (\u0009 \u000A \u000D),
-// the noncharacters \uFFFE/\uFFFF, and unpaired surrogates. None has an escaped form — not
-// even a character reference — so the only valid output is to remove them. No `u` flag, so the
-// surrogate alternatives match individual UTF-16 code units.
+// Characters forbidden in XML 1.0: the C0 controls except tab/LF/CR (\u0009 \u000A \u000D), the noncharacters \uFFFE/\uFFFF, and unpaired surrogates. None has an escaped form — not even a character reference — so the only valid output is to remove them. No `u` flag, so the surrogate alternatives match individual UTF-16 code units.
 const INVALID_XML_CHARS =
   // biome-ignore lint/suspicious/noControlCharactersInRegex: matching these chars is the intent
   /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g
@@ -34,9 +30,7 @@ export function stripInvalidXmlChars(s: string): string {
   return s.replace(INVALID_XML_CHARS, '')
 }
 
-// A literal CR (or the CR half of a CRLF pair) is normalized to LF on parse (XML 1.0 §2.11 —
-// end-of-line handling applies uniformly, text content included), so it's emitted as a numeric
-// reference to survive round-trip; tab/LF need no such escaping in text content.
+// A literal CR (or the CR half of a CRLF pair) is normalized to LF on parse (XML 1.0 §2.11 — end-of-line handling applies uniformly, text content included), so it's emitted as a numeric reference to survive round-trip; tab/LF need no such escaping in text content.
 const TEXT_ESCAPES: Record<string, string> = {
   '&': '&amp;',
   '<': '&lt;',
@@ -50,9 +44,7 @@ export function escapeText(s: string): string {
   return stripInvalidXmlChars(s).replace(/[&<>\r]/g, (ch) => TEXT_ESCAPES[ch])
 }
 
-// Attribute-value normalization (XML 1.0 §3.3.3) additionally flattens any literal tab/LF to a
-// space — on top of §2.11's CR handling above — so attribute values need tab/LF as numeric
-// references too, beyond what escapeText requires for text content.
+// Attribute-value normalization (XML 1.0 §3.3.3) additionally flattens any literal tab/LF to a space — on top of §2.11's CR handling above — so attribute values need tab/LF as numeric references too, beyond what escapeText requires for text content.
 const ATTR_ESCAPES: Record<string, string> = {
   ...TEXT_ESCAPES,
   '"': '&quot;',
@@ -67,8 +59,7 @@ export function escapeAttr(s: string): string {
 }
 
 /**
- * Wrap in CDATA, splitting any `]]>` so the section cannot be broken. Characters invalid in
- * XML are dropped first — CDATA changes how `& < >` are read, but cannot legalize them.
+ * Wrap in CDATA, splitting any `]]>` so the section cannot be broken. Characters invalid in XML are dropped first — CDATA changes how `& < >` are read, but cannot legalize them.
  */
 export function cdata(s: string): string {
   return `<![CDATA[${stripInvalidXmlChars(s).replace(/]]>/g, ']]]]><![CDATA[>')}]]>`
@@ -83,8 +74,7 @@ export function el(name: string, attrs?: Attrs, children?: Node[] | Node): ElNod
   return { kind: 'el', name, attrs, children: ch }
 }
 
-// A pragmatic ASCII subset of the XML `Name` production, with one optional namespace-prefix
-// colon. Names are structural and never escaped by `el()`, so `<`/`>`/whitespace must be rejected.
+// A pragmatic ASCII subset of the XML `Name` production, with one optional namespace-prefix colon. Names are structural and never escaped by `el()`, so `<`/`>`/whitespace must be rejected.
 const XML_NAME = /^[A-Za-z_][\w.-]*(?::[A-Za-z_][\w.-]*)?$/
 
 function assertXmlName(name: string, what: string): void {
@@ -94,9 +84,7 @@ function assertXmlName(name: string, what: string): void {
 }
 
 /**
- * Convert a JSON-shaped `XmlElementSpec` (the `customXml` escape hatch) into a `Node`.
- * Element and attribute names are validated because, unlike values, they are never escaped
- * and an invalid one would inject raw markup.
+ * Convert a JSON-shaped `XmlElementSpec` (the `customXml` escape hatch) into a `Node`. Element and attribute names are validated because, unlike values, they are never escaped and an invalid one would inject raw markup.
  */
 export function specToNode(spec: XmlElementSpec): Node {
   assertXmlName(spec.name, 'element name')
@@ -112,8 +100,7 @@ function renderAttrs(attrs?: Attrs): string {
   if (!attrs) return ''
   let out = ''
   for (const [k, v] of Object.entries(attrs)) {
-    // `false` (like `null`/`undefined`) omits the attribute; `true` still needs a value —
-    // XML 1.0 has no valueless/boolean attribute syntax — so it falls through to `String(v)`.
+    // `false` (like `null`/`undefined`) omits the attribute; `true` still needs a value — XML 1.0 has no valueless/boolean attribute syntax — so it falls through to `String(v)`.
     if (v === undefined || v === null || v === false) continue
     out += ` ${k}="${escapeAttr(String(v))}"`
   }

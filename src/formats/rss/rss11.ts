@@ -4,8 +4,7 @@ import { absolutize, selfUrl } from '../../utils/url'
 import { el, type Node, specToNode, xmlDocument } from '../../utils/xml'
 import { rdfItem } from './rdf-item'
 
-// RSS 1.1: `<Channel>` root in the rss1.1# namespace. Items nest directly under
-// `<items>` (no rdf:Seq). Uses Dublin Core + content modules like RSS 1.0.
+// RSS 1.1: `<Channel>` root in the rss1.1# namespace. Items nest directly under `<items>` (no rdf:Seq). Uses Dublin Core + content modules like RSS 1.0.
 export function toRSS11(input: FeedInput, opts: SerializeOptions): string {
   const { options, items } = input
   const base = opts.baseUrl

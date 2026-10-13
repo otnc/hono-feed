@@ -1,8 +1,4 @@
-// Exercises the built package.json "exports" map itself (not src/) via Node's
-// self-referencing package imports, so a build/exports-map regression that the
-// vitest suite (which imports from src/) can't see is caught here. Subpaths are
-// read from package.json at run time, so adding a new export entry needs no
-// change here.
+// Exercises the built package.json "exports" map itself (not src/) via Node's self-referencing package imports, so a build/exports-map regression that the vitest suite (which imports from src/) can't see is caught here. Subpaths are read from package.json at run time, so adding a new export entry needs no change here.
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 

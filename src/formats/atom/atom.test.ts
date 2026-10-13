@@ -63,8 +63,7 @@ describe('toAtom', () => {
   it('escapes html content as a text node and strips control chars from title/content', () => {
     const out = toAtom({
       ...input,
-      // \u0007 (bell) is invalid XML; it must be dropped from both the title and the
-      // type="html" content (which is emitted as an escaped text node).
+      // \u0007 (bell) is invalid XML; it must be dropped from both the title and the type="html" content (which is emitted as an escaped text node).
       items: [{ ...input.items[0], title: 'a\u0007b', content: '<p>c\u0007d & e</p>' }],
     })
     expect(out).toContain('<title>ab</title>')

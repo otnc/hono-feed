@@ -2,8 +2,7 @@ import type { FeedInput, SerializeOptions } from '../../types'
 import { absolutize, selfUrl } from '../../utils/url'
 import { el, type Node, xmlDocument } from '../../utils/xml'
 
-// RSS 0.90 (original Netscape "RDF Site Summary"): minimal `<rdf:RDF>`. Channel carries
-// title/link/description; items carry only title/link. No rdf:Seq, no modules.
+// RSS 0.90 (original Netscape "RDF Site Summary"): minimal `<rdf:RDF>`. Channel carries title/link/description; items carry only title/link. No rdf:Seq, no modules.
 export function toRSS090(input: FeedInput, opts: SerializeOptions): string {
   const { options, items } = input
   const base = opts.baseUrl

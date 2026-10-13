@@ -45,8 +45,7 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
       feed.push(el('category', { term: cat.term, scheme: cat.scheme, label: cat.label }))
     }
   }
-  // RFC 4287 §4.2.8: icon is a small square, logo a 2:1 image — same roles as RSS <image>
-  // and JSON Feed icon/favicon.
+  // RFC 4287 §4.2.8: icon is a small square, logo a 2:1 image — same roles as RSS <image> and JSON Feed icon/favicon.
   if (options.favicon) feed.push(el('icon', undefined, absolutize(options.favicon, base)))
   if (options.image) feed.push(el('logo', undefined, absolutize(options.image, base)))
   if (options.customXml) feed.push(...options.customXml.map(specToNode))
@@ -68,9 +67,7 @@ function atomEntry10(item: FeedItem, base?: string): Node {
   const link = absolutize(item.link, base)
   const id = item.id ?? link
   if (!id) throw new TypeError('hono-feed: Atom entry requires an id')
-  // RFC 4287 §4.2.6: atom:id MUST be an absolute IRI. An explicit id is checked by
-  // validateInput; the link fallback isn't, so a relative link with no baseUrl could
-  // otherwise reach the document unchecked.
+  // RFC 4287 §4.2.6: atom:id MUST be an absolute IRI. An explicit id is checked by validateInput; the link fallback isn't, so a relative link with no baseUrl could otherwise reach the document unchecked.
   if (!hasIriScheme(id)) {
     throw new TypeError(
       'hono-feed: Atom entry id must be an absolute IRI (RFC 4287 §4.2.6) — set "baseUrl" or an absolute "id"/"link"',
@@ -98,8 +95,7 @@ function atomEntry10(item: FeedItem, base?: string): Node {
     }
   }
 
-  // RFC 4287 §4.2.7.2: rel="enclosure" identifies a related, potentially large resource.
-  // Atom, like RSS, supports at most one; keep only the first.
+  // RFC 4287 §4.2.7.2: rel="enclosure" identifies a related, potentially large resource. Atom, like RSS, supports at most one; keep only the first.
   const enclosure = firstEnclosure(item.enclosure)
   if (enclosure) {
     ch.push(

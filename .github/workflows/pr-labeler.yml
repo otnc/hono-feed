@@ -1,17 +1,6 @@
 name: pr-labeler
 
-# Labels PRs from two sources: the PR template's checkboxes (bug/enhancement/others) and the
-# base branch (to main/to others), plus a conflict label from the PR's mergeable state.
-# Runs on PR open/reopen/new-commits/edit (pull_request_target), on new PR comments
-# (issue_comment — issues and PRs share comment infrastructure, so those two jobs guard on
-# github.event.issue.pull_request to skip comments on plain issues), and on push to a base branch
-# (recheck-labels-on-push reconciles every managed label for every open PR targeting that branch,
-# since a push can newly conflict a PR without it getting its own event, and PRs opened before
-# this workflow existed or whose labels drifted never got a pull_request_target/issue_comment
-# event of their own to fix that).
-# Uses pull_request_target (not pull_request) so labeling also works for PRs opened from forks.
-# actions/checkout here defaults to github.sha, i.e. the base branch's own code — never the PR's
-# (possibly untrusted) head — so running scripts/pr-labeler/*.cjs from it is safe.
+# Labels PRs from two sources: the PR template's checkboxes (bug/enhancement/others) and the base branch (to main/to others), plus a conflict label from the PR's mergeable state. Runs on PR open/reopen/new-commits/edit (pull_request_target), on new PR comments (issue_comment — issues and PRs share comment infrastructure, so those two jobs guard on github.event.issue.pull_request to skip comments on plain issues), and on push to a base branch (recheck-labels-on-push reconciles every managed label for every open PR targeting that branch, since a push can newly conflict a PR without it getting its own event, and PRs opened before this workflow existed or whose labels drifted never got a pull_request_target/issue_comment event of their own to fix that). Uses pull_request_target (not pull_request) so labeling also works for PRs opened from forks. actions/checkout here defaults to github.sha, i.e. the base branch's own code — never the PR's (possibly untrusted) head — so running scripts/pr-labeler/*.cjs from it is safe.
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, edited]

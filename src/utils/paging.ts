@@ -4,9 +4,7 @@ import { absolutize } from './url'
 type Paging = NonNullable<FeedOptions['paging']>
 type LinkKey = 'next' | 'prev' | 'first' | 'last' | 'current' | 'prevArchive' | 'nextArchive'
 
-// RFC 5005 §3 spells the "previous" rel out in full (not "prev"), while §4's archive rels
-// really are hyphenated "prev-archive"/"next-archive" — not expansions of "prev". Order
-// matches a natural reading order rather than object key order.
+// RFC 5005 §3 spells the "previous" rel out in full (not "prev"), while §4's archive rels really are hyphenated "prev-archive"/"next-archive" — not expansions of "prev". Order matches a natural reading order rather than object key order.
 const RELS: Array<[LinkKey, string]> = [
   ['next', 'next'],
   ['prev', 'previous'],

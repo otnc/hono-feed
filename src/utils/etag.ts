@@ -1,6 +1,4 @@
-// FNV-1a 64-bit synchronous hash (via BigInt), used for the default weak ETag. 64 bits pushes
-// the birthday bound for an accidental collision past ~5 billion distinct bodies (vs. ~77k for
-// a 32-bit hash), while staying synchronous instead of relying on async crypto.subtle.
+// FNV-1a 64-bit synchronous hash (via BigInt), used for the default weak ETag. 64 bits pushes the birthday bound for an accidental collision past ~5 billion distinct bodies (vs. ~77k for a 32-bit hash), while staying synchronous instead of relying on async crypto.subtle.
 const FNV64_OFFSET = 0xcbf29ce484222325n
 const FNV64_PRIME = 0x100000001b3n
 const MASK64 = 0xffffffffffffffffn
@@ -23,9 +21,7 @@ export function weakEtag(body: string): string {
 const LOOKS_LIKE_ETAG = /^(W\/)?"[^"]*"$/
 
 /**
- * Resolve the ETag to send: the built-in weak hash by default, or — when `custom` is given —
- * its return value for the body, used verbatim if it already looks like an ETag (`"…"` /
- * `W/"…"`), otherwise wrapped as a weak validator.
+ * Resolve the ETag to send: the built-in weak hash by default, or — when `custom` is given — its return value for the body, used verbatim if it already looks like an ETag (`"…"` / `W/"…"`), otherwise wrapped as a weak validator.
  */
 export function resolveEtag(body: string, custom?: (body: string) => string): string {
   if (!custom) return weakEtag(body)

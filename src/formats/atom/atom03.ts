@@ -7,8 +7,7 @@ import { el, type Node, xmlDocument } from '../../utils/xml'
 import { atomAuthorEl } from './author'
 import { atomFeedIdentity } from './identity'
 
-// Atom 0.3 (deprecated, pre-RFC). Namespace purl.org/atom/ns#; uses tagline / modified /
-// issued / copyright and author <url>; content is escaped HTML.
+// Atom 0.3 (deprecated, pre-RFC). Namespace purl.org/atom/ns#; uses tagline / modified / issued / copyright and author <url>; content is escaped HTML.
 export function toAtom03(input: FeedInput, opts: SerializeOptions): string {
   const { options, items } = input
   const base = opts.baseUrl
@@ -35,9 +34,7 @@ function atomEntry03(item: FeedItem, base?: string): Node {
   const link = absolutize(item.link, base)
   const id = item.id ?? link
   if (!id) throw new TypeError('hono-feed: Atom 0.3 entry requires an id')
-  // RFC 4287 §4.2.6: atom:id MUST be an absolute IRI. An explicit id is checked by
-  // validateInput; the link fallback isn't, so a relative link with no baseUrl could
-  // otherwise reach the document unchecked.
+  // RFC 4287 §4.2.6: atom:id MUST be an absolute IRI. An explicit id is checked by validateInput; the link fallback isn't, so a relative link with no baseUrl could otherwise reach the document unchecked.
   if (!hasIriScheme(id)) {
     throw new TypeError(
       'hono-feed: Atom 0.3 entry id must be an absolute IRI (RFC 4287 §4.2.6) — set "baseUrl" or an absolute "id"/"link"',
@@ -55,8 +52,7 @@ function atomEntry03(item: FeedItem, base?: string): Node {
 
   for (const a of authorList(item.author)) ch.push(atomAuthorEl(a, 'url'))
 
-  // Atom 0.3's link draft defines rel="enclosure" the same way 1.0 (RFC 4287 §4.2.7.2) does.
-  // Like 1.0, at most one is supported; keep only the first.
+  // Atom 0.3's link draft defines rel="enclosure" the same way 1.0 (RFC 4287 §4.2.7.2) does. Like 1.0, at most one is supported; keep only the first.
   const enclosure = firstEnclosure(item.enclosure)
   if (enclosure) {
     ch.push(

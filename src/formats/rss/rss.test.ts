@@ -398,8 +398,7 @@ describe('toRSS', () => {
   it('escapes markup in titles and strips control chars from text and CDATA', () => {
     const out = toRSS({
       options: { title: 'A & B <ok>', link: 'https://example.com/' },
-      // \u0007 (a bell control char) is invalid XML and must not reach the output, in either
-      // the escaped title path or the CDATA content path.
+      // \u0007 (a bell control char) is invalid XML and must not reach the output, in either the escaped title path or the CDATA content path.
       items: [{ title: 'x\u0007y & z', link: 'https://example.com/1', content: 'a\u0007b' }],
     })
     expect(out).toContain('<title>A &amp; B &lt;ok&gt;</title>')

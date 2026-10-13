@@ -59,8 +59,7 @@ describe('lintInput', () => {
 
   it('warns about a missing Atom id/link/feedUrl, only for atom', () => {
     const noLink: FeedInput = { ...clean, options: { ...clean.options, link: undefined } }
-    // Both the id-fallback rule and the separate rel="alternate" rule fire when link is
-    // entirely absent (id/feedUrl are unset too).
+    // Both the id-fallback rule and the separate rel="alternate" rule fire when link is entirely absent (id/feedUrl are unset too).
     expect(lintInput(noLink, 'atom')).toEqual([
       expect.stringMatching(/no "id" \(or "link"\/"feedUrl"\)/),
       expect.stringMatching(/no "link".*rel="alternate"/),
@@ -71,8 +70,7 @@ describe('lintInput', () => {
       ...clean,
       options: { ...clean.options, link: undefined, feedUrl: 'https://example.com/feed' },
     }
-    // id fallback is satisfied via feedUrl, but the rel="alternate" rule still fires since
-    // link itself is still unset.
+    // id fallback is satisfied via feedUrl, but the rel="alternate" rule still fires since link itself is still unset.
     expect(lintInput(withFeedUrl, 'atom')).toEqual([
       expect.stringMatching(/no "link".*rel="alternate"/),
     ])
