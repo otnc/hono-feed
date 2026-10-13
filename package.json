@@ -111,8 +111,8 @@
     "format": "biome format --write .",
     "check": "biome check --write . && tsc --noEmit",
     "ci": "biome ci .",
-    "docs:build": "kiritan build",
-    "docs:check": "kiritan check && kiritan verify",
+    "build:docs": "kiritan build",
+    "check:docs": "kiritan check && kiritan verify",
     "check:package": "pnpm build && publint && attw --pack . --ignore-rules no-resolution && node scripts/smoke.mjs",
     "prepublishOnly": "pnpm check:package"
   },

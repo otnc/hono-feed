@@ -24,13 +24,13 @@ pnpm install --frozen-lockfile
 | `pnpm typecheck` | `tsc --noEmit` で型チェックする |
 | `pnpm check` | リント、フォーマット、import の整理を行い、修正を書き込む (Biome) |
 | `pnpm run ci` | 書き込みなしで同じ検査を行う。CI が実行するもの |
-| `pnpm docs:build` | `base/*.base.md` から多言語のドキュメントを再生成する (Kiritan) |
-| `pnpm docs:check` | 生成されたドキュメントが base ファイルと食い違っていれば失敗する |
+| `pnpm build:docs` | `base/*.base.md` から多言語のドキュメントを再生成する (Kiritan) |
+| `pnpm check:docs` | 生成されたドキュメントが base ファイルと食い違っていれば失敗する |
 
 Pull Request を出す前に、すべての検査が通ることを確認してください。
 
 ```sh
-pnpm run ci && pnpm typecheck && pnpm test && pnpm build && pnpm docs:check
+pnpm run ci && pnpm typecheck && pnpm test && pnpm build && pnpm check:docs
 ```
 
 ## 規約
@@ -38,7 +38,7 @@ pnpm run ci && pnpm typecheck && pnpm test && pnpm build && pnpm docs:check
 - **フォーマットとリントは Biome** (`biome.json`)です。シングルクォート、セミコロンなし、末尾カンマ、100 桁幅に統一しています。コミット前に `pnpm check` を実行すれば、すべて整います。
 - **テストはコードの隣に置きます。** `*.test.ts` という名前で、vitest で実行します。
 - **コードのコメントは英語で書き**、簡潔にします。
-- **利用者向けのドキュメントは日英の 2 言語です。** `README.md`、`CONTRIBUTING.md`、`HONOFEED_DEP.md` と、それぞれの `*.ja.md` は、[Kiritan](https://github.com/otnc/kiritan) が `base/*.base.md` から生成します。編集するのは base ファイルで、生成されたファイルは直接編集せず、`pnpm docs:build` を実行してください。英語と日本語は、セクションごとの小さな `:::kiritan{locale=en}` / `:::kiritan{locale=ja}` のペアとして並べて書き、言語に依存しないもの (コードブロックやバッジ)はブロックの外に置きます。
+- **利用者向けのドキュメントは日英の 2 言語です。** `README.md`、`CONTRIBUTING.md`、`HONOFEED_DEP.md` と、それぞれの `*.ja.md` は、[Kiritan](https://github.com/otnc/kiritan) が `base/*.base.md` から生成します。編集するのは base ファイルで、生成されたファイルは直接編集せず、`pnpm build:docs` を実行してください。英語と日本語は、セクションごとの小さな `:::kiritan{locale=en}` / `:::kiritan{locale=ja}` のペアとして並べて書き、言語に依存しないもの (コードブロックやバッジ)はブロックの外に置きます。
 - **実行時の依存はありません。** `hono` は peer dependency で、それ以外は Web 標準 API だけを使います (`Response`、`URL`、`TextEncoder` など)。これにより、すべてのエッジランタイムで動き続けます。ビルドの `platform: 'neutral'` が、これを強制しています。Node 専用の API を使う価値が本当にある場合 (`process.emitWarning` など)は、`globalThis` 経由で機能を検出し、使えなければ穏当にフォールバックしてください。手本は `src/utils/deprecation.ts` です。
 - **型だけの import には `import type` を使います** (`verbatimModuleSyntax` を有効にしています)。
 
