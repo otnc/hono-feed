@@ -6,7 +6,7 @@ If anything here is unclear, opening an issue to ask is welcome.
 
 ## Getting set up
 
-You'll need Node.js >= 20 and [pnpm](https://pnpm.io).  
+You'll need Node.js >= 22.12 and [pnpm](https://pnpm.io).  
 If you don't have pnpm, `corepack enable` gives it to you.  
 Then install exactly what the lockfile pins:
 
