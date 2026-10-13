@@ -67,6 +67,12 @@ function atomEntry10(item: FeedItem, base?: string): Node {
   ch.push(tag('updated', rfc3339(item.updated ?? item.published ?? new Date())))
   if (item.published) ch.push(tag('published', rfc3339(item.published)))
   if (link) ch.push(el('link', { rel: 'alternate', href: link }))
+  // RFC 4685 §3: rel="replies" points at where the discussion of an entry lives.
+  if (item.comments) {
+    ch.push(
+      el('link', { rel: 'replies', type: 'text/html', href: absolutize(item.comments, base) }),
+    )
+  }
   if (item.description) ch.push(tag('summary', item.description))
   // content type="html" body is escaped as a text node.
   if (item.content) ch.push(el('content', { type: 'html' }, item.content))

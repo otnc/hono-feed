@@ -141,6 +141,24 @@ describe('toAtom', () => {
       )
     })
 
+    it('maps comments to <link rel="replies"> (RFC 4685), absolutized, in Atom 1.0 only', () => {
+      const withComments = {
+        ...input,
+        items: [{ ...input.items[0], comments: '/1#comments' }],
+      }
+      const out = toAtom(withComments, {
+        feedUrl: 'https://example.com/feed',
+        baseUrl: 'https://example.com',
+      })
+      expect(out).toContain(
+        '<link rel="replies" type="text/html" href="https://example.com/1#comments"/>',
+      )
+
+      const out03 = toAtom(withComments, { atomVersion: '0.3', baseUrl: 'https://example.com' })
+      expect(out03).not.toContain('replies')
+      expect(toAtom(input, { feedUrl: 'https://example.com/feed' })).not.toContain('replies')
+    })
+
     it('omits <source> when unset', () => {
       expect(toAtom(input, { feedUrl: 'https://example.com/feed' })).not.toContain('<source')
     })
