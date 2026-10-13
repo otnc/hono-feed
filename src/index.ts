@@ -29,6 +29,8 @@ export type {
   XmlVersion,
 } from './types'
 export { feedExtensionMap } from './utils/mime'
+export type { Paginated, PaginateOptions } from './utils/paging'
+export { paginate } from './utils/paging'
 export { validateInput } from './validate'
 export type { NotifyHubOptions, NotifyHubResult } from './websub'
 export { notifyHub } from './websub'
