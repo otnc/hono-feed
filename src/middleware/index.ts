@@ -13,7 +13,16 @@ export interface FeedMiddlewareEnv {
   Variables: { serveFeed: ServeFeedFn }
 }
 
-/** Expose a preconfigured `serveFeed` on `c.var.serveFeed`. Per-call options override defaults. */
+/**
+ * Expose a preconfigured `serveFeed` on `c.var.serveFeed`. Per-call options override defaults.
+ *
+ * @example
+ * ```ts
+ * const app = new Hono<FeedMiddlewareEnv>()
+ * app.use(feedMiddleware({ cacheControl: 'public, max-age=600' }))
+ * app.get('/feed', (c) => c.var.serveFeed(feed))
+ * ```
+ */
 export function feed(defaults: ServeFeedOptions = {}): MiddlewareHandler<FeedMiddlewareEnv> {
   return async (c, next) => {
     c.set('serveFeed', bindServeFeed(c, defaults))

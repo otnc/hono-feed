@@ -83,10 +83,8 @@ export function el(name: string, attrs?: Attrs, children?: Node[] | Node): ElNod
   return { kind: 'el', name, attrs, children: ch }
 }
 
-// A pragmatic ASCII subset of the XML `Name` production (letters/underscore start, then
-// letters/digits/._-, with one optional namespace-prefix colon). Rejects e.g. a name
-// containing `<`/`>`/whitespace, which — unlike text/attribute values — `el()` never escapes,
-// since element and attribute names are structural, not content.
+// A pragmatic ASCII subset of the XML `Name` production, with one optional namespace-prefix
+// colon. Names are structural and never escaped by `el()`, so `<`/`>`/whitespace must be rejected.
 const XML_NAME = /^[A-Za-z_][\w.-]*(?::[A-Za-z_][\w.-]*)?$/
 
 function assertXmlName(name: string, what: string): void {
@@ -96,11 +94,9 @@ function assertXmlName(name: string, what: string): void {
 }
 
 /**
- * Convert a public, JSON-shaped `XmlElementSpec` (the `customXml` escape hatch) into a `Node`.
- * Goes through `el()` like every built-in element, so attrs/text are escaped the same way.
- * The element name and any attribute keys are validated against the XML `Name` production —
- * unlike attribute/text values, names are never escaped, so an invalid one would inject raw
- * markup into the document.
+ * Convert a JSON-shaped `XmlElementSpec` (the `customXml` escape hatch) into a `Node`.
+ * Element and attribute names are validated because, unlike values, they are never escaped
+ * and an invalid one would inject raw markup.
  */
 export function specToNode(spec: XmlElementSpec): Node {
   assertXmlName(spec.name, 'element name')

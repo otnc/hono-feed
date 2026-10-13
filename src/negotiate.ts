@@ -37,7 +37,6 @@ export const isAtomVersion: (v: unknown) => v is AtomVersion = memberGuard(ATOM_
 export const isJsonFeedVersion: (v: unknown) => v is JsonFeedVersion =
   memberGuard(JSON_FEED_VERSIONS)
 
-/** Resolve a format from the query. */
 export function formatFromQuery(value: string | null | undefined): FeedFormat | null {
   return isFeedFormat(value) ? value : null
 }
@@ -72,10 +71,8 @@ function specificity(e: AcceptEntry): number {
   return 2
 }
 
-// Split on `delim` outside of a quoted-string (RFC 9110 §5.6.4 quoted-string: DQUOTE-delimited,
-// `\` escapes the next character). Used for both the top-level "," separating Accept entries
-// and the ";" separating an entry's accept-params, so a quoted parameter value (e.g.
-// `profile="a,b"`) isn't torn apart by a delimiter that only appears inside its quotes.
+// Split on `delim` outside a quoted-string (RFC 9110 §5.6.4), for both the "," between Accept
+// entries and the ";" between params, so a quoted value like `profile="a,b"` stays intact.
 function splitUnquoted(s: string, delim: string): string[] {
   const parts: string[] = []
   let start = 0
@@ -149,16 +146,12 @@ function resolveEntry(e: AcceptEntry): FeedFormat | 'all' | null {
 }
 
 /**
- * Per-format effective q, per RFC 9110 §12.5.1: the media range with the highest precedence
- * (most specific match) determines the quality value, regardless of q — an exact match
- * (`application/rss+xml`) always outranks a wildcard (any-type) for that format, even at q=0.
- * A format with no matching entry at all is left out of the map ("no opinion"), distinct from
- * an entry that matches it at q=0 (an explicit rejection).
+ * Per-format effective q, per RFC 9110 §12.5.1: the most specific matching media range decides
+ * the q regardless of its value, so an exact match outranks a wildcard even at q=0. A format
+ * with no matching entry is left out of the map ("no opinion"), unlike a q=0 match (rejection).
  *
- * Ties (same specificity, same format) keep whichever entry `parseAccept` sorted first — q
- * desc, so the higher-q entry wins; this only matters for the pathological case of a client
- * listing the same effective format twice (e.g. both `application/xml` and
- * `application/rss+xml`, which are synonyms in `MIME_FORMAT`).
+ * Ties on specificity keep the entry `parseAccept` sorted first (the higher q), which only
+ * matters when a client lists synonyms such as `application/xml` and `application/rss+xml`.
  */
 function effectiveQs(entries: AcceptEntry[]): Map<FeedFormat, number> {
   const best = new Map<FeedFormat, { specificity: number; q: number }>()
@@ -205,12 +198,10 @@ export function negotiateFormat(
 }
 
 /**
- * The format to fall back to when `negotiateFormat` returns null and `strictAccept` doesn't
- * apply (or didn't trigger). Falls back to `defaultFormat` unless the header explicitly
- * rejected it (effective q of exactly 0), in which case the first non-rejected format (in
- * `FEED_FORMATS` order) is used instead — an explicit rejection must never be silently
- * resurrected by the fallback. When every format is rejected, `defaultFormat` is returned
- * regardless (matching the documented non-`strictAccept` behaviour of falling through).
+ * The format to use when `negotiateFormat` returns null and `strictAccept` doesn't reject.
+ * Returns `defaultFormat` unless the header rejected it (q=0), in which case the first
+ * non-rejected format in `FEED_FORMATS` order wins. When every format is rejected, it still
+ * returns `defaultFormat`.
  */
 export function resolveFallbackFormat(
   header: string | null | undefined,
@@ -228,10 +219,8 @@ export function resolveFallbackFormat(
 }
 
 /**
- * True when the Accept header explicitly rejects (q=0) every known feed format — as opposed
- * to simply not matching any of them (an absent header, or one that only mentions unrelated
- * types). Used to distinguish "nothing acceptable was found" from "the client actively
- * refused everything we can serve" (see `strictAccept` in `ServeFeedOptions`).
+ * True when the Accept header explicitly rejects (q=0) every feed format, as opposed to merely
+ * not mentioning any (see `strictAccept` in `ServeFeedOptions`).
  */
 export function rejectsAllFormats(header: string | null | undefined): boolean {
   const entries = parseAccept(header)

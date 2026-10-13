@@ -63,6 +63,15 @@ export type FeedInputSource =
  * Stays synchronous (returning a plain `Response`) unless `etagFrom` or a lazy `input`
  * function is used, in which case it may return a `Promise<Response>` instead — see the
  * overloads below.
+ *
+ * Throws `TypeError` when the input fails validation.
+ *
+ * @example
+ * ```ts
+ * app.get('/feed', (c) =>
+ *   serveFeed(c, { options: { title: 'Blog', link: 'https://example.com' }, items }),
+ * )
+ * ```
  */
 export function serveFeed(
   c: Context,
@@ -276,12 +285,10 @@ function finishServeFeed(
 
   const resolved: FeedInput = input instanceof Feed ? input.toInput() : input
 
-  // Validate with the request-derived feedUrl folded in: rules that accept feedUrl as a
-  // fallback (RSS channel <link>, Atom feed id) are satisfiable here even when the caller
-  // set neither, because serving always yields a self URL. Absolutizing against `base`
-  // (rather than the request's own origin) keeps an explicit relative `feedUrl` — and the
-  // request-derived fallback itself — from leaking a relative or internal-only URL into the
-  // document when `baseUrl` is set (e.g. behind a reverse proxy).
+  // Validate with the request-derived feedUrl folded in, so rules that accept it as a fallback
+  // (RSS channel <link>, Atom feed id) are satisfiable. Absolutizing against `base` rather than
+  // the request origin keeps a relative or internal-only URL out of the document when
+  // `baseUrl` is set (e.g. behind a reverse proxy).
   const feedUrl = absolutize(resolved.options.feedUrl, base) ?? new URL(url.pathname, base).href
   validateInput({ options: { ...resolved.options, feedUrl }, items: resolved.items }, format)
   const serializeOpts = {
@@ -346,8 +353,6 @@ function isNotModified(
   etagValue: string | undefined,
   updatedDate: Date | undefined,
 ): boolean {
-  // RFC 9110 §13.1.2/§13.1.3: a recipient MUST ignore If-None-Match/If-Modified-Since when the
-  // request method is neither GET nor HEAD.
   if (!isConditionalMethod(c)) return false
 
   const inm = c.req.header('if-none-match')
