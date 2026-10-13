@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 import type {
+  FeedOptions,
   FeedPodcast,
   ItemPodcast,
   PodcastChapters,
@@ -7,40 +8,40 @@ import type {
   PodcastOwner,
   PodcastTranscript,
 } from './index'
-import { validateInput } from './index'
+import * as honoFeed from './index'
 
-// validateInput is the same per-format validation serveFeed runs internally; exporting it lets low-level toRSS/toAtom/toJSONFeed callers opt into the same checks (see README "Low-level serializers"). This guards the export itself — validation behaviour is covered in validate.test.ts.
-describe('validateInput (public export)', () => {
-  it('is importable from the package root', () => {
-    expect(typeof validateInput).toBe('function')
+describe('package root', () => {
+  it('exports the documented runtime API', () => {
+    expect(Object.keys(honoFeed).sort()).toEqual([
+      'Feed',
+      'feedMiddleware',
+      'lintInput',
+      'notifyHub',
+      'serveFeed',
+      'toAtom',
+      'toJSONFeed',
+      'toRSS',
+      'validateInput',
+    ])
   })
 
-  it('throws the documented message for missing input', () => {
-    expect(() =>
-      validateInput({ options: { title: '', link: 'https://example.com/' }, items: [] }, 'rss'),
-    ).toThrow(/feed "title" is required/)
-  })
-
-  it('applies format-specific rules (Atom relative id) not enforced by the serializers alone', () => {
-    expect(() =>
-      validateInput(
-        { options: { title: 'T', id: '/not-absolute', updated: new Date() }, items: [] },
-        'atom',
-      ),
-    ).toThrow(/absolute IRI/)
+  it('serializes with the exported functions', () => {
+    const input = {
+      options: { title: 't', link: 'https://example.com/', author: { name: 'a' } },
+      items: [{ title: 'post', link: 'https://example.com/1', content: '<p>body</p>' }],
+    }
+    expect(honoFeed.toRSS(input)).toContain('<rss version="2.0"')
+    expect(honoFeed.toAtom(input)).toContain('xmlns="http://www.w3.org/2005/Atom"')
+    expect(JSON.parse(honoFeed.toJSONFeed(input)).version).toBe('https://jsonfeed.org/version/1.1')
   })
 })
 
-describe('podcast types (public export)', () => {
-  it('are importable from the package root', () => {
-    // Type-only: these have no runtime presence, so the check is that this file — importing them via `import type { ... } from './index'` rather than an internal relative path — still type-checks (`pnpm typecheck`). If one is ever dropped from index.ts's export list, this stops compiling.
-    const owner: PodcastOwner = { name: 'Ada', email: 'ada@example.com' }
-    const funding: PodcastFunding = { url: 'https://example.com/support' }
-    const transcript: PodcastTranscript = { url: 'https://example.com/1.vtt', type: 'text/vtt' }
-    const chapters: PodcastChapters = { url: 'https://example.com/1-chapters.json' }
-    const feedPodcast: FeedPodcast = { owner, funding: [funding] }
-    const itemPodcast: ItemPodcast = { transcript: [transcript], chapters }
-    expect(feedPodcast.owner).toEqual(owner)
-    expect(itemPodcast.chapters).toEqual(chapters)
+describe('public podcast types', () => {
+  it('are the types used by FeedOptions and FeedItem', () => {
+    expectTypeOf<FeedOptions['podcast']>().toEqualTypeOf<FeedPodcast | undefined>()
+    expectTypeOf<FeedPodcast['owner']>().toEqualTypeOf<PodcastOwner | undefined>()
+    expectTypeOf<FeedPodcast['funding']>().toEqualTypeOf<PodcastFunding[] | undefined>()
+    expectTypeOf<ItemPodcast['transcript']>().toEqualTypeOf<PodcastTranscript[] | undefined>()
+    expectTypeOf<ItemPodcast['chapters']>().toEqualTypeOf<PodcastChapters | undefined>()
   })
 })

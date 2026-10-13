@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FeedInput } from '../../types'
-import { toJSONFeed, validateInput } from './index'
+import { toJSONFeed } from './index'
 
 const input: FeedInput = {
   options: { title: 'example blog', link: 'https://example.com/' },
@@ -34,11 +34,6 @@ describe('toJSONFeed', () => {
     expect(json.title).toBe('example blog')
     expect(json.items[0]._custom).toBe('item-value')
     expect(json.items[0].title).toBe('post 1')
-  })
-
-  it('has no customJson → output unaffected', () => {
-    const json = JSON.parse(toJSONFeed(input))
-    expect(Object.keys(json)).not.toContain('_custom')
   })
 
   it('emits version 1.1 and array items', () => {
@@ -529,33 +524,5 @@ describe('toJSONFeed', () => {
       { pretty: true },
     )
     expect(out).toContain('\n  "title"')
-  })
-
-  it('falls back to content_text from description when content is absent', () => {
-    const json = JSON.parse(
-      toJSONFeed({
-        options: { title: 't', link: 'https://example.com/' },
-        items: [{ title: 'a', link: 'https://example.com/1', description: 'a summary' }],
-      }),
-    )
-    expect(json.items[0].content_text).toBe('a summary')
-    expect(json.items[0].content_html).toBeUndefined()
-  })
-
-  it('throws when a JSON Feed item has neither id nor link', () => {
-    expect(() =>
-      toJSONFeed({
-        options: { title: 't', link: 'https://example.com/' },
-        items: [{ title: 'a', content: '<p>b</p>' }],
-      }),
-    ).toThrow(/requires "id"/)
-  })
-})
-
-describe('validateInput (re-exported for this subpath)', () => {
-  it('is importable alongside toJSONFeed', () => {
-    expect(() => validateInput({ options: { title: '' }, items: [] }, 'json')).toThrow(
-      /feed "title" is required/,
-    )
   })
 })

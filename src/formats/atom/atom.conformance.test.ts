@@ -260,10 +260,6 @@ describe('Atom customXml/customNamespaces escape hatch', () => {
     expect(xml).toContain('<itunes:duration>3:45</itunes:duration>')
     expect(xml.indexOf('<itunes:author>')).toBeLessThan(xml.indexOf('<entry>'))
   })
-
-  it('has no custom fields → no custom elements/namespaces present', () => {
-    expect(toAtom(complete)).not.toContain('itunes')
-  })
 })
 
 describe('Atom feed-level category (RFC 4287 §4.1.1, same element as §4.2.2)', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FeedInput } from '../../types'
-import { toAtom, validateInput } from './index'
+import { toAtom } from './index'
 
 const input: FeedInput = {
   options: {
@@ -390,13 +390,5 @@ describe('toAtom', () => {
       expect(out).toContain('<name>two</name>')
       expect(out).toContain('<url>https://example.com/two</url>')
     })
-  })
-})
-
-describe('validateInput (re-exported for this subpath)', () => {
-  it('is importable alongside toAtom', () => {
-    expect(() => validateInput({ options: { title: '' }, items: [] }, 'atom')).toThrow(
-      /feed "title" is required/,
-    )
   })
 })
