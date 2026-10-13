@@ -684,6 +684,25 @@ feed.addItem({
 
 `skipHours` values outside 0–23 throw. `textInput` and `cloud` (rssCloud) are deliberately not modeled — `textInput` is essentially unused in the wild, and `cloud` is superseded in practice by the WebSub support [above](#websub); reach for `customXml` if you need either.
 
+## Media RSS
+
+`media` on a `FeedItem` adds [Media RSS](https://www.rssboard.org/media-rss) thumbnails and media objects, the de facto way to attach a preview image or a video to an RSS or Atom entry.  
+`xmlns:media` is declared automatically, only when an item sets one (an explicit `customNamespaces` entry still wins).
+
+```ts
+feed.addItem({
+  title: 'New video',
+  link: 'https://example.com/video',
+  media: {
+    thumbnails: [{ url: '/video-thumb.jpg', width: 320, height: 180 }], // <media:thumbnail>
+    contents: [{ url: '/video.mp4', type: 'video/mp4', medium: 'video', duration: 42 }], // <media:content>
+  },
+})
+```
+
+URLs are absolutized against `baseUrl` like every other URL field, and every entry needs a `url`.  
+It is emitted for RSS 2.0 and Atom 1.0 only; JSON Feed has no equivalent (use the item's `image` there).
+
 ## Extending with custom fields
 
 The neutral model is deliberately small — anything outside it (Media RSS, Dublin Core extras, a namespaced module hono-feed doesn't model, custom JSON Feed keys) needs an escape hatch. `customXml` / `customNamespaces` (XML formats) and `customJson` (JSON Feed) are that hatch, on both `FeedOptions` (feed-level) and `FeedItem` (item-level):
