@@ -1,4 +1,4 @@
-import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
+import type { FeedInput, FeedItem, FeedOptions, SerializeOptions } from '../../types'
 import { firstAuthor } from '../../utils/author'
 import { rfc822 } from '../../utils/date'
 import { firstEnclosure } from '../../utils/enclosure'
@@ -45,6 +45,25 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   const link = absolutize(options.link, base) ?? self
   if (!link) throw new TypeError('hono-feed: RSS requires "link" (or "feedUrl")')
 
+  const channel = channelNodes(options, caps, base, link, self)
+  for (const item of items) channel.push(rssItem(item, caps, base))
+
+  const root = el(
+    'rss',
+    { version, ...rootNamespaces(options, items, caps), ...options.customNamespaces },
+    [tag('channel', channel)],
+  )
+  return xmlDocument(root, { pretty: opts.pretty, version: opts.xmlVersion })
+}
+
+// Channel children before the items: metadata, then the `<image>`, podcast and custom elements.
+function channelNodes(
+  options: FeedOptions,
+  caps: Caps,
+  base: string | undefined,
+  link: string,
+  self: string | undefined,
+): Node[] {
   const channel: Node[] = []
   channel.push(tag('title', options.title))
   channel.push(tag('link', link))
@@ -123,9 +142,15 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
 
   // Escape hatch: appended unconditionally (no caps gating) — the caller opted in explicitly.
   if (options.customXml) channel.push(...options.customXml.map(specToNode))
+  return channel
+}
 
-  for (const item of items) channel.push(rssItem(item, caps, base))
-
+// `xmlns:*` declarations the document needs, each only when something in it uses the namespace.
+function rootNamespaces(
+  options: FeedOptions,
+  items: FeedItem[],
+  caps: Caps,
+): Record<string, string | undefined> {
   const hasContent = caps.rss20 && items.some((item) => item.content)
   // <dc:creator> is emitted for any item author with a name but no email (see rssItem).
   const hasDcCreator =
@@ -138,21 +163,14 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
     ? podcastNamespacesUsed(options, items)
     : { itunes: false, podcast: false }
   const hasFh = caps.rss20 && options.paging !== undefined && pagingMarker(options.paging)
-  const root = el(
-    'rss',
-    {
-      version,
-      'xmlns:atom': caps.rss20 ? 'http://www.w3.org/2005/Atom' : undefined,
-      'xmlns:content': hasContent ? 'http://purl.org/rss/1.0/modules/content/' : undefined,
-      'xmlns:dc': hasDcCreator ? 'http://purl.org/dc/elements/1.1/' : undefined,
-      'xmlns:itunes': podcastNs.itunes ? ITUNES_NS : undefined,
-      'xmlns:podcast': podcastNs.podcast ? PODCAST_NS : undefined,
-      'xmlns:fh': hasFh ? 'http://purl.org/syndication/history/1.0' : undefined,
-      ...options.customNamespaces,
-    },
-    [tag('channel', channel)],
-  )
-  return xmlDocument(root, { pretty: opts.pretty, version: opts.xmlVersion })
+  return {
+    'xmlns:atom': caps.rss20 ? 'http://www.w3.org/2005/Atom' : undefined,
+    'xmlns:content': hasContent ? 'http://purl.org/rss/1.0/modules/content/' : undefined,
+    'xmlns:dc': hasDcCreator ? 'http://purl.org/dc/elements/1.1/' : undefined,
+    'xmlns:itunes': podcastNs.itunes ? ITUNES_NS : undefined,
+    'xmlns:podcast': podcastNs.podcast ? PODCAST_NS : undefined,
+    'xmlns:fh': hasFh ? 'http://purl.org/syndication/history/1.0' : undefined,
+  }
 }
 
 // "email (name)" when name is present, otherwise the bare email — shared by managingEditor, webMaster, and item <author>, all of which require an email (checked by the caller) and treat the name as optional.

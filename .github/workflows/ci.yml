@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20, 22, 24]
+        node-version: [22, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -26,3 +26,24 @@ jobs:
       - run: pnpm run typecheck
       - run: pnpm run test
       - run: pnpm run check:package
+
+  hono-compat:
+    name: hono-compat (hono@${{ matrix.hono }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest version the `hono >=4.0.0` peer range allows, and the upcoming major.
+        hono: ['4.0.0', next]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm add -D hono@${{ matrix.hono }}
+      - run: pnpm run test

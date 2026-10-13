@@ -28,6 +28,7 @@ export type {
   XmlElementSpec,
   XmlVersion,
 } from './types'
+export { feedExtensionMap } from './utils/mime'
 export type { Paginated, PaginateOptions } from './utils/paging'
 export { paginate } from './utils/paging'
 export { validateInput } from './validate'

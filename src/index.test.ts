@@ -14,6 +14,7 @@ describe('package root', () => {
   it('exports the documented runtime API', () => {
     expect(Object.keys(honoFeed).sort()).toEqual([
       'Feed',
+      'feedExtensionMap',
       'feedMiddleware',
       'lintInput',
       'notifyHub',
