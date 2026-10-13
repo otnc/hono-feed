@@ -17,6 +17,7 @@ describe('package root', () => {
       'feedMiddleware',
       'lintInput',
       'notifyHub',
+      'paginate',
       'serveFeed',
       'toAtom',
       'toJSONFeed',

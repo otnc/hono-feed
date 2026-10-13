@@ -605,6 +605,24 @@ const feed = new Feed({
 
 RSS 2.0 and Atom 1.0 emit one `atom:link`/`link` per set field; JSON Feed only maps `next` (to `next_url` — the spec has no equivalent for the others).
 
+Rather than assembling those links yourself, `paginate()` slices the items for the current page and builds `paging` for it.  
+It takes the 1-based `page` (a query string value is fine; anything unparsable means page 1 and a page past the end is clamped to the last), `perPage`, and a `url(page)` function:
+
+```ts
+import { paginate, serveFeed } from 'hono-feed'
+
+app.get('/feed', (c) => {
+  const { items, paging } = paginate(posts, {
+    page: c.req.query('page'),
+    perPage: 20,
+    url: (page) => `/feed?page=${page}`,
+  })
+  return serveFeed(c, { options: { title: 'My Blog', link: 'https://example.com/', paging }, items })
+})
+```
+
+`next` and `prev` appear only where there is a page to go to, and `first`/`last` whenever there is more than one page. It also returns `page` and `totalPages`, in case you want to answer an out-of-range page with a 404 instead of the clamped one.
+
 Two more fields complete §2/§4: `complete` (§2) marks a document as containing the *entire* feed, and `archive` (§4) marks an archive page whose content never changes — pairs naturally with `cacheControl: { immutable: true }`. They emit `<fh:complete/>` / `<fh:archive/>` (the `xmlns:fh` namespace is declared automatically, only when one is set), and are mutually exclusive — setting both throws:
 
 ```ts
