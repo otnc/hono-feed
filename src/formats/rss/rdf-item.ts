@@ -1,7 +1,7 @@
-import type { FeedItem } from '../../types'
+import type { FeedItem, FeedOptions, SerializeOptions } from '../../types'
 import { firstAuthor } from '../../utils/author'
 import { rfc3339 } from '../../utils/date'
-import { absolutize } from '../../utils/url'
+import { absolutize, selfUrl } from '../../utils/url'
 import { cdata, el, type Node, raw, tag } from '../../utils/xml'
 
 /** Shared RSS 1.0 / 1.1 `<item rdf:about="…">` builder — both are RDF + Dublin Core. */
@@ -27,4 +27,37 @@ export function rdfItem(
   }
 
   return { uri, node: el('item', { 'rdf:about': uri }, ch) }
+}
+
+/** The channel's `rdf:about` URI: the self URL, else the home link. */
+export function rdfFeedUri(
+  options: FeedOptions,
+  opts: SerializeOptions,
+  version: '1.0' | '1.1',
+): string {
+  const feedUri = selfUrl(opts, options) ?? absolutize(options.link, opts.baseUrl)
+  if (!feedUri) throw new TypeError(`hono-feed: RSS ${version} requires "feedUrl" or "link"`)
+  return feedUri
+}
+
+/**
+ * Channel children RSS 1.0 and 1.1 share, in document order. Only 1.0 carries `dc:language` here (1.1 uses `xml:lang` on the root).
+ * The channel `<link>` is mandatory, so it falls back to the feed URI.
+ */
+export function rdfChannelNodes(
+  options: FeedOptions,
+  home: string | undefined,
+  feedUri: string,
+  withLanguage: boolean,
+): Node[] {
+  const nodes: Node[] = [
+    tag('title', options.title),
+    tag('link', home ?? feedUri),
+    tag('description', options.description ?? ''),
+  ]
+  if (withLanguage && options.language) nodes.push(tag('dc:language', options.language))
+  if (options.updated) nodes.push(tag('dc:date', rfc3339(options.updated)))
+  if (options.copyright) nodes.push(tag('dc:rights', options.copyright))
+  for (const cat of options.categories ?? []) nodes.push(tag('dc:subject', cat.term))
+  return nodes
 }
