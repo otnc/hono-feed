@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { defaultExtensionMap, toSSG } from 'hono/ssg'
+import * as ssg from 'hono/ssg'
 import { describe, expect, it } from 'vitest'
 import { feedExtensionMap, serveFeed } from './index'
 
@@ -33,13 +33,16 @@ async function generate(extensionMap?: Record<string, string>) {
     },
     mkdir: async () => {},
   }
-  await toSSG(app, fsModule, { dir: 'out', extensionMap })
+  await ssg.toSSG(app, fsModule, { dir: 'out', extensionMap })
   return files
 }
 
-describe('feedExtensionMap with hono/ssg', () => {
+// `toSSG`'s `extensionMap` option (and `defaultExtensionMap`) don't exist in the oldest Hono versions the peer range allows.
+const supportsExtensionMap = 'defaultExtensionMap' in ssg
+
+describe.skipIf(!supportsExtensionMap)('feedExtensionMap with hono/ssg', () => {
   it('writes RSS and Atom as .xml and JSON Feed as .json, keeping HTML as .html', async () => {
-    const files = await generate({ ...defaultExtensionMap, ...feedExtensionMap })
+    const files = await generate({ ...ssg.defaultExtensionMap, ...feedExtensionMap })
     expect([...files.keys()].sort()).toEqual([
       'out/atom.xml',
       'out/feed.json',
