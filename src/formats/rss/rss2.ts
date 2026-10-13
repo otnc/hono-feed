@@ -6,6 +6,7 @@ import { hubList } from '../../utils/hub'
 import { pagingMarker, pagingRels } from '../../utils/paging'
 import { absolutize, isUrl, selfUrl } from '../../utils/url'
 import { cdata, el, type Node, raw, specToNode, tag, xmlDocument } from '../../utils/xml'
+import { hasMedia, MEDIA_NS, mediaItemNodes } from '../media'
 import {
   ITUNES_NS,
   PODCAST_NS,
@@ -170,6 +171,7 @@ function rootNamespaces(
     'xmlns:itunes': podcastNs.itunes ? ITUNES_NS : undefined,
     'xmlns:podcast': podcastNs.podcast ? PODCAST_NS : undefined,
     'xmlns:fh': hasFh ? 'http://purl.org/syndication/history/1.0' : undefined,
+    'xmlns:media': caps.rss20 && items.some((item) => hasMedia(item.media)) ? MEDIA_NS : undefined,
   }
 }
 
@@ -204,6 +206,11 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
     ch.push(tag('comments', absolutize(item.comments, base)))
   }
 
+  // <source> is RSS 2.0-only; the spec requires its url attribute (validateInput checks both fields).
+  if (caps.rss20 && item.source) {
+    ch.push(el('source', { url: absolutize(item.source.url, base) }, item.source.title))
+  }
+
   // RSS <author> requires an email; when it's absent, fall back to Dublin Core <dc:creator> so a name-only author still appears (matching the RDF serializers and Atom/JSON output).
   if (caps.rss20) {
     const author = firstAuthor(item.author)
@@ -233,6 +240,7 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
   }
 
   if (caps.rss20) ch.push(...podcastItemNodes(item.podcast, enclosure, base))
+  if (caps.rss20) ch.push(...mediaItemNodes(item.media, base))
 
   if (item.customXml) ch.push(...item.customXml.map(specToNode))
 

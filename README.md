@@ -699,7 +699,36 @@ const feed = new Feed({
 })
 ```
 
+Per item, `source` records the feed an entry was republished from — `<source url="…">Title</source>` in RSS 2.0 and `<source>` (title plus a `rel="self"` link, RFC 4287 §4.2.11) in Atom 1.0. Both `title` and `url` (the original *feed's* URL) are required; JSON Feed has no equivalent:
+
+```ts
+feed.addItem({
+  title: 'A post worth sharing',
+  link: 'https://example.com/shared',
+  source: { title: 'Original Blog', url: 'https://original.example/feed.xml' },
+})
+```
+
 `skipHours` values outside 0–23 throw. `textInput` and `cloud` (rssCloud) are deliberately not modeled — `textInput` is essentially unused in the wild, and `cloud` is superseded in practice by the WebSub support [above](#websub); reach for `customXml` if you need either.
+
+## Media RSS
+
+`media` on a `FeedItem` adds [Media RSS](https://www.rssboard.org/media-rss) thumbnails and media objects, the de facto way to attach a preview image or a video to an RSS or Atom entry.  
+`xmlns:media` is declared automatically, only when an item sets one (an explicit `customNamespaces` entry still wins).
+
+```ts
+feed.addItem({
+  title: 'New video',
+  link: 'https://example.com/video',
+  media: {
+    thumbnails: [{ url: '/video-thumb.jpg', width: 320, height: 180 }], // <media:thumbnail>
+    contents: [{ url: '/video.mp4', type: 'video/mp4', medium: 'video', duration: 42 }], // <media:content>
+  },
+})
+```
+
+URLs are absolutized against `baseUrl` like every other URL field, and every entry needs a `url`.  
+It is emitted for RSS 2.0 and Atom 1.0 only; JSON Feed has no equivalent (use the item's `image` there).
 
 ## Extending with custom fields
 
