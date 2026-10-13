@@ -1,13 +1,12 @@
 import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
-import { authorList } from '../../utils/author'
 import { latestDate, rfc3339 } from '../../utils/date'
 import { firstEnclosure } from '../../utils/enclosure'
 import { hubList } from '../../utils/hub'
 import { pagingMarker, pagingRels } from '../../utils/paging'
-import { absolutize, hasIriScheme } from '../../utils/url'
+import { absolutize } from '../../utils/url'
 import { el, type Node, specToNode, tag, xmlDocument } from '../../utils/xml'
-import { atomAuthorEl } from './author'
-import { atomFeedIdentity } from './identity'
+import { atomCategories, atomEnclosureLink, atomPeople } from './author'
+import { atomFeedIdentity, requireAtomId } from './identity'
 
 // Atom 1.0 (RFC 4287).
 export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
@@ -34,17 +33,10 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
     const marker = pagingMarker(options.paging)
     if (marker) feed.push(el(`fh:${marker}`))
   }
-  for (const a of authorList(options.author)) feed.push(atomAuthorEl(a, 'uri'))
-  if (options.contributors) {
-    for (const c of options.contributors) feed.push(atomAuthorEl(c, 'uri', 'contributor'))
-  }
+  feed.push(...atomPeople(options.author, options.contributors, 'uri'))
   feed.push(tag('generator', options.generator ?? 'hono-feed'))
   if (options.copyright) feed.push(tag('rights', options.copyright))
-  if (options.categories) {
-    for (const cat of options.categories) {
-      feed.push(el('category', { term: cat.term, scheme: cat.scheme, label: cat.label }))
-    }
-  }
+  feed.push(...atomCategories(options.categories))
   // RFC 4287 §4.2.8: icon is a small square, logo a 2:1 image — same roles as RSS <image> and JSON Feed icon/favicon.
   if (options.favicon) feed.push(tag('icon', absolutize(options.favicon, base)))
   if (options.image) feed.push(tag('logo', absolutize(options.image, base)))
@@ -65,14 +57,7 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
 
 function atomEntry10(item: FeedItem, base?: string): Node {
   const link = absolutize(item.link, base)
-  const id = item.id ?? link
-  if (!id) throw new TypeError('hono-feed: Atom entry requires an id')
-  // RFC 4287 §4.2.6: atom:id MUST be an absolute IRI. An explicit id is checked by validateInput; the link fallback isn't, so a relative link with no baseUrl could otherwise reach the document unchecked.
-  if (!hasIriScheme(id)) {
-    throw new TypeError(
-      'hono-feed: Atom entry id must be an absolute IRI (RFC 4287 §4.2.6) — set "baseUrl" or an absolute "id"/"link"',
-    )
-  }
+  const id = requireAtomId(item.id ?? link, 'Atom entry')
 
   const ch: Node[] = []
   ch.push(tag('id', id))
@@ -84,29 +69,12 @@ function atomEntry10(item: FeedItem, base?: string): Node {
   // content type="html" body is escaped as a text node.
   if (item.content) ch.push(el('content', { type: 'html' }, item.content))
 
-  for (const a of authorList(item.author)) ch.push(atomAuthorEl(a, 'uri'))
-  if (item.contributors) {
-    for (const c of item.contributors) ch.push(atomAuthorEl(c, 'uri', 'contributor'))
-  }
-
-  if (item.categories) {
-    for (const cat of item.categories) {
-      ch.push(el('category', { term: cat.term, scheme: cat.scheme, label: cat.label }))
-    }
-  }
+  ch.push(...atomPeople(item.author, item.contributors, 'uri'))
+  ch.push(...atomCategories(item.categories))
 
   // RFC 4287 §4.2.7.2: rel="enclosure" identifies a related, potentially large resource. Atom, like RSS, supports at most one; keep only the first.
   const enclosure = firstEnclosure(item.enclosure)
-  if (enclosure) {
-    ch.push(
-      el('link', {
-        rel: 'enclosure',
-        href: absolutize(enclosure.url, base),
-        type: enclosure.type,
-        length: enclosure.length !== undefined ? String(enclosure.length) : undefined,
-      }),
-    )
-  }
+  if (enclosure) ch.push(atomEnclosureLink(enclosure, base))
 
   if (item.customXml) ch.push(...item.customXml.map(specToNode))
 
