@@ -74,6 +74,11 @@ export function el(name: string, attrs?: Attrs, children?: Node[] | Node): ElNod
   return { kind: 'el', name, attrs, children: ch }
 }
 
+/** An element with no attributes: `el(name, undefined, children)`. */
+export function tag(name: string, children?: Node[] | Node): ElNode {
+  return el(name, undefined, children)
+}
+
 // A pragmatic ASCII subset of the XML `Name` production, with one optional namespace-prefix colon. Names are structural and never escaped by `el()`, so `<`/`>`/whitespace must be rejected.
 const XML_NAME = /^[A-Za-z_][\w.-]*(?::[A-Za-z_][\w.-]*)?$/
 

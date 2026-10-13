@@ -1,7 +1,7 @@
 import type { FeedInput, SerializeOptions } from '../../types'
 import { rfc3339 } from '../../utils/date'
 import { absolutize, selfUrl } from '../../utils/url'
-import { el, type Node, specToNode, xmlDocument } from '../../utils/xml'
+import { el, type Node, specToNode, tag, xmlDocument } from '../../utils/xml'
 import { rdfItem } from './rdf-item'
 
 // RSS 1.0 (RDF Site Summary): `<rdf:RDF>` root with an `<items>`/`rdf:Seq` table of contents plus Dublin Core + content modules.
@@ -23,24 +23,24 @@ export function toRSS10(input: FeedInput, opts: SerializeOptions): string {
   }
 
   // Channel <link> is mandatory; fall back to the feed URI.
-  const channel: Node[] = [el('title', undefined, options.title)]
-  channel.push(el('link', undefined, home ?? feedUri))
-  channel.push(el('description', undefined, options.description ?? ''))
-  if (options.language) channel.push(el('dc:language', undefined, options.language))
-  if (options.updated) channel.push(el('dc:date', undefined, rfc3339(options.updated)))
-  if (options.copyright) channel.push(el('dc:rights', undefined, options.copyright))
+  const channel: Node[] = [tag('title', options.title)]
+  channel.push(tag('link', home ?? feedUri))
+  channel.push(tag('description', options.description ?? ''))
+  if (options.language) channel.push(tag('dc:language', options.language))
+  if (options.updated) channel.push(tag('dc:date', rfc3339(options.updated)))
+  if (options.copyright) channel.push(tag('dc:rights', options.copyright))
   if (options.categories) {
-    for (const cat of options.categories) channel.push(el('dc:subject', undefined, cat.term))
+    for (const cat of options.categories) channel.push(tag('dc:subject', cat.term))
   }
-  channel.push(el('items', undefined, [el('rdf:Seq', undefined, seq)]))
+  channel.push(tag('items', [tag('rdf:Seq', seq)]))
   if (imageUrl) channel.push(el('image', { 'rdf:resource': imageUrl }))
   // Escape hatch: appended unconditionally — RDF has no per-element gating to opt out of.
   if (options.customXml) channel.push(...options.customXml.map(specToNode))
 
   const nodes: Node[] = [el('channel', { 'rdf:about': feedUri }, channel)]
   if (imageUrl) {
-    const img: Node[] = [el('title', undefined, options.title), el('url', undefined, imageUrl)]
-    if (home) img.push(el('link', undefined, home))
+    const img: Node[] = [tag('title', options.title), tag('url', imageUrl)]
+    if (home) img.push(tag('link', home))
     nodes.push(el('image', { 'rdf:about': imageUrl }, img))
   }
   nodes.push(...itemNodes)

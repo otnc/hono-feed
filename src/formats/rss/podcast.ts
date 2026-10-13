@@ -1,7 +1,7 @@
 import type { Enclosure, FeedItem, FeedOptions, ItemPodcast } from '../../types'
 import { firstEnclosure } from '../../utils/enclosure'
 import { absolutize } from '../../utils/url'
-import { el, type Node } from '../../utils/xml'
+import { el, type Node, tag } from '../../utils/xml'
 
 export const ITUNES_NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd'
 export const PODCAST_NS = 'https://podcastindex.org/namespace/1.0'
@@ -78,7 +78,7 @@ function itunesDuration(
 export function podcastChannelNodes(p: FeedOptions['podcast'], base: string | undefined): Node[] {
   if (!p) return []
   const nodes: Node[] = []
-  if (p.author) nodes.push(el('itunes:author', undefined, p.author))
+  if (p.author) nodes.push(tag('itunes:author', p.author))
   if (p.category) {
     for (const category of p.category) {
       if (typeof category === 'string') {
@@ -97,27 +97,24 @@ export function podcastChannelNodes(p: FeedOptions['podcast'], base: string | un
     }
   }
   if (p.explicit !== undefined) {
-    nodes.push(el('itunes:explicit', undefined, p.explicit ? 'true' : 'false'))
+    nodes.push(tag('itunes:explicit', p.explicit ? 'true' : 'false'))
   }
   if (p.image) nodes.push(el('itunes:image', { href: absolutize(p.image, base) }))
   if (p.owner) {
     nodes.push(
-      el('itunes:owner', undefined, [
-        el('itunes:name', undefined, p.owner.name),
-        el('itunes:email', undefined, p.owner.email),
-      ]),
+      tag('itunes:owner', [tag('itunes:name', p.owner.name), tag('itunes:email', p.owner.email)]),
     )
   }
-  if (p.type) nodes.push(el('itunes:type', undefined, p.type))
-  if (p.subtitle) nodes.push(el('itunes:subtitle', undefined, p.subtitle))
-  if (p.summary) nodes.push(el('itunes:summary', undefined, p.summary))
+  if (p.type) nodes.push(tag('itunes:type', p.type))
+  if (p.subtitle) nodes.push(tag('itunes:subtitle', p.subtitle))
+  if (p.summary) nodes.push(tag('itunes:summary', p.summary))
   // Apple's documented value is "Yes"; absence (false/unset) means no, so there's no "No" to emit.
-  if (p.block) nodes.push(el('itunes:block', undefined, 'Yes'))
-  if (p.complete) nodes.push(el('itunes:complete', undefined, 'Yes'))
-  if (p.newFeedUrl) nodes.push(el('itunes:new-feed-url', undefined, absolutize(p.newFeedUrl, base)))
-  if (p.guid) nodes.push(el('podcast:guid', undefined, p.guid))
+  if (p.block) nodes.push(tag('itunes:block', 'Yes'))
+  if (p.complete) nodes.push(tag('itunes:complete', 'Yes'))
+  if (p.newFeedUrl) nodes.push(tag('itunes:new-feed-url', absolutize(p.newFeedUrl, base)))
+  if (p.guid) nodes.push(tag('podcast:guid', p.guid))
   if (p.locked !== undefined) {
-    nodes.push(el('podcast:locked', undefined, p.locked ? 'yes' : 'no'))
+    nodes.push(tag('podcast:locked', p.locked ? 'yes' : 'no'))
   }
   if (p.funding) {
     for (const funding of p.funding) {
@@ -137,23 +134,23 @@ export function podcastItemNodes(
 ): Node[] {
   const nodes: Node[] = []
   const duration = itunesDuration(podcast, enclosure)
-  if (duration !== undefined) nodes.push(el('itunes:duration', undefined, String(duration)))
+  if (duration !== undefined) nodes.push(tag('itunes:duration', String(duration)))
   if (!podcast) return nodes
 
   if (podcast.explicit !== undefined) {
-    nodes.push(el('itunes:explicit', undefined, podcast.explicit ? 'true' : 'false'))
+    nodes.push(tag('itunes:explicit', podcast.explicit ? 'true' : 'false'))
   }
   if (podcast.episode !== undefined) {
-    nodes.push(el('itunes:episode', undefined, String(podcast.episode)))
+    nodes.push(tag('itunes:episode', String(podcast.episode)))
   }
   if (podcast.season !== undefined) {
-    nodes.push(el('itunes:season', undefined, String(podcast.season)))
+    nodes.push(tag('itunes:season', String(podcast.season)))
   }
-  if (podcast.episodeType) nodes.push(el('itunes:episodeType', undefined, podcast.episodeType))
+  if (podcast.episodeType) nodes.push(tag('itunes:episodeType', podcast.episodeType))
   if (podcast.image) nodes.push(el('itunes:image', { href: absolutize(podcast.image, base) }))
-  if (podcast.title) nodes.push(el('itunes:title', undefined, podcast.title))
+  if (podcast.title) nodes.push(tag('itunes:title', podcast.title))
   // Apple's documented value is "Yes"; absence (false/unset) means no, so there's no "No" to emit.
-  if (podcast.block) nodes.push(el('itunes:block', undefined, 'Yes'))
+  if (podcast.block) nodes.push(tag('itunes:block', 'Yes'))
   if (podcast.transcript) {
     for (const t of podcast.transcript) {
       nodes.push(el('podcast:transcript', { url: absolutize(t.url, base), type: t.type }))

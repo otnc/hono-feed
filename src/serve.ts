@@ -14,6 +14,7 @@ import {
 } from './negotiate'
 import type {
   AtomVersion,
+  CacheControlDirectives,
   FeedFormat,
   FeedInput,
   JsonFeedVersion,
@@ -22,7 +23,7 @@ import type {
 } from './types'
 import { serializeCacheControl } from './utils/cache-control'
 import { latestDate } from './utils/date'
-import { resolveEtag } from './utils/etag'
+import { normalizeEtag, resolveEtag } from './utils/etag'
 import { FEED_MIME_TYPES } from './utils/mime'
 import { absolutize } from './utils/url'
 import { validateInput } from './validate'
@@ -34,6 +35,15 @@ const CONTENT_TYPE: Record<FeedFormat, string> = {
 }
 
 const ENCODER = new TextEncoder()
+
+const DEFAULT_CACHE_CONTROL = 'public, max-age=3600'
+
+function cacheControlValue(
+  cacheControl: string | CacheControlDirectives | false,
+): string | undefined {
+  if (cacheControl === false) return undefined
+  return typeof cacheControl === 'string' ? cacheControl : serializeCacheControl(cacheControl)
+}
 
 // Query-driven version errors aren't governed by `cacheControl` (that's for successful feed bodies), and whether they reproduce can change independently of the URL as the underlying feed data changes — so a cache must not hold onto them past this response.
 const NO_STORE = { 'Cache-Control': 'no-store' }
@@ -121,15 +131,12 @@ function serveWithEtagFrom(
   options: ServeFeedOptions,
   negotiation: Negotiation,
 ): Response | Promise<Response> {
-  const etagValue = resolveEtag('', () => tag)
+  const etagValue = normalizeEtag(tag)
   const inm = c.req.header('if-none-match')
   if (isConditionalMethod(c) && inm !== undefined && etagMatches(inm, etagValue)) {
-    const { cacheControl = 'public, max-age=3600' } = options
     const headers: Record<string, string> = { ETag: etagValue }
-    if (cacheControl !== false) {
-      headers['Cache-Control'] =
-        typeof cacheControl === 'string' ? cacheControl : serializeCacheControl(cacheControl)
-    }
+    const cacheControl = cacheControlValue(options.cacheControl ?? DEFAULT_CACHE_CONTROL)
+    if (cacheControl) headers['Cache-Control'] = cacheControl
     // RFC 9110 §15.4.5: a 304 MUST carry the same Vary a 200 for this request would have.
     if (negotiation.negotiated) headers.Vary = 'Accept'
     return c.body(null, 304, headers)
@@ -208,25 +215,21 @@ function resolveNegotiation(c: Context, options: ServeFeedOptions): Negotiation 
   if (detectVersionFromQuery) {
     const raw = url.searchParams.get(versionQueryParam)
     if (raw !== null) {
+      const invalid = () =>
+        c.text(`hono-feed: invalid "${versionQueryParam}" query value`, 400, NO_STORE)
       if (format === 'rss' && rssVersionOpt === undefined) {
         const queried = versionFromQuery(raw, isRssVersion)
-        if (queried === 'invalid') {
-          return c.text(`hono-feed: invalid "${versionQueryParam}" query value`, 400, NO_STORE)
-        }
+        if (queried === 'invalid') return invalid()
         rssVersion = queried
         versionQueried = true
       } else if (format === 'atom' && atomVersionOpt === undefined) {
         const queried = versionFromQuery(raw, isAtomVersion)
-        if (queried === 'invalid') {
-          return c.text(`hono-feed: invalid "${versionQueryParam}" query value`, 400, NO_STORE)
-        }
+        if (queried === 'invalid') return invalid()
         atomVersion = queried
         versionQueried = true
       } else if (format === 'json' && jsonFeedVersionOpt === undefined) {
         const queried = versionFromQuery(raw, isJsonFeedVersion)
-        if (queried === 'invalid') {
-          return c.text(`hono-feed: invalid "${versionQueryParam}" query value`, 400, NO_STORE)
-        }
+        if (queried === 'invalid') return invalid()
         jsonFeedVersion = queried
         versionQueried = true
       }
@@ -255,7 +258,7 @@ function finishServeFeed(
     url,
   } = negotiation
   const {
-    cacheControl = 'public, max-age=3600',
+    cacheControl = DEFAULT_CACHE_CONTROL,
     etag = true,
     lastModified = true,
     pretty = false,
@@ -291,10 +294,8 @@ function finishServeFeed(
   }
 
   const headers: Record<string, string> = { 'Content-Type': CONTENT_TYPE[format] }
-  if (cacheControl !== false) {
-    headers['Cache-Control'] =
-      typeof cacheControl === 'string' ? cacheControl : serializeCacheControl(cacheControl)
-  }
+  const cacheControlHeader = cacheControlValue(cacheControl)
+  if (cacheControlHeader) headers['Cache-Control'] = cacheControlHeader
   if (negotiated) headers.Vary = 'Accept'
 
   let etagValue: string | undefined
@@ -317,10 +318,11 @@ function finishServeFeed(
     return c.body(null, 304, headers)
   }
 
-  headers['Content-Length'] = String(ENCODER.encode(body).length)
+  const bytes = ENCODER.encode(body)
+  headers['Content-Length'] = String(bytes.length)
 
   if (c.req.method === 'HEAD') return c.body(null, 200, headers)
-  return c.body(body, 200, headers)
+  return c.body(bytes, 200, headers)
 }
 
 function isNotModified(

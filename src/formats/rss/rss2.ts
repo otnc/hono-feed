@@ -5,7 +5,7 @@ import { firstEnclosure } from '../../utils/enclosure'
 import { hubList } from '../../utils/hub'
 import { pagingMarker, pagingRels } from '../../utils/paging'
 import { absolutize, isUrl, selfUrl } from '../../utils/url'
-import { cdata, el, type Node, raw, specToNode, xmlDocument } from '../../utils/xml'
+import { cdata, el, type Node, raw, specToNode, tag, xmlDocument } from '../../utils/xml'
 import {
   ITUNES_NS,
   PODCAST_NS,
@@ -46,59 +46,54 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   if (!link) throw new TypeError('hono-feed: RSS requires "link" (or "feedUrl")')
 
   const channel: Node[] = []
-  channel.push(el('title', undefined, options.title))
-  channel.push(el('link', undefined, link))
-  channel.push(el('description', undefined, options.description ?? ''))
-  if (options.language) channel.push(el('language', undefined, options.language))
-  if (options.copyright) channel.push(el('copyright', undefined, options.copyright))
+  channel.push(tag('title', options.title))
+  channel.push(tag('link', link))
+  channel.push(tag('description', options.description ?? ''))
+  if (options.language) channel.push(tag('language', options.language))
+  if (options.copyright) channel.push(tag('copyright', options.copyright))
   // Channel <category> is RSS 2.0-only; 0.92 only added the item-level element (see below).
   if (caps.rss20 && options.categories) {
     for (const cat of options.categories) {
       channel.push(el('category', { domain: cat.scheme }, cat.term))
     }
   }
-  if (options.published) channel.push(el('pubDate', undefined, rfc822(options.published)))
-  if (options.updated) channel.push(el('lastBuildDate', undefined, rfc822(options.updated)))
+  if (options.published) channel.push(tag('pubDate', rfc822(options.published)))
+  if (options.updated) channel.push(tag('lastBuildDate', rfc822(options.updated)))
   // managingEditor/webMaster/docs/skipHours/skipDays are all part of the format since Netscape 0.91; ungated here like language/copyright above.
   const feedAuthor = firstAuthor(options.author)
   if (feedAuthor?.email) {
-    channel.push(el('managingEditor', undefined, emailLine(feedAuthor.email, feedAuthor.name)))
+    channel.push(tag('managingEditor', emailLine(feedAuthor.email, feedAuthor.name)))
   }
   if (options.webmaster?.email) {
-    channel.push(
-      el('webMaster', undefined, emailLine(options.webmaster.email, options.webmaster.name)),
-    )
+    channel.push(tag('webMaster', emailLine(options.webmaster.email, options.webmaster.name)))
   }
   if (options.docs) {
     channel.push(
-      el(
+      tag(
         'docs',
-        undefined,
         options.docs === true ? 'https://www.rssboard.org/rss-specification' : options.docs,
       ),
     )
   }
   if (options.skipHours?.length) {
     channel.push(
-      el(
+      tag(
         'skipHours',
-        undefined,
-        options.skipHours.map((hour) => el('hour', undefined, String(hour))),
+        options.skipHours.map((hour) => tag('hour', String(hour))),
       ),
     )
   }
   if (options.skipDays?.length) {
     channel.push(
-      el(
+      tag(
         'skipDays',
-        undefined,
-        options.skipDays.map((day) => el('day', undefined, day)),
+        options.skipDays.map((day) => tag('day', day)),
       ),
     )
   }
   if (caps.rss20) {
-    channel.push(el('generator', undefined, options.generator ?? 'hono-feed'))
-    if (options.ttl !== undefined) channel.push(el('ttl', undefined, String(options.ttl)))
+    channel.push(tag('generator', options.generator ?? 'hono-feed'))
+    if (options.ttl !== undefined) channel.push(tag('ttl', String(options.ttl)))
     if (self) {
       channel.push(el('atom:link', { href: self, rel: 'self', type: 'application/rss+xml' }))
     }
@@ -116,11 +111,11 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   }
 
   if (options.image) {
-    const img: Node[] = [el('url', undefined, absolutize(options.image, base))]
-    img.push(el('title', undefined, options.title))
+    const img: Node[] = [tag('url', absolutize(options.image, base))]
+    img.push(tag('title', options.title))
     // <image> requires url/title/link all three.
-    img.push(el('link', undefined, link))
-    channel.push(el('image', undefined, img))
+    img.push(tag('link', link))
+    channel.push(tag('image', img))
   }
 
   // Podcast metadata (iTunes / Podcasting 2.0) is RSS 2.0-only, like the rest of caps.rss20.
@@ -155,7 +150,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
       'xmlns:fh': hasFh ? 'http://purl.org/syndication/history/1.0' : undefined,
       ...options.customNamespaces,
     },
-    [el('channel', undefined, channel)],
+    [tag('channel', channel)],
   )
   return xmlDocument(root, { pretty: opts.pretty, version: opts.xmlVersion })
 }
@@ -167,13 +162,13 @@ function emailLine(email: string, name: string | undefined): string {
 
 function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
   const ch: Node[] = []
-  ch.push(el('title', undefined, item.title))
+  ch.push(tag('title', item.title))
 
   const link = absolutize(item.link, base)
   if (!link && caps.itemLinkRequired) {
     throw new TypeError('hono-feed: RSS 0.91 item requires "link"')
   }
-  if (link) ch.push(el('link', undefined, link))
+  if (link) ch.push(tag('link', link))
 
   if (caps.rss20) {
     const guid = item.id ?? link
@@ -183,22 +178,21 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
     }
   }
 
-  if (caps.itemPubDate && item.published) ch.push(el('pubDate', undefined, rfc822(item.published)))
-  if (item.description) ch.push(el('description', undefined, raw(cdata(item.description))))
-  if (caps.rss20 && item.content)
-    ch.push(el('content:encoded', undefined, raw(cdata(item.content))))
+  if (caps.itemPubDate && item.published) ch.push(tag('pubDate', rfc822(item.published)))
+  if (item.description) ch.push(tag('description', raw(cdata(item.description))))
+  if (caps.rss20 && item.content) ch.push(tag('content:encoded', raw(cdata(item.content))))
   // <comments> was introduced in RSS 2.0 (not 0.92, unlike category/enclosure below).
   if (caps.rss20 && item.comments) {
-    ch.push(el('comments', undefined, absolutize(item.comments, base)))
+    ch.push(tag('comments', absolutize(item.comments, base)))
   }
 
   // RSS <author> requires an email; when it's absent, fall back to Dublin Core <dc:creator> so a name-only author still appears (matching the RDF serializers and Atom/JSON output).
   if (caps.rss20) {
     const author = firstAuthor(item.author)
     if (author?.email) {
-      ch.push(el('author', undefined, emailLine(author.email, author.name)))
+      ch.push(tag('author', emailLine(author.email, author.name)))
     } else if (author?.name) {
-      ch.push(el('dc:creator', undefined, author.name))
+      ch.push(tag('dc:creator', author.name))
     }
   }
 
@@ -224,5 +218,5 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
 
   if (item.customXml) ch.push(...item.customXml.map(specToNode))
 
-  return el('item', undefined, ch)
+  return tag('item', ch)
 }

@@ -6,6 +6,12 @@ describe('weakEtag', () => {
     expect(weakEtag('body')).toMatch(/^W\/"[^"]+"$/)
   })
 
+  it('matches the FNV-1a 64-bit test vectors', () => {
+    expect(weakEtag('')).toBe('W/"cbf29ce484222325"')
+    expect(weakEtag('a')).toBe('W/"af63dc4c8601ec8c"')
+    expect(weakEtag('foobar')).toBe('W/"85944171f73967e8"')
+  })
+
   it('is stable for the same body and differs for a different body', () => {
     expect(weakEtag('hello')).toBe(weakEtag('hello'))
     expect(weakEtag('hello')).not.toBe(weakEtag('world'))

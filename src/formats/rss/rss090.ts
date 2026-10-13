@@ -1,6 +1,6 @@
 import type { FeedInput, SerializeOptions } from '../../types'
 import { absolutize, selfUrl } from '../../utils/url'
-import { el, type Node, xmlDocument } from '../../utils/xml'
+import { el, type Node, tag, xmlDocument } from '../../utils/xml'
 
 // RSS 0.90 (original Netscape "RDF Site Summary"): minimal `<rdf:RDF>`. Channel carries title/link/description; items carry only title/link. No rdf:Seq, no modules.
 export function toRSS090(input: FeedInput, opts: SerializeOptions): string {
@@ -11,22 +11,20 @@ export function toRSS090(input: FeedInput, opts: SerializeOptions): string {
   if (!home) throw new TypeError('hono-feed: RSS 0.90 requires "link" (or "feedUrl")')
   const imageUrl = options.image ? absolutize(options.image, base) : undefined
 
-  const channel: Node[] = [el('title', undefined, options.title)]
-  channel.push(el('link', undefined, home))
-  channel.push(el('description', undefined, options.description ?? ''))
+  const channel: Node[] = [tag('title', options.title)]
+  channel.push(tag('link', home))
+  channel.push(tag('description', options.description ?? ''))
 
-  const nodes: Node[] = [el('channel', undefined, channel)]
+  const nodes: Node[] = [tag('channel', channel)]
   if (imageUrl) {
-    const img: Node[] = [el('title', undefined, options.title), el('url', undefined, imageUrl)]
-    img.push(el('link', undefined, home))
-    nodes.push(el('image', undefined, img))
+    const img: Node[] = [tag('title', options.title), tag('url', imageUrl)]
+    img.push(tag('link', home))
+    nodes.push(tag('image', img))
   }
   for (const item of items) {
     const link = absolutize(item.link, base) ?? item.id
     if (!link) throw new TypeError('hono-feed: RSS 0.90 item requires "link" (or "id")')
-    nodes.push(
-      el('item', undefined, [el('title', undefined, item.title), el('link', undefined, link)]),
-    )
+    nodes.push(tag('item', [tag('title', item.title), tag('link', link)]))
   }
 
   const root = el(

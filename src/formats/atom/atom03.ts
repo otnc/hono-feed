@@ -3,7 +3,7 @@ import { authorList } from '../../utils/author'
 import { latestDate, rfc3339 } from '../../utils/date'
 import { firstEnclosure } from '../../utils/enclosure'
 import { absolutize, hasIriScheme } from '../../utils/url'
-import { el, type Node, xmlDocument } from '../../utils/xml'
+import { el, type Node, tag, xmlDocument } from '../../utils/xml'
 import { atomAuthorEl } from './author'
 import { atomFeedIdentity } from './identity'
 
@@ -14,14 +14,14 @@ export function toAtom03(input: FeedInput, opts: SerializeOptions): string {
 
   const { link, feedId } = atomFeedIdentity(options, opts, 'Atom 0.3 feed')
 
-  const feed: Node[] = [el('title', undefined, options.title)]
-  if (options.description) feed.push(el('tagline', undefined, options.description))
+  const feed: Node[] = [tag('title', options.title)]
+  if (options.description) feed.push(tag('tagline', options.description))
   if (link) feed.push(el('link', { rel: 'alternate', type: 'text/html', href: link }))
-  feed.push(el('modified', undefined, rfc3339(options.updated ?? latestDate(items) ?? new Date())))
+  feed.push(tag('modified', rfc3339(options.updated ?? latestDate(items) ?? new Date())))
   for (const a of authorList(options.author)) feed.push(atomAuthorEl(a, 'url'))
-  feed.push(el('generator', undefined, options.generator ?? 'hono-feed'))
-  if (options.copyright) feed.push(el('copyright', undefined, options.copyright))
-  feed.push(el('id', undefined, feedId))
+  feed.push(tag('generator', options.generator ?? 'hono-feed'))
+  if (options.copyright) feed.push(tag('copyright', options.copyright))
+  feed.push(tag('id', feedId))
 
   for (const item of items) feed.push(atomEntry03(item, base))
 
@@ -41,13 +41,13 @@ function atomEntry03(item: FeedItem, base?: string): Node {
     )
   }
 
-  const ch: Node[] = [el('title', undefined, item.title)]
+  const ch: Node[] = [tag('title', item.title)]
   if (link) ch.push(el('link', { rel: 'alternate', type: 'text/html', href: link }))
-  ch.push(el('id', undefined, id))
+  ch.push(tag('id', id))
   // <issued> is mandatory in 0.3 (unlike published in 1.0); fall back to updated.
-  ch.push(el('issued', undefined, rfc3339(item.published ?? item.updated ?? new Date())))
-  ch.push(el('modified', undefined, rfc3339(item.updated ?? item.published ?? new Date())))
-  if (item.description) ch.push(el('summary', undefined, item.description))
+  ch.push(tag('issued', rfc3339(item.published ?? item.updated ?? new Date())))
+  ch.push(tag('modified', rfc3339(item.updated ?? item.published ?? new Date())))
+  if (item.description) ch.push(tag('summary', item.description))
   if (item.content) ch.push(el('content', { type: 'text/html', mode: 'escaped' }, item.content))
 
   for (const a of authorList(item.author)) ch.push(atomAuthorEl(a, 'url'))
@@ -65,5 +65,5 @@ function atomEntry03(item: FeedItem, base?: string): Node {
     )
   }
 
-  return el('entry', undefined, ch)
+  return tag('entry', ch)
 }

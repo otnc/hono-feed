@@ -5,7 +5,7 @@ import { firstEnclosure } from '../../utils/enclosure'
 import { hubList } from '../../utils/hub'
 import { pagingMarker, pagingRels } from '../../utils/paging'
 import { absolutize, hasIriScheme } from '../../utils/url'
-import { el, type Node, specToNode, xmlDocument } from '../../utils/xml'
+import { el, type Node, specToNode, tag, xmlDocument } from '../../utils/xml'
 import { atomAuthorEl } from './author'
 import { atomFeedIdentity } from './identity'
 
@@ -17,10 +17,10 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
   const { self, link, feedId } = atomFeedIdentity(options, opts, 'Atom feed')
 
   const feed: Node[] = []
-  feed.push(el('id', undefined, feedId))
-  feed.push(el('title', undefined, options.title))
-  if (options.description) feed.push(el('subtitle', undefined, options.description))
-  feed.push(el('updated', undefined, rfc3339(options.updated ?? latestDate(items) ?? new Date())))
+  feed.push(tag('id', feedId))
+  feed.push(tag('title', options.title))
+  if (options.description) feed.push(tag('subtitle', options.description))
+  feed.push(tag('updated', rfc3339(options.updated ?? latestDate(items) ?? new Date())))
   if (link) feed.push(el('link', { rel: 'alternate', href: link }))
   if (self) feed.push(el('link', { rel: 'self', type: 'application/atom+xml', href: self }))
   for (const hub of hubList(options.hub)) {
@@ -38,16 +38,16 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
   if (options.contributors) {
     for (const c of options.contributors) feed.push(atomAuthorEl(c, 'uri', 'contributor'))
   }
-  feed.push(el('generator', undefined, options.generator ?? 'hono-feed'))
-  if (options.copyright) feed.push(el('rights', undefined, options.copyright))
+  feed.push(tag('generator', options.generator ?? 'hono-feed'))
+  if (options.copyright) feed.push(tag('rights', options.copyright))
   if (options.categories) {
     for (const cat of options.categories) {
       feed.push(el('category', { term: cat.term, scheme: cat.scheme, label: cat.label }))
     }
   }
   // RFC 4287 §4.2.8: icon is a small square, logo a 2:1 image — same roles as RSS <image> and JSON Feed icon/favicon.
-  if (options.favicon) feed.push(el('icon', undefined, absolutize(options.favicon, base)))
-  if (options.image) feed.push(el('logo', undefined, absolutize(options.image, base)))
+  if (options.favicon) feed.push(tag('icon', absolutize(options.favicon, base)))
+  if (options.image) feed.push(tag('logo', absolutize(options.image, base)))
   if (options.customXml) feed.push(...options.customXml.map(specToNode))
 
   for (const item of items) feed.push(atomEntry10(item, base))
@@ -75,12 +75,12 @@ function atomEntry10(item: FeedItem, base?: string): Node {
   }
 
   const ch: Node[] = []
-  ch.push(el('id', undefined, id))
-  ch.push(el('title', undefined, item.title))
-  ch.push(el('updated', undefined, rfc3339(item.updated ?? item.published ?? new Date())))
-  if (item.published) ch.push(el('published', undefined, rfc3339(item.published)))
+  ch.push(tag('id', id))
+  ch.push(tag('title', item.title))
+  ch.push(tag('updated', rfc3339(item.updated ?? item.published ?? new Date())))
+  if (item.published) ch.push(tag('published', rfc3339(item.published)))
   if (link) ch.push(el('link', { rel: 'alternate', href: link }))
-  if (item.description) ch.push(el('summary', undefined, item.description))
+  if (item.description) ch.push(tag('summary', item.description))
   // content type="html" body is escaped as a text node.
   if (item.content) ch.push(el('content', { type: 'html' }, item.content))
 
