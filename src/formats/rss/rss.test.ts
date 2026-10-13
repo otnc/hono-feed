@@ -380,6 +380,25 @@ describe('toRSS', () => {
     expect(out092).not.toContain('<comments>')
   })
 
+  it('emits item <source url>, absolutized, in RSS 2.0 only', () => {
+    const withSource: FeedInput = {
+      options: { title: 't', link: 'https://example.com/', language: 'en' },
+      items: [
+        {
+          title: 'a',
+          link: 'https://example.com/1',
+          source: { title: 'Original & Co', url: '/original.xml' },
+        },
+      ],
+    }
+    const out = toRSS(withSource, { baseUrl: 'https://example.com' })
+    expect(out).toContain(
+      '<source url="https://example.com/original.xml">Original &amp; Co</source>',
+    )
+
+    expect(toRSS(withSource, { rssVersion: '0.92' })).not.toContain('<source')
+  })
+
   it('honours xmlVersion and rssVersion', () => {
     const out = toRSS(input, { xmlVersion: '1.1', rssVersion: '0.92' })
     expect(out.startsWith('<?xml version="1.1" encoding="utf-8"?>')).toBe(true)

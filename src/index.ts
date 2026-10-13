@@ -18,6 +18,7 @@ export type {
   FeedPodcast,
   ItemMedia,
   ItemPodcast,
+  ItemSource,
   JsonFeedVersion,
   MediaContent,
   MediaThumbnail,
