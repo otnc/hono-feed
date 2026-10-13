@@ -125,14 +125,14 @@
     "hono": ">=4.0.0"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "^0.18.4",
-    "@biomejs/biome": "2.5.1",
-    "@vitest/coverage-v8": "^4.1.10",
-    "fast-xml-parser": "^5.10.0",
-    "hono": "^4.12.28",
-    "publint": "^0.3.21",
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@biomejs/biome": "2.5.15",
+    "@vitest/coverage-v8": "^4.1.11",
+    "fast-xml-parser": "^5.11.2",
+    "hono": "^4.13.13",
+    "publint": "^0.3.25",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   }
 }
