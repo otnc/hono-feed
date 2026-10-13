@@ -570,6 +570,8 @@ Rather than emit a document that violates its spec, `serveFeed` checks these per
 
 `Enclosure.length` is optional in the neutral model, but RSS's `<enclosure>` requires the attribute — when it's unset, RSS emits `length="0"`, per the RSS Best Practices Profile ("If the length of an enclosure cannot be determined, a publisher SHOULD use a length of zero"). JSON Feed omits `size_in_bytes` instead, since it's optional there.
 
+An item's `comments` URL becomes `<comments>` in RSS 2.0 and `<link rel="replies">` (RFC 4685) in Atom 1.0; JSON Feed has no equivalent.
+
 > [!TIP]
 > hono-feed does the XML escaping for you, but it doesn't HTML-encode entities. If you need that — e.g. to turn arbitrary text into a safe HTML `content`/`description` value — reach for [`he`](https://www.npmjs.com/package/he) (`he.encode(text)`), plus [`@types/he`](https://www.npmjs.com/package/@types/he) for its TypeScript types.
 :::
@@ -585,6 +587,8 @@ Rather than emit a document that violates its spec, `serveFeed` checks these per
 (非推奨のバージョンでは要件がいくつか増えます。たとえば RSS 0.91 は `language` が必須で、エラーメッセージも同じく具体的です。)
 
 `Enclosure.length` は共通モデルでは省略可能ですが、RSS の `<enclosure>` ではこの属性が必須です。未設定の場合、RSS Best Practices Profile ("If the length of an enclosure cannot be determined, a publisher SHOULD use a length of zero")に従い、RSS は `length="0"` を出力します。JSON Feed では省略可能なので、代わりに `size_in_bytes` を出力しません。
+
+記事の `comments` の URL は、RSS 2.0 では `<comments>`、Atom 1.0 では `<link rel="replies">` (RFC 4685)になります。JSON Feed には対応するものがありません。
 
 > [!TIP]
 > hono-feed は XML エスケープを行いますが、HTML エンティティのエンコードは行いません。必要な場合、たとえば任意のテキストを安全な HTML の `content` / `description` に変換したいときは、[`he`](https://www.npmjs.com/package/he) (`he.encode(text)`)と、その TypeScript の型定義の [`@types/he`](https://www.npmjs.com/package/@types/he) を使ってください。
@@ -848,6 +852,13 @@ const feed = new Feed({
   hub: 'https://pubsubhubbub.appspot.com/', // or string[] for more than one hub
 })
 ```
+
+:::kiritan{locale=en}
+`serveFeed` also advertises the hub and the feed's own URL in an HTTP `Link` header (`<…>; rel="hub", <…>; rel="self"`), the header form of WebSub discovery, so a hub or subscriber can find them without parsing the document.
+:::
+:::kiritan{locale=ja}
+`serveFeed` は、WebSub の発見のヘッダー形式として、ハブとフィード自身の URL を HTTP の `Link` ヘッダー (`<…>; rel="hub", <…>; rel="self"`)でも通知します。ハブや購読者は、ドキュメントを解析しなくても見つけられます。
+:::
 
 :::kiritan{locale=en}
 **Notification** — `notifyHub()` tells the hub a feed changed, so subscribers get the update in real time instead of waiting for their next poll. This is the publisher's obligation under WebSub §6 (Publishing); the spec leaves the mechanism open, so `notifyHub` sends the de-facto standard PubSubHubbub 0.4 "publish" ping that real-world hubs accept:
