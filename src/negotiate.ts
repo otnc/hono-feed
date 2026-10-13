@@ -42,9 +42,7 @@ export function formatFromQuery(value: string | null | undefined): FeedFormat | 
 }
 
 /**
- * Resolve a version from a query value against a type guard (`isRssVersion` and friends).
- * `undefined` means the query didn't carry the param at all; `'invalid'` means it did, but
- * with a value the guard rejects.
+ * Resolve a version from a query value against a type guard (`isRssVersion` and friends). `undefined` means the query didn't carry the param at all; `'invalid'` means it did, but with a value the guard rejects.
  */
 export function versionFromQuery<T extends string>(
   value: string | null,
@@ -71,8 +69,7 @@ function specificity(e: AcceptEntry): number {
   return 2
 }
 
-// Split on `delim` outside a quoted-string (RFC 9110 §5.6.4), for both the "," between Accept
-// entries and the ";" between params, so a quoted value like `profile="a,b"` stays intact.
+// Split on `delim` outside a quoted-string (RFC 9110 §5.6.4), for both the "," between Accept entries and the ";" between params, so a quoted value like `profile="a,b"` stays intact.
 function splitUnquoted(s: string, delim: string): string[] {
   const parts: string[] = []
   let start = 0
@@ -92,8 +89,7 @@ function splitUnquoted(s: string, delim: string): string[] {
   return parts
 }
 
-// Strip a quoted-string's surrounding DQUOTEs and unescape any `\x` sequence. Left as-is when
-// not quoted (the common case: `q=0.9`, `charset=utf-8`).
+// Strip a quoted-string's surrounding DQUOTEs and unescape any `\x` sequence. Left as-is when not quoted (the common case: `q=0.9`, `charset=utf-8`).
 function unquote(s: string): string {
   if (s.length >= 2 && s.startsWith('"') && s.endsWith('"')) {
     return s.slice(1, -1).replace(/\\(.)/g, '$1')
@@ -130,8 +126,7 @@ export function parseAccept(header: string | null | undefined): AcceptEntry[] {
     entries.push({ type, subtype, q, params })
   }
 
-  // `Array.prototype.sort` has been a stable sort since ES2019, so entries with equal
-  // q and specificity naturally keep their original header order without an explicit tiebreak.
+  // `Array.prototype.sort` has been a stable sort since ES2019, so entries with equal q and specificity naturally keep their original header order without an explicit tiebreak.
   return entries.sort((a, b) => {
     if (b.q !== a.q) return b.q - a.q
     return specificity(b) - specificity(a)
@@ -146,12 +141,9 @@ function resolveEntry(e: AcceptEntry): FeedFormat | 'all' | null {
 }
 
 /**
- * Per-format effective q, per RFC 9110 §12.5.1: the most specific matching media range decides
- * the q regardless of its value, so an exact match outranks a wildcard even at q=0. A format
- * with no matching entry is left out of the map ("no opinion"), unlike a q=0 match (rejection).
- *
- * Ties on specificity keep the entry `parseAccept` sorted first (the higher q), which only
- * matters when a client lists synonyms such as `application/xml` and `application/rss+xml`.
+ * Per-format effective q, per RFC 9110 §12.5.1: the most specific matching media range decides the q regardless of its value, so an exact match outranks a wildcard even at q=0. A format with no matching entry is left out of the map ("no opinion"), unlike a q=0 match (rejection).
+
+ * Ties on specificity keep the entry `parseAccept` sorted first (the higher q), which only matters when a client lists synonyms such as `application/xml` and `application/rss+xml`.
  */
 function effectiveQs(entries: AcceptEntry[]): Map<FeedFormat, number> {
   const best = new Map<FeedFormat, { specificity: number; q: number }>()
@@ -187,8 +179,7 @@ export function negotiateFormat(
   for (const format of FEED_FORMATS) {
     const q = qs.get(format)
     if (q === undefined || q <= 0) continue
-    // Prefer defaultFormat on ties, so an unopinionated wildcard (`*/*` alone) still resolves
-    // to it rather than an arbitrary FEED_FORMATS member.
+    // Prefer defaultFormat on ties, so an unopinionated wildcard (`*/*` alone) still resolves to it rather than an arbitrary FEED_FORMATS member.
     if (q > winnerQ || (q === winnerQ && format === defaultFormat)) {
       winner = format
       winnerQ = q
@@ -198,10 +189,7 @@ export function negotiateFormat(
 }
 
 /**
- * The format to use when `negotiateFormat` returns null and `strictAccept` doesn't reject.
- * Returns `defaultFormat` unless the header rejected it (q=0), in which case the first
- * non-rejected format in `FEED_FORMATS` order wins. When every format is rejected, it still
- * returns `defaultFormat`.
+ * The format to use when `negotiateFormat` returns null and `strictAccept` doesn't reject. Returns `defaultFormat` unless the header rejected it (q=0), in which case the first non-rejected format in `FEED_FORMATS` order wins. When every format is rejected, it still returns `defaultFormat`.
  */
 export function resolveFallbackFormat(
   header: string | null | undefined,
@@ -219,8 +207,7 @@ export function resolveFallbackFormat(
 }
 
 /**
- * True when the Accept header explicitly rejects (q=0) every feed format, as opposed to merely
- * not mentioning any (see `strictAccept` in `ServeFeedOptions`).
+ * True when the Accept header explicitly rejects (q=0) every feed format, as opposed to merely not mentioning any (see `strictAccept` in `ServeFeedOptions`).
  */
 export function rejectsAllFormats(header: string | null | undefined): boolean {
   const entries = parseAccept(header)

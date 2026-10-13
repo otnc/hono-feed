@@ -15,10 +15,8 @@ import {
 } from './podcast'
 
 // `<rss version="…">` structure (Netscape/UserLand lineage: 0.91 / 0.92 / 0.93 / 0.94 / 2.0).
-//
-// Older versions define smaller element sets, so emission is gated per version:
-// item category/enclosure arrived in 0.92, item pubDate in 0.93, and guid, item author,
-// generator, ttl and namespaced extensions (atom:link, content:encoded) are 2.0-only.
+
+// Older versions define smaller element sets, so emission is gated per version: item category/enclosure arrived in 0.92, item pubDate in 0.93, and guid, item author, generator, ttl and namespaced extensions (atom:link, content:encoded) are 2.0-only.
 interface Caps {
   itemLinkRequired: boolean // 0.91 (0.92 made all item elements optional)
   itemPubDate: boolean
@@ -61,8 +59,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   }
   if (options.published) channel.push(el('pubDate', undefined, rfc822(options.published)))
   if (options.updated) channel.push(el('lastBuildDate', undefined, rfc822(options.updated)))
-  // managingEditor/webMaster/docs/skipHours/skipDays are all part of the format since Netscape
-  // 0.91; ungated here like language/copyright above.
+  // managingEditor/webMaster/docs/skipHours/skipDays are all part of the format since Netscape 0.91; ungated here like language/copyright above.
   const feedAuthor = firstAuthor(options.author)
   if (feedAuthor?.email) {
     channel.push(el('managingEditor', undefined, emailLine(feedAuthor.email, feedAuthor.name)))
@@ -163,9 +160,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   return xmlDocument(root, { pretty: opts.pretty, version: opts.xmlVersion })
 }
 
-// "email (name)" when name is present, otherwise the bare email — shared by managingEditor,
-// webMaster, and item <author>, all of which require an email (checked by the caller) and
-// treat the name as optional.
+// "email (name)" when name is present, otherwise the bare email — shared by managingEditor, webMaster, and item <author>, all of which require an email (checked by the caller) and treat the name as optional.
 function emailLine(email: string, name: string | undefined): string {
   return name ? `${email} (${name})` : email
 }
@@ -197,8 +192,7 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
     ch.push(el('comments', undefined, absolutize(item.comments, base)))
   }
 
-  // RSS <author> requires an email; when it's absent, fall back to Dublin Core <dc:creator>
-  // so a name-only author still appears (matching the RDF serializers and Atom/JSON output).
+  // RSS <author> requires an email; when it's absent, fall back to Dublin Core <dc:creator> so a name-only author still appears (matching the RDF serializers and Atom/JSON output).
   if (caps.rss20) {
     const author = firstAuthor(item.author)
     if (author?.email) {

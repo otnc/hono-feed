@@ -1,6 +1,4 @@
-// Shared by the other scripts in this directory. `pull_request_target` events carry the PR
-// directly on the payload; `issue_comment` events only carry the issue/PR number, so that case
-// fetches the PR via the API. Returns null when an issue_comment fired on a plain issue (no PR).
+// Shared by the other scripts in this directory. `pull_request_target` events carry the PR directly on the payload; `issue_comment` events only carry the issue/PR number, so that case fetches the PR via the API. Returns null when an issue_comment fired on a plain issue (no PR).
 module.exports = async function getPullRequest({ github, context }) {
   const { owner, repo } = context.repo
 

@@ -15,7 +15,7 @@ export interface FeedMiddlewareEnv {
 
 /**
  * Expose a preconfigured `serveFeed` on `c.var.serveFeed`. Per-call options override defaults.
- *
+
  * @example
  * ```ts
  * const app = new Hono<FeedMiddlewareEnv>()

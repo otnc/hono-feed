@@ -4,9 +4,7 @@ import { toJSONFeed } from './index'
 
 const RFC3339 = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/
 
-// Spec-complete input: every item has both an id-worthy link and content, so the
-// "content_html or content_text required" rule (jsonfeed.org/version/1.1 §Items) is
-// satisfied without relying on unvalidated fallbacks.
+// Spec-complete input: every item has both an id-worthy link and content, so the "content_html or content_text required" rule (jsonfeed.org/version/1.1 §Items) is satisfied without relying on unvalidated fallbacks.
 const complete: FeedInput = {
   options: {
     title: 'example blog',

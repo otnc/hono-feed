@@ -2,13 +2,9 @@ import type { FeedFormat, FeedInput, FeedItem, FeedOptions } from './types'
 import { firstAuthor } from './utils/author'
 
 /**
- * Report recommended-but-missing fields — the "valid, but…" tier that `validateInput` doesn't
- * cover. `validateInput` enforces hard spec requirements (missing → broken document); `lintInput`
- * surfaces what feed validators warn about and directories/readers penalize.
- *
- * Returns a list of human-readable warnings (empty = clean); it never throws and `serveFeed`
- * never calls it, so it can't slow the serve path. Meant for tests/CI —
- * `expect(lintInput(input, 'rss')).toEqual([])` — and for tightening a feed before shipping.
+ * Report recommended-but-missing fields — the "valid, but…" tier that `validateInput` doesn't cover. `validateInput` enforces hard spec requirements (missing → broken document); `lintInput` surfaces what feed validators warn about and directories/readers penalize.
+
+ * Returns a list of human-readable warnings (empty = clean); it never throws and `serveFeed` never calls it, so it can't slow the serve path. Meant for tests/CI — `expect(lintInput(input, 'rss')).toEqual([])` — and for tightening a feed before shipping.
  */
 export function lintInput(input: FeedInput, format: FeedFormat): string[] {
   const { options, items } = input
@@ -36,8 +32,7 @@ function lintFeed(options: FeedOptions, format: FeedFormat, warnings: string[]):
   if (!options.image && !options.favicon) {
     warnings.push('feed: no "image" or "favicon" — directories and readers display placeholder art')
   }
-  // Atom's <id> falls back to link, then to the request URL at serve time; the latter changes
-  // with the host, so the feed's identity isn't stable across environments.
+  // Atom's <id> falls back to link, then to the request URL at serve time; the latter changes with the host, so the feed's identity isn't stable across environments.
   if (format === 'atom' && !options.id && !options.link && !options.feedUrl) {
     warnings.push(
       'feed: no "id" (or "link"/"feedUrl") — Atom id falls back to the request URL, so the feed identity is unstable across hosts',
@@ -50,8 +45,7 @@ function lintFeed(options: FeedOptions, format: FeedFormat, warnings: string[]):
     )
   }
 
-  // RFC 5005 §4: an archive page SHOULD carry rel="current" back to the always-up-to-date
-  // document. Only RSS/Atom emit fh:archive/rel="current" at all — JSON Feed has no mapping.
+  // RFC 5005 §4: an archive page SHOULD carry rel="current" back to the always-up-to-date document. Only RSS/Atom emit fh:archive/rel="current" at all — JSON Feed has no mapping.
   if (format !== 'json' && options.paging?.archive && !options.paging?.current) {
     warnings.push(
       'feed.paging: "archive" is set without "current" — RFC 5005 §4 recommends pointing archive pages at the current document',

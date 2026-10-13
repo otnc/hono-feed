@@ -56,9 +56,7 @@ export function feedLinksHtml(options: FeedLinksOptions): string {
 
 const HEADER_ENCODER = new TextEncoder()
 
-// RFC 3986 unreserved + reserved characters stay raw, plus `%` so already-encoded hrefs pass
-// through (`encodeURI` would double-encode them). Everything else is UTF-8 percent-encoded:
-// a raw non-ASCII character in a header value makes `Headers.append` throw.
+// RFC 3986 unreserved + reserved characters stay raw, plus `%` so already-encoded hrefs pass through (`encodeURI` would double-encode them). Everything else is UTF-8 percent-encoded: a raw non-ASCII character in a header value makes `Headers.append` throw.
 const HREF_UNSAFE = /[^A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]/gu
 
 function encodeHref(href: string): string {
@@ -69,17 +67,14 @@ function encodeHref(href: string): string {
   )
 }
 
-// Printable ASCII without `"` or `\`, so it fits an RFC 8288 quoted-string unescaped
-// (receivers' quoted-pair support is spotty, so those two fall through to `title*`).
+// Printable ASCII without `"` or `\`, so it fits an RFC 8288 quoted-string unescaped (receivers' quoted-pair support is spotty, so those two fall through to `title*`).
 const PLAIN_TITLE = /^[ !#-[\]-~]*$/
 
 // RFC 8187 attr-char, as what encodeURIComponent leaves raw minus what 8187 doesn't allow.
 const RFC8187_EXTRA = /[*'()]/g
 
 /**
- * Serialize the title as a plain `title="…"` when simple ASCII, otherwise as RFC 8187
- * `title*=UTF-8''…`. Only one form is sent: receivers prefer `title*` when both are present,
- * so pairing them would add bytes without changing behavior.
+ * Serialize the title as a plain `title="…"` when simple ASCII, otherwise as RFC 8187 `title*=UTF-8''…`. Only one form is sent: receivers prefer `title*` when both are present, so pairing them would add bytes without changing behavior.
  */
 function titleParam(title: string): string {
   if (PLAIN_TITLE.test(title)) return `title="${title}"`
@@ -103,9 +98,7 @@ function isHtmlResponse(contentType: string | undefined): boolean {
 }
 
 /**
- * Middleware that appends one `Link: <…>; rel="alternate"; type="…"` header (RFC 8288) per
- * configured feed URL, but only to responses whose `Content-Type` is HTML (or XHTML) — a feed
- * response itself has no use for advertising its own alternates.
+ * Middleware that appends one `Link: <…>; rel="alternate"; type="…"` header (RFC 8288) per configured feed URL, but only to responses whose `Content-Type` is HTML (or XHTML) — a feed response itself has no use for advertising its own alternates.
  */
 export function feedLinkHeader(options: FeedLinksOptions): MiddlewareHandler {
   const links = feedLinks(options)

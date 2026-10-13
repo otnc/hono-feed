@@ -4,11 +4,8 @@ import { hasIriScheme } from './utils/url'
 
 /**
  * Minimal validation after the format is decided. Invalid input throws `TypeError`.
- *
- * `serveFeed` calls this with a request-derived `options.feedUrl` fallback already folded in
- * (the RSS channel `<link>` and Atom feed `id` rules accept it in place of `link`/`id`). Callers
- * validating input for the low-level serializers directly must set `options.feedUrl` themselves
- * first if they're relying on that fallback — same as they already must for serialization.
+
+ * `serveFeed` calls this with a request-derived `options.feedUrl` fallback already folded in (the RSS channel `<link>` and Atom feed `id` rules accept it in place of `link`/`id`). Callers validating input for the low-level serializers directly must set `options.feedUrl` themselves first if they're relying on that fallback — same as they already must for serialization.
  */
 export function validateInput(input: FeedInput, format: FeedFormat): void {
   const { options, items } = input
@@ -19,8 +16,7 @@ export function validateInput(input: FeedInput, format: FeedFormat): void {
   assertValidDate(options.updated, 'feed.updated')
   assertValidDate(options.published, 'feed.published')
 
-  // RFC 5005 defines <fh:complete/> (§2, "this is the whole feed") and <fh:archive/> (§4,
-  // "this page never changes") for different document types — a page can't be both at once.
+  // RFC 5005 defines <fh:complete/> (§2, "this is the whole feed") and <fh:archive/> (§4, "this page never changes") for different document types — a page can't be both at once.
   if (options.paging?.complete && options.paging?.archive) {
     throw new TypeError(
       'hono-feed: paging "complete" and "archive" are mutually exclusive (RFC 5005 §2/§4)',

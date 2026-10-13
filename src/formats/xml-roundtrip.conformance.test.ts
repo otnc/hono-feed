@@ -3,20 +3,13 @@ import { describe, expect, it } from 'vitest'
 import type { FeedInput } from '../types'
 import { toAtom, toRSS } from './index'
 
-// Every other XML assertion in this test suite is a string check (toContain/toMatch)
-// against the serialized output, so well-formedness and round-trip fidelity are only
-// ever guaranteed transitively through the per-function escaping unit tests. This file
-// instead runs a real, spec-conformant XML parser against the output, pinning the
-// property feed readers actually depend on: no reachable input produces a document a
-// conforming parser reads differently than intended. fast-xml-parser is a devDependency
-// only — the published package stays runtime-dependency-free.
+// Every other XML assertion in this test suite is a string check (toContain/toMatch) against the serialized output, so well-formedness and round-trip fidelity are only ever guaranteed transitively through the per-function escaping unit tests. This file instead runs a real, spec-conformant XML parser against the output, pinning the property feed readers actually depend on: no reachable input produces a document a conforming parser reads differently than intended. fast-xml-parser is a devDependency only — the published package stays runtime-dependency-free.
 const parser = new XMLParser({
   ignoreAttributes: false,
   parseTagValue: false,
   parseAttributeValue: false,
   trimValues: false,
-  // Decodes numeric character references (e.g. `&#xD;`) in addition to the five
-  // predefined XML entities — needed to verify escapeText/escapeAttr's CR handling.
+  // Decodes numeric character references (e.g. `&#xD;`) in addition to the five predefined XML entities — needed to verify escapeText/escapeAttr's CR handling.
   htmlEntities: true,
 })
 
@@ -24,14 +17,10 @@ function isWellFormed(xml: string): boolean {
   return XMLValidator.validate(xml) === true
 }
 
-// The pretty-printer only adds inter-element indentation/newlines, which — unlike the
-// hostile-value round-trip above — this comparison doesn't care about, so whitespace-only
-// text nodes are trimmed away instead of compared.
+// The pretty-printer only adds inter-element indentation/newlines, which — unlike the hostile-value round-trip above — this comparison doesn't care about, so whitespace-only text nodes are trimmed away instead of compared.
 const structureParser = new XMLParser({ ignoreAttributes: false, htmlEntities: true })
 
-// Grabs the first `<tag ...>...</tag>` or `<tag .../>` occurrence and parses it in
-// isolation, returning both its text content (if any) and its attributes. The lookahead
-// after the tag name guards against e.g. `title` matching inside an unrelated `titles`.
+// Grabs the first `<tag ...>...</tag>` or `<tag .../>` occurrence and parses it in isolation, returning both its text content (if any) and its attributes. The lookahead after the tag name guards against e.g. `title` matching inside an unrelated `titles`.
 function elementOf(xml: string, tag: string): { text?: string; attrs: Record<string, string> } {
   const match = xml.match(new RegExp(`<${tag}(?=[\\s/>])(?:\\s[^>]*)?(?:/>|>[\\s\\S]*?</${tag}>)`))
   if (!match) throw new Error(`<${tag}> not found in: ${xml}`)
@@ -42,26 +31,19 @@ function elementOf(xml: string, tag: string): { text?: string; attrs: Record<str
   return { text, attrs }
 }
 
-// Isolates the first <item>/<entry> block so element lookups inside it can't accidentally
-// match the channel/feed-level element of the same name. The lookahead after the tag name
-// guards against e.g. `item` matching RSS 1.0/1.1's `<items rdf:parseType="Collection">`.
+// Isolates the first <item>/<entry> block so element lookups inside it can't accidentally match the channel/feed-level element of the same name. The lookahead after the tag name guards against e.g. `item` matching RSS 1.0/1.1's `<items rdf:parseType="Collection">`.
 function firstBlock(xml: string, tag: 'item' | 'entry'): string {
   const match = xml.match(new RegExp(`<${tag}(?=[\\s>])[^>]*>[\\s\\S]*?</${tag}>`))
   if (!match) throw new Error(`<${tag}> block not found in: ${xml}`)
   return match[0]
 }
 
-// Exercises every branch of the shared escaping pipeline (escapeText/escapeAttr/cdata in
-// ../utils/xml.ts) in one string: XML-significant characters, a quote pair, the CDATA
-// terminator, CR/CRLF/tab, and non-ASCII (CJK) plus astral-plane (emoji) code points.
+// Exercises every branch of the shared escaping pipeline (escapeText/escapeAttr/cdata in ../utils/xml.ts) in one string: XML-significant characters, a quote pair, the CDATA terminator, CR/CRLF/tab, and non-ASCII (CJK) plus astral-plane (emoji) code points.
 const HOSTILE = '& < > "q" \'r\' \r\n\t 日本語 😀 ]]>'
-// XML 1.0 §2.11: a CDATA section can't escape a literal CR, so a conforming parser
-// normalizes any CR/CRLF inside one to LF — this is what a CDATA round-trip must produce.
+// XML 1.0 §2.11: a CDATA section can't escape a literal CR, so a conforming parser normalizes any CR/CRLF inside one to LF — this is what a CDATA round-trip must produce.
 const HOSTILE_IN_CDATA = HOSTILE.replace(/\r\n?/g, '\n')
 
-// A "spec-complete" RSS input — every field a conformant document needs, across every
-// RSS variant — with hostile content injected into title/description/content/category so
-// the same fixture doubles as the escaping-pipeline round-trip case.
+// A "spec-complete" RSS input — every field a conformant document needs, across every RSS variant — with hostile content injected into title/description/content/category so the same fixture doubles as the escaping-pipeline round-trip case.
 const rssComplete: FeedInput = {
   options: {
     title: 'example blog',
@@ -89,8 +71,7 @@ const rssComplete: FeedInput = {
 
 const rssOpts = { baseUrl: 'https://example.com', feedUrl: 'https://example.com/feed' } as const
 
-// A "spec-complete" Atom input — feed-level author so the RFC 4287 §4.1.1 rule is
-// satisfied without relying on unvalidated fallbacks — with the same hostile content.
+// A "spec-complete" Atom input — feed-level author so the RFC 4287 §4.1.1 rule is satisfied without relying on unvalidated fallbacks — with the same hostile content.
 const atomComplete: FeedInput = {
   options: {
     title: HOSTILE,

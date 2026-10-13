@@ -1,7 +1,6 @@
 // Run by .github/workflows/pr-labeler.yml via actions/github-script.
-//
-// Triggered by pull_request_target (PR body carried directly on the payload) and by
-// issue_comment on a PR (only the PR number is available, so get-pull-request fetches it).
+
+// Triggered by pull_request_target (PR body carried directly on the payload) and by issue_comment on a PR (only the PR number is available, so get-pull-request fetches it).
 
 const getPullRequest = require('./get-pull-request.cjs')
 const { reconcileCheckboxAndBranchLabels } = require('./checkbox-and-branch-labels-core.cjs')

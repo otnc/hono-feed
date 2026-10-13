@@ -4,8 +4,7 @@ import { toAtom } from './index'
 
 const RFC3339 = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/
 
-// Spec-complete input: feed-level author is present so the RFC 4287 4.1.1 "author unless
-// every entry has one" rule is satisfied without relying on unvalidated fallbacks.
+// Spec-complete input: feed-level author is present so the RFC 4287 4.1.1 "author unless every entry has one" rule is satisfied without relying on unvalidated fallbacks.
 const complete: FeedInput = {
   options: {
     title: 'example blog',
@@ -64,8 +63,7 @@ describe('Atom 1.0 conformance (RFC 4287)', () => {
   })
 
   it('entry satisfies "no atom:content requires a rel=alternate link" (§4.1.2)', () => {
-    // The fixture has both; the rule only needs one. Pin that the compliant shape holds:
-    // every <entry> contains <content> or a rel="alternate" <link>.
+    // The fixture has both; the rule only needs one. Pin that the compliant shape holds: every <entry> contains <content> or a rel="alternate" <link>.
     const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].map((m) => m[1])
     expect(entries.length).toBeGreaterThan(0)
     for (const entry of entries) {

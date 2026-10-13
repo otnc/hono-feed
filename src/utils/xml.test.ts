@@ -139,8 +139,7 @@ describe('stripInvalidXmlChars (XML 1.0 Char production)', () => {
 })
 
 describe('invalid characters cannot escape through any path', () => {
-  // The whole point: a control character must never reach the output, regardless of the route
-  // it takes (text node, attribute value, or CDATA section).
+  // The whole point: a control character must never reach the output, regardless of the route it takes (text node, attribute value, or CDATA section).
   const dirty = 'before\u0001after'
 
   it('is stripped from text nodes', () => {

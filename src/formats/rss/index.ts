@@ -11,8 +11,7 @@ export { validateInput } from '../../validate'
 const OBSOLETE_RSS = new Set(['0.90', '0.91', '0.92', '0.93', '0.94'])
 
 /**
- * Serialize the neutral model to RSS. `rssVersion` '0.90' / '1.0' / '1.1' emit RDF;
- * '2.0' / '0.94' / '0.93' / '0.92' / '0.91' emit the `<rss version="…">` structure.
+ * Serialize the neutral model to RSS. `rssVersion` '0.90' / '1.0' / '1.1' emit RDF; '2.0' / '0.94' / '0.93' / '0.92' / '0.91' emit the `<rss version="…">` structure.
  */
 export function toRSS(input: FeedInput, opts: SerializeOptions = {}): string {
   const version = opts.rssVersion
