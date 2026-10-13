@@ -409,6 +409,8 @@ feed.addItem({
 
 `Enclosure.length` は共通モデルでは省略可能ですが、RSS の `<enclosure>` ではこの属性が必須です。未設定の場合、RSS Best Practices Profile ("If the length of an enclosure cannot be determined, a publisher SHOULD use a length of zero")に従い、RSS は `length="0"` を出力します。JSON Feed では省略可能なので、代わりに `size_in_bytes` を出力しません。
 
+記事の `comments` の URL は、RSS 2.0 では `<comments>`、Atom 1.0 では `<link rel="replies">` (RFC 4685)になります。JSON Feed には対応するものがありません。
+
 > [!TIP]
 > hono-feed は XML エスケープを行いますが、HTML エンティティのエンコードは行いません。必要な場合、たとえば任意のテキストを安全な HTML の `content` / `description` に変換したいときは、[`he`](https://www.npmjs.com/package/he) (`he.encode(text)`)と、その TypeScript の型定義の [`@types/he`](https://www.npmjs.com/package/@types/he) を使ってください。
 
@@ -583,6 +585,8 @@ const feed = new Feed({
   hub: 'https://pubsubhubbub.appspot.com/', // or string[] for more than one hub
 })
 ```
+
+`serveFeed` は、WebSub の発見のヘッダー形式として、ハブとフィード自身の URL を HTTP の `Link` ヘッダー (`<…>; rel="hub", <…>; rel="self"`)でも通知します。ハブや購読者は、ドキュメントを解析しなくても見つけられます。
 
 **通知**: `notifyHub()` はフィードが更新されたことをハブに伝えます。購読者は次のポーリングを待たず、リアルタイムに更新を受け取れます。これは WebSub §6 (Publishing)でパブリッシャーに課されている義務です。仕様は方法を定めていないため、`notifyHub` は実際のハブが受け付ける事実上の標準、PubSubHubbub 0.4 の "publish" ping を送ります。
 

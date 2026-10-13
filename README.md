@@ -409,6 +409,8 @@ Rather than emit a document that violates its spec, `serveFeed` checks these per
 
 `Enclosure.length` is optional in the neutral model, but RSS's `<enclosure>` requires the attribute — when it's unset, RSS emits `length="0"`, per the RSS Best Practices Profile ("If the length of an enclosure cannot be determined, a publisher SHOULD use a length of zero"). JSON Feed omits `size_in_bytes` instead, since it's optional there.
 
+An item's `comments` URL becomes `<comments>` in RSS 2.0 and `<link rel="replies">` (RFC 4685) in Atom 1.0; JSON Feed has no equivalent.
+
 > [!TIP]
 > hono-feed does the XML escaping for you, but it doesn't HTML-encode entities. If you need that — e.g. to turn arbitrary text into a safe HTML `content`/`description` value — reach for [`he`](https://www.npmjs.com/package/he) (`he.encode(text)`), plus [`@types/he`](https://www.npmjs.com/package/@types/he) for its TypeScript types.
 
@@ -583,6 +585,8 @@ const feed = new Feed({
   hub: 'https://pubsubhubbub.appspot.com/', // or string[] for more than one hub
 })
 ```
+
+`serveFeed` also advertises the hub and the feed's own URL in an HTTP `Link` header (`<…>; rel="hub", <…>; rel="self"`), the header form of WebSub discovery, so a hub or subscriber can find them without parsing the document.
 
 **Notification** — `notifyHub()` tells the hub a feed changed, so subscribers get the update in real time instead of waiting for their next poll. This is the publisher's obligation under WebSub §6 (Publishing); the spec leaves the mechanism open, so `notifyHub` sends the de-facto standard PubSubHubbub 0.4 "publish" ping that real-world hubs accept:
 
