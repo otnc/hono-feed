@@ -28,6 +28,7 @@ export type {
   XmlElementSpec,
   XmlVersion,
 } from './types'
+export { feedExtensionMap } from './utils/mime'
 export { validateInput } from './validate'
 export type { NotifyHubOptions, NotifyHubResult } from './websub'
 export { notifyHub } from './websub'
