@@ -369,6 +369,25 @@ app.get('/feed', feedRenderer({ baseUrl: 'https://example.com' }), (c) =>
 > Keeping it on its own entry point is what makes that opt-in: you get the augmentation only if you import it.  
 > If you'd rather keep the helper scoped to a route, use [`feedMiddleware`](#sharing-options-with-middleware) instead.
 
+## Static site generation
+
+Hono's [`toSSG`](https://hono.dev/docs/helpers/ssg) can write feeds to disk at build time.  
+It picks the file extension from the response's `Content-Type`, and it doesn't know the feed MIME types, so an unmapped feed would be saved as `feed.json.html`.  
+`feedExtensionMap` maps them to `.xml` (RSS and Atom) and `.json`.  
+Merge it with Hono's `defaultExtensionMap`, because `toSSG` uses a map you give it in place of its own:
+
+```ts
+import { Hono } from 'hono'
+import { defaultExtensionMap, toSSG } from 'hono/ssg'
+import { feedExtensionMap, serveFeed } from 'hono-feed'
+
+const app = new Hono()
+app.get('/rss', (c) => serveFeed(c, buildFeed(), { format: 'rss' })) // -> rss.xml
+app.get('/feed.json', (c) => serveFeed(c, buildFeed(), { format: 'json' })) // -> feed.json
+
+await toSSG(app, fs, { extensionMap: { ...defaultExtensionMap, ...feedExtensionMap } })
+```
+
 ## What goes in a feed
 
 `new Feed(options)` describes the channel; `feed.addItem(item)` adds an entry.  
