@@ -299,7 +299,7 @@ export interface FeedItem {
   categories?: Category[]
   /** RSS enclosure (first only) / Atom link rel="enclosure" (first only) / JSON attachments. */
   enclosure?: Enclosure | Enclosure[]
-  /** URL of the item's comments page. RSS `<comments>` only; no Atom/JSON mapping. */
+  /** URL of the item's comments page. RSS 2.0 `<comments>` / Atom 1.0 `<link rel="replies">` (RFC 4685); no JSON Feed mapping. */
   comments?: string
   /** Media RSS thumbnails and content. `xmlns:media` is declared automatically, only when one is set. RSS 2.0 and Atom 1.0 only; no JSON Feed mapping (use `image`). */
   media?: ItemMedia
