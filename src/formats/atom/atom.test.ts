@@ -123,6 +123,28 @@ describe('toAtom', () => {
   })
 
   describe('Atom 1.0 optional fields', () => {
+    it('emits <source> with the original feed title and a rel="self" link (RFC 4287 §4.2.11)', () => {
+      const out = toAtom(
+        {
+          ...input,
+          items: [
+            {
+              ...input.items[0],
+              source: { title: 'Original & Co', url: 'https://original.example/feed.xml' },
+            },
+          ],
+        },
+        { feedUrl: 'https://example.com/feed', baseUrl: 'https://example.com' },
+      )
+      expect(out).toContain(
+        '<source><title>Original &amp; Co</title><link rel="self" href="https://original.example/feed.xml"/></source>',
+      )
+    })
+
+    it('omits <source> when unset', () => {
+      expect(toAtom(input, { feedUrl: 'https://example.com/feed' })).not.toContain('<source')
+    })
+
     it('emits rights, subtitle and a category without a scheme', () => {
       const out = toAtom({
         options: {

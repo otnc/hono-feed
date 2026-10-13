@@ -243,6 +243,14 @@ export interface FeedOptions {
   >
 }
 
+/** The feed an item was republished from: RSS 2.0 `<source url>` and Atom 1.0 `<source>` (RFC 4287 §4.2.11). */
+export interface ItemSource {
+  /** Title of the original feed. */
+  title: string
+  /** URL of the original feed (its XML document, not its homepage). */
+  url: string
+}
+
 export interface FeedItem {
   title: string
   link?: string
@@ -264,6 +272,8 @@ export interface FeedItem {
   enclosure?: Enclosure | Enclosure[]
   /** URL of the item's comments page. RSS `<comments>` only; no Atom/JSON mapping. */
   comments?: string
+  /** Where the item was republished from. RSS 2.0 and Atom 1.0 only; no JSON Feed equivalent. */
+  source?: ItemSource
   /** JSON image. */
   image?: string
   /** JSON `external_url` — the linkblog pattern: `link` is your post, this is what it links to. */

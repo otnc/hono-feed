@@ -69,6 +69,11 @@ function atomEntry10(item: FeedItem, base?: string): Node {
   // content type="html" body is escaped as a text node.
   if (item.content) ch.push(el('content', { type: 'html' }, item.content))
 
+  if (item.source) {
+    const self = el('link', { rel: 'self', href: absolutize(item.source.url, base) })
+    ch.push(tag('source', [tag('title', item.source.title), self]))
+  }
+
   ch.push(...atomPeople(item.author, item.contributors, 'uri'))
   ch.push(...atomCategories(item.categories))
 
