@@ -6,3 +6,7 @@ coverage/
 # Private
 .private/
 .env
+local.kiritanconfig
+
+# Local agent config (skills are installed from .agents/skills via symlinks)
+.claude/

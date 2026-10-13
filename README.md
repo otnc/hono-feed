@@ -6,26 +6,20 @@
 
 <hr />
 
-[![npm](https://img.shields.io/npm/v/hono-feed)](https://www.npmjs.com/package/hono-feed) [![npm](https://img.shields.io/npm/dm/hono-feed)](https://www.npmjs.com/package/hono-feed)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/otnc/hono-feed/ci.yml?branch=main)](https://github.com/otnc/hono-feed/actions) [![GitHub](https://img.shields.io/github/license/otnc/hono-feed)](https://github.com/otnc/hono-feed/blob/main/LICENSE) [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/otnc/hono-feed)](https://github.com/otnc/hono-feed/pulse) [![GitHub last commit](https://img.shields.io/github/last-commit/otnc/hono-feed)](https://github.com/otnc/hono-feed/commits/main)
-<!-- [![Bundle Size](https://img.shields.io/bundlephobia/min/hono-feed)](https://bundlephobia.com/result?p=hono-feed) [![Bundle Size](https://img.shields.io/bundlephobia/minzip/hono-feed)](https://bundlephobia.com/result?p=hono-feed) -->
+**English** | [日本語](README.ja.md)
+
+[![npm](https://img.shields.io/npm/v/hono-feed)](https://www.npmjs.com/package/hono-feed) [![npm](https://img.shields.io/npm/dm/hono-feed)](https://www.npmjs.com/package/hono-feed) [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/otnc/hono-feed/ci.yml?branch=main)](https://github.com/otnc/hono-feed/actions) [![GitHub](https://img.shields.io/github/license/otnc/hono-feed)](https://github.com/otnc/hono-feed/blob/main/LICENSE) [![GitHub commit activity](https://img.shields.io/github/commit-activity/m/otnc/hono-feed)](https://github.com/otnc/hono-feed/pulse) [![GitHub last commit](https://img.shields.io/github/last-commit/otnc/hono-feed)](https://github.com/otnc/hono-feed/commits/main)
 
 > RSS, Atom and JSON Feed for [Hono](https://hono.dev) — done right.
 
-Serving a feed sounds simple, but the details bite: dates have to be in the exact format each spec wants, text has to be XML-escaped, conditional requests should return `304`, and readers ask for different formats through the `Accept` header.  
-`hono-feed` takes care of all of that.  
-You describe your feed once; it returns a correct HTTP `Response`.
+Serving a feed sounds simple, but the details bite: dates have to be in the exact format each spec wants, text has to be XML-escaped, conditional requests should return `304`, and readers ask for different formats through the `Accept` header. `hono-feed` takes care of all of that. You describe your feed once; it returns a correct HTTP `Response`.
 
 > [!NOTE]
->   
-> Zero runtime dependencies, built on Web Standards alone — so it runs anywhere Hono does:  
-> Cloudflare Workers, Deno, Bun and Node.  
-> `hono` itself is a peer dependency (`>=4`).
+> Zero runtime dependencies, built on Web Standards alone — so it runs anywhere Hono does: Cloudflare Workers, Deno, Bun and Node. `hono` itself is a peer dependency (`>=4`).
 
 ## Why hono-feed?
 
-Hono ships no feed helper, so you have two usual options — hand-roll the XML, or pull in a general feed library and wire the HTTP layer around it.  
-hono-feed replaces both.
+Hono ships no feed helper, so you have two usual options — hand-roll the XML, or pull in a general feed library and wire the HTTP layer around it. hono-feed replaces both.
 
 ### vs. hand-rolling the XML
 
@@ -85,8 +79,7 @@ app.get('/feed', (c) =>
 
 ### vs. a feed library
 
-Libraries like [`feed`](https://github.com/jpmonette/feed) or [`rss`](https://github.com/dylang/node-rss) do handle the escaping and date formats — but they hand you a *string*.  
-The HTTP layer is still yours to build:
+Libraries like [`feed`](https://github.com/jpmonette/feed) or [`rss`](https://github.com/dylang/node-rss) do handle the escaping and date formats — but they hand you a *string*. The HTTP layer is still yours to build:
 
 ```ts
 // ESM
@@ -137,10 +130,7 @@ app.get('/feed', (c) =>
 )
 ```
 
-There's also a portability catch.  
-Many feed libraries are written for Node and either use Node built-ins (`Buffer`, `stream`, `fs`) or depend on packages that do.  
-On Cloudflare Workers, Vercel Edge, Deno or Bun that can mean reaching for polyfills, enabling a `nodejs_compat` flag, or finding it just won't run.  
-hono-feed has **zero dependencies** and uses only Web Standard APIs, so the same code runs unchanged on every one of them.
+There's also a portability catch. Many feed libraries are written for Node and either use Node built-ins (`Buffer`, `stream`, `fs`) or depend on packages that do. On Cloudflare Workers, Vercel Edge, Deno or Bun that can mean reaching for polyfills, enabling a `nodejs_compat` flag, or finding it just won't run. hono-feed has **zero dependencies** and uses only Web Standard APIs, so the same code runs unchanged on every one of them.
 
 | | Hand-rolled | A feed library | hono-feed |
 | --- | --- | --- | --- |
@@ -194,11 +184,9 @@ app.get('/feed', (c) => {
 export default app
 ```
 
-That single endpoint now speaks all three formats.  
-A feed reader gets RSS, a browser fetching `application/json` gets JSON Feed, and so on — no extra routes needed.
+That single endpoint now speaks all three formats. A feed reader gets RSS, a browser fetching `application/json` gets JSON Feed, and so on — no extra routes needed.
 
-Prefer plain data over the builder?  
-Pass an object instead:
+Prefer plain data over the builder? Pass an object instead:
 
 ```ts
 return serveFeed(c, { options: { title: 'Example Blog', updated: new Date() }, items: [] })
@@ -206,8 +194,7 @@ return serveFeed(c, { options: { title: 'Example Blog', updated: new Date() }, i
 
 ## Choosing the format
 
-By default the format is negotiated for you.  
-If you'd rather pin an endpoint to one format — the classic `/rss.xml`, `/atom.xml`, `/feed.json` — just say so:
+By default the format is negotiated for you. If you'd rather pin an endpoint to one format — the classic `/rss.xml`, `/atom.xml`, `/feed.json` — just say so:
 
 ```ts
 // ESM
@@ -314,14 +301,14 @@ app.get('/feed', (c) =>
 `etagFrom` may return synchronously or as a `Promise`; either way, `serveFeed`'s return type becomes `Response | Promise<Response>` once `etagFrom` or a lazy `input` is used (TypeScript picks this up automatically via overloads — the plain, synchronous call shown everywhere else in this README is unaffected and keeps returning a plain `Response`).
 
 A few things worth knowing:
+
 - Only `If-None-Match` can be checked this early — there's no `updated` date yet for `If-Modified-Since`. Per RFC 9110 §13.1.3, a request carrying `If-None-Match` ignores `If-Modified-Since` anyway, so this still covers the common revalidation case; a request with only `If-Modified-Since` resolves `input` normally.
 - On a miss, the `etagFrom` value becomes the response's `ETag` (the `etag` option is ignored) — same verbatim-vs-`W/"…"` wrapping rule as a custom `etag` function.
 - `strictAccept`'s `406` and an invalid `?version=`'s `400` are both resolved before `etagFrom` or `input` are ever touched.
 
 ## Sharing options with middleware
 
-Setting the same options on every route gets repetitive.  
-`feedMiddleware` lets you set them once; each route can still override them per call.
+Setting the same options on every route gets repetitive. `feedMiddleware` lets you set them once; each route can still override them per call.
 
 ```ts
 // ESM
@@ -342,9 +329,7 @@ app.get('/feed', (c) => c.var.serveFeed(buildFeed()))
 
 ## Using `c.render()`
 
-Prefer Hono's renderer convention?  
-`feedRenderer` wires `serveFeed` into `c.render`, the same way `jsxRenderer` wires up HTML.  
-Pass it as route middleware and return `c.render(input)`:
+Prefer Hono's renderer convention? `feedRenderer` wires `serveFeed` into `c.render`, the same way `jsxRenderer` wires up HTML. Pass it as route middleware and return `c.render(input)`:
 
 ```ts
 // ESM
@@ -364,17 +349,11 @@ app.get('/feed', feedRenderer({ baseUrl: 'https://example.com' }), (c) =>
 ```
 
 > [!NOTE]
->   
-> `feedRenderer` augments Hono's global `ContextRenderer` type, so importing `hono-feed/renderer` anywhere makes `c.render()` take a feed across your whole project — the same trade-off `jsxRenderer` makes.  
-> Keeping it on its own entry point is what makes that opt-in: you get the augmentation only if you import it.  
-> If you'd rather keep the helper scoped to a route, use [`feedMiddleware`](#sharing-options-with-middleware) instead.
+> `feedRenderer` augments Hono's global `ContextRenderer` type, so importing `hono-feed/renderer` anywhere makes `c.render()` take a feed across your whole project — the same trade-off `jsxRenderer` makes. Keeping it on its own entry point is what makes that opt-in: you get the augmentation only if you import it. If you'd rather keep the helper scoped to a route, use [`feedMiddleware`](#sharing-options-with-middleware) instead.
 
 ## Static site generation
 
-Hono's [`toSSG`](https://hono.dev/docs/helpers/ssg) can write feeds to disk at build time.  
-It picks the file extension from the response's `Content-Type`, and it doesn't know the feed MIME types, so an unmapped feed would be saved as `feed.json.html`.  
-`feedExtensionMap` maps them to `.xml` (RSS and Atom) and `.json`.  
-Merge it with Hono's `defaultExtensionMap`, because `toSSG` uses a map you give it in place of its own:
+Hono's [`toSSG`](https://hono.dev/docs/helpers/ssg) can write feeds to disk at build time. It picks the file extension from the response's `Content-Type`, and it doesn't know the feed MIME types, so an unmapped feed would be saved as `feed.json.html`. `feedExtensionMap` maps them to `.xml` (RSS and Atom) and `.json`. Merge it with Hono's `defaultExtensionMap`, because `toSSG` uses a map you give it in place of its own:
 
 ```ts
 import { Hono } from 'hono'
@@ -390,9 +369,7 @@ await toSSG(app, fs, { extensionMap: { ...defaultExtensionMap, ...feedExtensionM
 
 ## What goes in a feed
 
-`new Feed(options)` describes the channel; `feed.addItem(item)` adds an entry.  
-Only `title` is required everywhere — the other fields are optional in the neutral model and map to the right field in every format.  
-On top of that, each format enforces the fields *its spec* makes mandatory (see the table below the example).
+`new Feed(options)` describes the channel; `feed.addItem(item)` adds an entry. Only `title` is required everywhere — the other fields are optional in the neutral model and map to the right field in every format. On top of that, each format enforces the fields *its spec* makes mandatory (see the table below the example).
 
 ```ts
 // ESM
@@ -433,9 +410,7 @@ Rather than emit a document that violates its spec, `serveFeed` checks these per
 `Enclosure.length` is optional in the neutral model, but RSS's `<enclosure>` requires the attribute — when it's unset, RSS emits `length="0"`, per the RSS Best Practices Profile ("If the length of an enclosure cannot be determined, a publisher SHOULD use a length of zero"). JSON Feed omits `size_in_bytes` instead, since it's optional there.
 
 > [!TIP]
->   
-> hono-feed does the XML escaping for you, but it doesn't HTML-encode entities.  
-> If you need that — e.g. to turn arbitrary text into a safe HTML `content`/`description` value — reach for [`he`](https://www.npmjs.com/package/he) (`he.encode(text)`), plus [`@types/he`](https://www.npmjs.com/package/@types/he) for its TypeScript types.
+> hono-feed does the XML escaping for you, but it doesn't HTML-encode entities. If you need that — e.g. to turn arbitrary text into a safe HTML `content`/`description` value — reach for [`he`](https://www.npmjs.com/package/he) (`he.encode(text)`), plus [`@types/he`](https://www.npmjs.com/package/@types/he) for its TypeScript types.
 
 ## Options
 
@@ -466,8 +441,7 @@ All options for `serveFeed(c, input, options?)`:
 
 ## Feed versions
 
-The defaults — **RSS 2.0**, **Atom 1.0**, **JSON Feed 1.1** — are the modern, recommended formats, so most projects never touch these.  
-They're typed unions, so your editor only offers valid values:
+The defaults — **RSS 2.0**, **Atom 1.0**, **JSON Feed 1.1** — are the modern, recommended formats, so most projects never touch these. They're typed unions, so your editor only offers valid values:
 
 | Option | Accepted values | Default |
 | --- | --- | --- |
@@ -476,16 +450,10 @@ They're typed unions, so your editor only offers valid values:
 | `jsonFeedVersion` | `'1.1'`, `'1'` | `'1.1'` |
 | `xmlVersion` | `'1.0'`, `'1.1'` | `'1.0'` |
 
-A bit of history, in case you need an older version: **RSS comes in two families.**  
-`0.91` through `0.94` and `2.0` share the familiar `<rss version="…">` shape.  
-The RDF family is a different document entirely — `0.90` is Netscape's original "RDF Site Summary", `1.0` adds Dublin Core and content modules, and `1.1` uses a `<Channel>` root.  
-RSS 1.0 and 1.1 are fully **supported, not deprecated** — reach for them when a consumer specifically wants RDF.
+A bit of history, in case you need an older version: **RSS comes in two families.** `0.91` through `0.94` and `2.0` share the familiar `<rss version="…">` shape. The RDF family is a different document entirely — `0.90` is Netscape's original "RDF Site Summary", `1.0` adds Dublin Core and content modules, and `1.1` uses a `<Channel>` root. RSS 1.0 and 1.1 are fully **supported, not deprecated** — reach for them when a consumer specifically wants RDF.
 
 > [!WARNING]
->   
-> **RSS 0.9x, Atom 0.3 and JSON Feed 1.0 are deprecated.**  
-> They still produce valid output, but each logs a one-time, coded `DeprecationWarning` (`HONOFEED_DEP000N`, see [HONOFEED_DEP.md](HONOFEED_DEP.md) for the full list) — through `process.emitWarning` on Node, or `console.warn` on edge runtimes.  
-> To silence it, set `suppressDeprecationWarnings: true`, the `HONO_FEED_NO_DEPRECATION` env var, or run Node with `--no-deprecation`.
+> **RSS 0.9x, Atom 0.3 and JSON Feed 1.0 are deprecated.** They still produce valid output, but each logs a one-time, coded `DeprecationWarning` (`HONOFEED_DEP000N`, see [HONOFEED\_DEP.md](HONOFEED_DEP.md) for the full list) — through `process.emitWarning` on Node, or `console.warn` on edge runtimes. To silence it, set `suppressDeprecationWarnings: true`, the `HONO_FEED_NO_DEPRECATION` env var, or run Node with `--no-deprecation`.
 
 ## Podcasts
 
@@ -579,8 +547,7 @@ app.use('*', feedLinkHeader({ rss: '/feed.rss' }))
 
 ## OPML
 
-Sites that publish several feeds, or aggregate other people's, can offer an [OPML](http://opml.org/spec2.opml) subscription list — the file feed readers import to subscribe in one step.  
-`serveOpml` serves it with the same caching behavior as `serveFeed` (`Cache-Control`, a weak `ETag`, `Last-Modified` from `dateModified`, `304` and `HEAD`), and `toOPML` returns just the string:
+Sites that publish several feeds, or aggregate other people's, can offer an [OPML](http://opml.org/spec2.opml) subscription list — the file feed readers import to subscribe in one step. `serveOpml` serves it with the same caching behavior as `serveFeed` (`Cache-Control`, a weak `ETag`, `Last-Modified` from `dateModified`, `304` and `HEAD`), and `toOPML` returns just the string:
 
 ```ts
 import { serveOpml } from 'hono-feed'
@@ -601,8 +568,7 @@ app.get('/subscriptions.opml', (c) =>
 )
 ```
 
-Relative `xmlUrl`/`htmlUrl`/`ownerId` are absolutized against `baseUrl` (default: the request origin), and every outline needs `text`.  
-`feedExtensionMap` maps `text/x-opml` to `.opml`, so the route also works with [static site generation](#static-site-generation).
+Relative `xmlUrl`/`htmlUrl`/`ownerId` are absolutized against `baseUrl` (default: the request origin), and every outline needs `text`. `feedExtensionMap` maps `text/x-opml` to `.opml`, so the route also works with [static site generation](#static-site-generation).
 
 ## WebSub
 
@@ -651,8 +617,7 @@ const feed = new Feed({
 
 RSS 2.0 and Atom 1.0 emit one `atom:link`/`link` per set field; JSON Feed only maps `next` (to `next_url` — the spec has no equivalent for the others).
 
-Rather than assembling those links yourself, `paginate()` slices the items for the current page and builds `paging` for it.  
-It takes the 1-based `page` (a query string value is fine; anything unparsable means page 1 and a page past the end is clamped to the last), `perPage`, and a `url(page)` function:
+Rather than assembling those links yourself, `paginate()` slices the items for the current page and builds `paging` for it. It takes the 1-based `page` (a query string value is fine; anything unparsable means page 1 and a page past the end is clamped to the last), `perPage`, and a `url(page)` function:
 
 ```ts
 import { paginate, serveFeed } from 'hono-feed'
@@ -713,8 +678,7 @@ feed.addItem({
 
 ## Media RSS
 
-`media` on a `FeedItem` adds [Media RSS](https://www.rssboard.org/media-rss) thumbnails and media objects, the de facto way to attach a preview image or a video to an RSS or Atom entry.  
-`xmlns:media` is declared automatically, only when an item sets one (an explicit `customNamespaces` entry still wins).
+`media` on a `FeedItem` adds [Media RSS](https://www.rssboard.org/media-rss) thumbnails and media objects, the de facto way to attach a preview image or a video to an RSS or Atom entry. `xmlns:media` is declared automatically, only when an item sets one (an explicit `customNamespaces` entry still wins).
 
 ```ts
 feed.addItem({
@@ -727,8 +691,7 @@ feed.addItem({
 })
 ```
 
-URLs are absolutized against `baseUrl` like every other URL field, and every entry needs a `url`.  
-It is emitted for RSS 2.0 and Atom 1.0 only; JSON Feed has no equivalent (use the item's `image` there).
+URLs are absolutized against `baseUrl` like every other URL field, and every entry needs a `url`. It is emitted for RSS 2.0 and Atom 1.0 only; JSON Feed has no equivalent (use the item's `image` there).
 
 ## Extending with custom fields
 
@@ -738,8 +701,8 @@ The neutral model is deliberately small — anything outside it (Media RSS, Dubl
 const feed = new Feed({
   title: 'My Show',
   link: 'https://example.com/',
-  customNamespaces: { 'xmlns:media': 'http://search.yahoo.com/mrss/' },
-  customXml: [{ name: 'media:rating', text: 'nonadult' }],
+  customNamespaces: { 'xmlns:dcterms': 'http://purl.org/dc/terms/' },
+  customXml: [{ name: 'dcterms:license', text: 'https://creativecommons.org/licenses/by/4.0/' }],
 })
 ```
 
@@ -749,8 +712,7 @@ const feed = new Feed({
 
 ## Low-level serializers
 
-Sometimes you just want the string — for a snapshot test, a queue, or a non-Hono transport.  
-`toRSS`, `toAtom` and `toJSONFeed` give you exactly that, with no HTTP layer involved:
+Sometimes you just want the string — for a snapshot test, a queue, or a non-Hono transport. `toRSS`, `toAtom` and `toJSONFeed` give you exactly that, with no HTTP layer involved:
 
 ```ts
 // ESM

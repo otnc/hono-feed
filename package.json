@@ -111,6 +111,8 @@
     "format": "biome format --write .",
     "check": "biome check --write . && tsc --noEmit",
     "ci": "biome ci .",
+    "docs:build": "kiritan build",
+    "docs:check": "kiritan check && kiritan verify",
     "check:package": "pnpm build && publint && attw --pack . --ignore-rules no-resolution && node scripts/smoke.mjs",
     "prepublishOnly": "pnpm check:package"
   },
@@ -130,6 +132,7 @@
     "@vitest/coverage-v8": "^5.0.4",
     "fast-xml-parser": "^5.11.2",
     "hono": "^4.13.13",
+    "kiritan": "^0.6.1",
     "publint": "^0.3.25",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
