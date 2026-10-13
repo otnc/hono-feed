@@ -1,0 +1,12 @@
+import { defineConfig } from "kiritan";
+
+export default defineConfig({
+  locales: { default: "en", list: ["en", "ja"] },
+  sources: [
+    { glob: "base/README.base.md", strategy: "inline" },
+    { glob: "base/CONTRIBUTING.base.md", strategy: "inline" },
+    { glob: "base/HONOFEED_DEP.base.md", strategy: "inline" },
+  ],
+  // README.md / README.ja.md are written at the project root rather than alongside base/.
+  naming: { template: "{base}.{locale}.{ext}" },
+});

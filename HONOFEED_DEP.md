@@ -1,3 +1,5 @@
+**English** | [日本語](HONOFEED_DEP.ja.md)
+
 # Deprecation codes
 
 `hono-feed` logs a one-time, coded `DeprecationWarning` when you opt into a version it still supports but no longer recommends. Each code is stable across releases, fires at most once per process (per code), and is emitted through `process.emitWarning` on Node or `console.warn` on edge runtimes (see `src/utils/deprecation.ts`).
