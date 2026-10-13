@@ -65,6 +65,8 @@ export interface RespondOptions {
   updated?: Date
   /** Set `Vary: Accept` (the format was negotiated). */
   vary?: boolean
+  /** A ready `Link` header value. */
+  link?: string
 }
 
 /** Build the final 200 or 304 for a serialized body: caching headers, conditional requests and HEAD. */
@@ -73,6 +75,7 @@ export function respond(c: Context, body: string, options: RespondOptions): Resp
   const cacheControl = cacheControlValue(options.cacheControl)
   if (cacheControl) headers['Cache-Control'] = cacheControl
   if (options.vary) headers.Vary = 'Accept'
+  if (options.link) headers.Link = options.link
 
   let etagValue: string | undefined
   if (options.etagValue !== undefined) {
