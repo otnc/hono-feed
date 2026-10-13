@@ -243,6 +243,35 @@ export interface FeedOptions {
   >
 }
 
+/** `media:thumbnail` (Media RSS) — a preview image for an item. */
+export interface MediaThumbnail {
+  url: string
+  width?: number
+  height?: number
+}
+
+/** `media:content` (Media RSS) — a media object for an item, e.g. a video or a full-size image. */
+export interface MediaContent {
+  url: string
+  /** MIME type, e.g. `'video/mp4'`. */
+  type?: string
+  medium?: 'image' | 'audio' | 'video' | 'document' | 'executable'
+  width?: number
+  height?: number
+  /** Duration in seconds. */
+  duration?: number
+  /** Size in bytes. */
+  fileSize?: number
+}
+
+/** [Media RSS](https://www.rssboard.org/media-rss) elements for a single item (RSS 2.0 and Atom 1.0 only). */
+export interface ItemMedia {
+  /** `media:thumbnail` — one element per entry. */
+  thumbnails?: MediaThumbnail[]
+  /** `media:content` — one element per entry. */
+  contents?: MediaContent[]
+}
+
 export interface FeedItem {
   title: string
   link?: string
@@ -264,6 +293,8 @@ export interface FeedItem {
   enclosure?: Enclosure | Enclosure[]
   /** URL of the item's comments page. RSS `<comments>` only; no Atom/JSON mapping. */
   comments?: string
+  /** Media RSS thumbnails and content. `xmlns:media` is declared automatically, only when one is set. RSS 2.0 and Atom 1.0 only; no JSON Feed mapping (use `image`). */
+  media?: ItemMedia
   /** JSON image. */
   image?: string
   /** JSON `external_url` — the linkblog pattern: `link` is your post, this is what it links to. */

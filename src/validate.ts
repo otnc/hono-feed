@@ -66,6 +66,9 @@ export function validateInput(input: FeedInput, format: FeedFormat): void {
     if (typeof item.title !== 'string' || item.title.length === 0) {
       throw new TypeError(`hono-feed: item[${i}] "title" is required`)
     }
+    for (const { url } of [...(item.media?.thumbnails ?? []), ...(item.media?.contents ?? [])]) {
+      if (!url) throw new TypeError(`hono-feed: item[${i}] media requires a "url" on every entry`)
+    }
     assertValidDate(item.published, `item[${i}].published`)
     assertValidDate(item.updated, `item[${i}].updated`)
 
