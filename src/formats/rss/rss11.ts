@@ -1,7 +1,7 @@
 import type { FeedInput, SerializeOptions } from '../../types'
 import { rfc3339 } from '../../utils/date'
 import { absolutize, selfUrl } from '../../utils/url'
-import { el, type Node, specToNode, xmlDocument } from '../../utils/xml'
+import { el, type Node, specToNode, tag, xmlDocument } from '../../utils/xml'
 import { rdfItem } from './rdf-item'
 
 // RSS 1.1: `<Channel>` root in the rss1.1# namespace. Items nest directly under `<items>` (no rdf:Seq). Uses Dublin Core + content modules like RSS 1.0.
@@ -19,13 +19,13 @@ export function toRSS11(input: FeedInput, opts: SerializeOptions): string {
   }
 
   // Channel <link> is mandatory; fall back to the feed URI.
-  const channel: Node[] = [el('title', undefined, options.title)]
-  channel.push(el('link', undefined, home ?? feedUri))
-  channel.push(el('description', undefined, options.description ?? ''))
-  if (options.updated) channel.push(el('dc:date', undefined, rfc3339(options.updated)))
-  if (options.copyright) channel.push(el('dc:rights', undefined, options.copyright))
+  const channel: Node[] = [tag('title', options.title)]
+  channel.push(tag('link', home ?? feedUri))
+  channel.push(tag('description', options.description ?? ''))
+  if (options.updated) channel.push(tag('dc:date', rfc3339(options.updated)))
+  if (options.copyright) channel.push(tag('dc:rights', options.copyright))
   if (options.categories) {
-    for (const cat of options.categories) channel.push(el('dc:subject', undefined, cat.term))
+    for (const cat of options.categories) channel.push(tag('dc:subject', cat.term))
   }
   // The spec makes rdf:parseType="Collection" mandatory on <items> (it replaces 1.0's rdf:Seq).
   channel.push(el('items', { 'rdf:parseType': 'Collection' }, itemNodes))
