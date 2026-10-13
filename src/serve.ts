@@ -22,6 +22,7 @@ import type {
 } from './types'
 import { latestDate } from './utils/date'
 import { normalizeEtag } from './utils/etag'
+import { hubList } from './utils/hub'
 import { FEED_MIME_TYPES } from './utils/mime'
 import {
   cacheControlValue,
@@ -233,6 +234,18 @@ function resolveNegotiation(c: Context, options: ServeFeedOptions): Negotiation 
   return { format, negotiated, rssVersion, atomVersion, jsonFeedVersion, versionQueried, base, url }
 }
 
+// WebSub §4: a hub and the feed's self URL can be discovered from `Link` headers as well as from the document, which lets a hub find them without parsing the feed.
+function webSubLinkHeader(
+  hub: string | string[] | undefined,
+  feedUrl: string,
+  base: string,
+): string | undefined {
+  const hubs = hubList(hub)
+  if (hubs.length === 0) return undefined
+  const links = hubs.map((h) => `<${absolutize(h, base)}>; rel="hub"`)
+  return [...links, `<${feedUrl}>; rel="self"`].join(', ')
+}
+
 /** The rest of the response: validate, serialize, and build headers/status from resolved `input`. */
 function finishServeFeed(
   c: Context,
@@ -288,6 +301,7 @@ function finishServeFeed(
   }
 
   return respond(c, body, {
+    link: webSubLinkHeader(resolved.options.hub, feedUrl, base),
     contentType: CONTENT_TYPE[format],
     cacheControl,
     etag,

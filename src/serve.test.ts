@@ -395,6 +395,48 @@ describe('serveFeed', () => {
     })
   })
 
+  describe('WebSub Link headers (W3C WebSub §4)', () => {
+    const hubApp = (hub?: string | string[]) => {
+      const a = new Hono()
+      a.get('/feed', (c) =>
+        serveFeed(
+          c,
+          new Feed({ title: 't', link: 'https://example.com/', hub }).addItem({ title: 'a' }),
+        ),
+      )
+      return a
+    }
+
+    it('advertises the hub and the self URL in a Link header when a hub is set', async () => {
+      const res = await hubApp('/hub').request('https://example.com/feed')
+      expect(res.headers.get('link')).toBe(
+        '<https://example.com/hub>; rel="hub", <https://example.com/feed>; rel="self"',
+      )
+    })
+
+    it('lists every hub, absolutized, before the self URL', async () => {
+      const res = await hubApp(['https://a.example/hub', '/b']).request('https://example.com/feed')
+      expect(res.headers.get('link')).toBe(
+        '<https://a.example/hub>; rel="hub", <https://example.com/b>; rel="hub", <https://example.com/feed>; rel="self"',
+      )
+    })
+
+    it('sends no Link header without a hub', async () => {
+      const res = await hubApp().request('https://example.com/feed')
+      expect(res.headers.get('link')).toBeNull()
+    })
+
+    it('keeps the Link header on a 304', async () => {
+      const a = hubApp('/hub')
+      const first = await a.request('https://example.com/feed')
+      const res = await a.request('https://example.com/feed', {
+        headers: { 'if-none-match': first.headers.get('etag') as string },
+      })
+      expect(res.status).toBe(304)
+      expect(res.headers.get('link')).toContain('rel="hub"')
+    })
+  })
+
   describe('conditional requests', () => {
     it('answers a non-matching If-None-Match with a full 200 response', async () => {
       const res = await app().request('/feed', {
