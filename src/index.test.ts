@@ -20,8 +20,10 @@ describe('package root', () => {
       'notifyHub',
       'paginate',
       'serveFeed',
+      'serveOpml',
       'toAtom',
       'toJSONFeed',
+      'toOPML',
       'toRSS',
       'validateInput',
     ])

@@ -14,17 +14,22 @@ import {
 } from './negotiate'
 import type {
   AtomVersion,
-  CacheControlDirectives,
   FeedFormat,
   FeedInput,
   JsonFeedVersion,
   RssVersion,
   ServeFeedOptions,
 } from './types'
-import { serializeCacheControl } from './utils/cache-control'
 import { latestDate } from './utils/date'
-import { normalizeEtag, resolveEtag } from './utils/etag'
+import { normalizeEtag } from './utils/etag'
 import { FEED_MIME_TYPES } from './utils/mime'
+import {
+  cacheControlValue,
+  DEFAULT_CACHE_CONTROL,
+  etagMatches,
+  isConditionalMethod,
+  respond,
+} from './utils/respond'
 import { absolutize } from './utils/url'
 import { validateInput } from './validate'
 
@@ -32,17 +37,6 @@ const CONTENT_TYPE: Record<FeedFormat, string> = {
   rss: `${FEED_MIME_TYPES.rss}; charset=utf-8`,
   atom: `${FEED_MIME_TYPES.atom}; charset=utf-8`,
   json: `${FEED_MIME_TYPES.json}; charset=utf-8`,
-}
-
-const ENCODER = new TextEncoder()
-
-const DEFAULT_CACHE_CONTROL = 'public, max-age=3600'
-
-function cacheControlValue(
-  cacheControl: string | CacheControlDirectives | false,
-): string | undefined {
-  if (cacheControl === false) return undefined
-  return typeof cacheControl === 'string' ? cacheControl : serializeCacheControl(cacheControl)
 }
 
 // Query-driven version errors aren't governed by `cacheControl` (that's for successful feed bodies), and whether they reproduce can change independently of the URL as the underlying feed data changes — so a cache must not hold onto them past this response.
@@ -293,75 +287,12 @@ function finishServeFeed(
     throw err
   }
 
-  const headers: Record<string, string> = { 'Content-Type': CONTENT_TYPE[format] }
-  const cacheControlHeader = cacheControlValue(cacheControl)
-  if (cacheControlHeader) headers['Cache-Control'] = cacheControlHeader
-  if (negotiated) headers.Vary = 'Accept'
-
-  let etagValue: string | undefined
-  if (etagFromValue !== undefined) {
-    // etagFrom already gave us the canonical tag; don't also hash the body.
-    etagValue = etagFromValue
-    headers.ETag = etagValue
-  } else if (etag) {
-    etagValue = resolveEtag(body, typeof etag === 'function' ? etag : undefined)
-    headers.ETag = etagValue
-  }
-
-  let updatedDate: Date | undefined
-  if (lastModified) {
-    updatedDate = resolved.options.updated ?? latestDate(resolved.items)
-    if (updatedDate) headers['Last-Modified'] = updatedDate.toUTCString()
-  }
-
-  if (isNotModified(c, etagValue, updatedDate)) {
-    return c.body(null, 304, headers)
-  }
-
-  const bytes = ENCODER.encode(body)
-  headers['Content-Length'] = String(bytes.length)
-
-  if (c.req.method === 'HEAD') return c.body(null, 200, headers)
-  return c.body(bytes, 200, headers)
-}
-
-function isNotModified(
-  c: Context,
-  etagValue: string | undefined,
-  updatedDate: Date | undefined,
-): boolean {
-  if (!isConditionalMethod(c)) return false
-
-  const inm = c.req.header('if-none-match')
-  // RFC 9110 §13.1.3: a recipient MUST ignore If-Modified-Since when the request contains If-None-Match — even if there's no ETag on our side to compare it against.
-  if (inm !== undefined) return etagValue !== undefined && etagMatches(inm, etagValue)
-
-  if (updatedDate) {
-    const ims = c.req.header('if-modified-since')
-    if (ims) {
-      const since = Date.parse(ims)
-      if (!Number.isNaN(since)) {
-        return Math.floor(updatedDate.getTime() / 1000) <= Math.floor(since / 1000)
-      }
-    }
-  }
-  return false
-}
-
-// RFC 9110 §13.1.2/§13.1.3: conditional request headers only govern GET/HEAD requests.
-function isConditionalMethod(c: Context): boolean {
-  return c.req.method === 'GET' || c.req.method === 'HEAD'
-}
-
-// An entity-tag per RFC 9110 §8.8.3: `[ "W/" ] DQUOTE *etagc DQUOTE`. `etagc` legally includes a comma, so a list of tags must be tokenized by matching whole quoted tags — splitting on "," would break on a tag that itself contains one.
-const ENTITY_TAG = /(?:W\/)?"[^"]*"/g
-
-// Weak comparison for If-None-Match (ignore the W/ prefix; a bare `*` always matches).
-function etagMatches(headerValue: string, etag: string): boolean {
-  if (headerValue.trim() === '*') return true
-  const target = etag.replace(/^W\//, '')
-  for (const tag of headerValue.match(ENTITY_TAG) ?? []) {
-    if (tag.replace(/^W\//, '') === target) return true
-  }
-  return false
+  return respond(c, body, {
+    contentType: CONTENT_TYPE[format],
+    cacheControl,
+    etag,
+    etagValue: etagFromValue,
+    updated: lastModified ? (resolved.options.updated ?? latestDate(resolved.items)) : undefined,
+    vary: negotiated,
+  })
 }

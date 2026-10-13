@@ -3,6 +3,8 @@ export { toAtom, toJSONFeed, toRSS } from './formats'
 export { lintInput } from './lint'
 export type { FeedMiddlewareEnv, ServeFeedFn } from './middleware'
 export { feed as feedMiddleware } from './middleware'
+export type { OpmlInput, OpmlOptions, OpmlOutline, ServeOpmlOptions } from './opml'
+export { serveOpml, toOPML } from './opml'
 export type { FeedInputSource } from './serve'
 export { serveFeed } from './serve'
 export type {

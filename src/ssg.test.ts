@@ -40,6 +40,10 @@ async function generate(extensionMap?: Record<string, string>) {
 // `toSSG`'s `extensionMap` option (and `defaultExtensionMap`) don't exist in the oldest Hono versions the peer range allows.
 const supportsExtensionMap = 'defaultExtensionMap' in ssg
 
+it('maps the OPML MIME type to .opml', () => {
+  expect(feedExtensionMap['text/x-opml']).toBe('opml')
+})
+
 describe.skipIf(!supportsExtensionMap)('feedExtensionMap with hono/ssg', () => {
   it('writes RSS and Atom as .xml and JSON Feed as .json, keeping HTML as .html', async () => {
     const files = await generate({ ...ssg.defaultExtensionMap, ...feedExtensionMap })
