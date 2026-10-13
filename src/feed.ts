@@ -1,6 +1,13 @@
 import type { FeedInput, FeedItem, FeedOptions } from './types'
 
-/** Thin builder accepted by `serveFeed` and the low-level serializers. */
+/**
+ * Thin builder accepted by `serveFeed` and the low-level serializers.
+ *
+ * @example
+ * ```ts
+ * const feed = new Feed({ title: 'Blog', link: 'https://example.com' }).addItem({ title: 'Hello' })
+ * ```
+ */
 export class Feed {
   #options: FeedOptions
   #items: FeedItem[] = []

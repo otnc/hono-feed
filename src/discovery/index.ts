@@ -56,12 +56,9 @@ export function feedLinksHtml(options: FeedLinksOptions): string {
 
 const HEADER_ENCODER = new TextEncoder()
 
-// Everything that may appear raw in a URI-Reference (RFC 3986 unreserved + reserved), plus `%`
-// so hrefs that are already percent-encoded (e.g. from `absolutize`/`new URL`) pass through
-// untouched — which is also why `encodeURI` can't be used here (it escapes `%` itself and
-// would double-encode them). Anything else — spaces, `<`/`>`/`"`, and every non-ASCII
-// character — is UTF-8 percent-encoded: HTTP header values are ByteStrings, so a raw non-ASCII
-// character wouldn't just be malformed, it would make `Headers.append` throw.
+// RFC 3986 unreserved + reserved characters stay raw, plus `%` so already-encoded hrefs pass
+// through (`encodeURI` would double-encode them). Everything else is UTF-8 percent-encoded:
+// a raw non-ASCII character in a header value makes `Headers.append` throw.
 const HREF_UNSAFE = /[^A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]/gu
 
 function encodeHref(href: string): string {
@@ -72,20 +69,17 @@ function encodeHref(href: string): string {
   )
 }
 
-// A title that can be carried as an RFC 8288 quoted-string as-is: printable ASCII with no `"`
-// or `\` (the two characters that would need quoted-pair escaping — receivers' support for
-// quoted-pairs is spotty, so those fall through to `title*` too).
+// Printable ASCII without `"` or `\`, so it fits an RFC 8288 quoted-string unescaped
+// (receivers' quoted-pair support is spotty, so those two fall through to `title*`).
 const PLAIN_TITLE = /^[ !#-[\]-~]*$/
 
 // RFC 8187 attr-char, as what encodeURIComponent leaves raw minus what 8187 doesn't allow.
 const RFC8187_EXTRA = /[*'()]/g
 
 /**
- * Serialize the title as an RFC 8288 parameter: a plain `title="…"` quoted-string when the
- * value is simple ASCII, otherwise RFC 8187 extended encoding (`title*=UTF-8''…`) — a raw
- * non-Latin-1 character in a header value would make `Headers.append` throw. Only one form is
- * sent: RFC 8187 §4.2 has receivers prefer `title*` when both are present, so pairing them
- * would add bytes without changing behavior.
+ * Serialize the title as a plain `title="…"` when simple ASCII, otherwise as RFC 8187
+ * `title*=UTF-8''…`. Only one form is sent: receivers prefer `title*` when both are present,
+ * so pairing them would add bytes without changing behavior.
  */
 function titleParam(title: string): string {
   if (PLAIN_TITLE.test(title)) return `title="${title}"`

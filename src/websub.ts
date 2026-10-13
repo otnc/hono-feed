@@ -12,16 +12,24 @@ export interface NotifyHubOptions {
 }
 
 /**
- * Ping one or more WebSub hubs to tell them a feed has new content — the publisher's
- * obligation under WebSub §6 (Publishing). §6 deliberately leaves the notification mechanism
- * up to the hub and publisher; what's sent here is the de-facto standard inherited from
- * PubSubHubbub 0.4 that real-world hubs accept: one `fetch` POST per hub, form-encoded as
- * `hub.mode=publish` with a repeated `hub.url` parameter for every feed URL. Call this after
- * publishing/updating content.
+ * Ping one or more WebSub hubs to tell them a feed has new content (WebSub §6, Publishing).
+ * §6 leaves the mechanism open, so this sends what real-world hubs accept, inherited from
+ * PubSubHubbub 0.4: one form-encoded `fetch` POST per hub, `hub.mode=publish` plus a repeated
+ * `hub.url` for every feed URL. Call it after publishing or updating content.
  *
- * Never throws: a non-2xx response, a network error, or an aborted request are all reported as
- * a result rather than a rejection, so one unreachable hub can't fail the whole publish flow —
- * subscribers still get the update on their next poll regardless.
+ * Never throws: a non-2xx response, a network error or an abort is reported in the result, so
+ * one unreachable hub can't fail the publish flow. Subscribers catch up on their next poll.
+ *
+ * @param hub - Hub URL, or several.
+ * @param feedUrl - Feed URL that changed, or several.
+ * @param options - `signal` aborts every in-flight ping.
+ * @returns One result per hub, in the order given.
+ *
+ * @example
+ * ```ts
+ * const results = await notifyHub('https://pubsubhubbub.appspot.com/', 'https://example.com/feed.xml')
+ * const failed = results.filter((r) => !r.ok)
+ * ```
  */
 export async function notifyHub(
   hub: string | string[],
