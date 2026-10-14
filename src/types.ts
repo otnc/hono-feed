@@ -180,6 +180,10 @@ export interface FeedOptions {
   image?: string
   /** Atom icon / JSON favicon. */
   favicon?: string
+  /**
+   * Emit an item's `image` as a `<media:thumbnail>` in RSS 2.0 and Atom 1.0, so readers that show thumbnails pick it up. Default `false`, so `image` stays JSON Feed-only. Items that already set `media.thumbnails` keep their own. `xmlns:media` is declared automatically, only when a thumbnail is emitted.
+   */
+  itemImageAsThumbnail?: boolean
   /** Defaults to 'hono-feed'. */
   generator?: string
   /** RSS ttl in minutes. */
@@ -305,7 +309,7 @@ export interface FeedItem {
   media?: ItemMedia
   /** Where the item was republished from. RSS 2.0 and Atom 1.0 only; no JSON Feed equivalent. */
   source?: ItemSource
-  /** JSON image. */
+  /** JSON `image`. Also emitted as a `media:thumbnail` in RSS 2.0 / Atom 1.0 when `itemImageAsThumbnail` is `true` and `media.thumbnails` is unset. */
   image?: string
   /** JSON `external_url` — the linkblog pattern: `link` is your post, this is what it links to. */
   externalUrl?: string

@@ -1023,12 +1023,16 @@ feed.addItem({
 :::kiritan{locale=en}
 URLs are absolutized against `baseUrl` like every other URL field, and every entry needs a `url`. It is emitted for RSS 2.0 and Atom 1.0 only; JSON Feed has no equivalent (use the item's `image` there).
 
+Set `itemImageAsThumbnail: true` in the feed options to also emit each item's `image` as a `<media:thumbnail>` in RSS 2.0 and Atom 1.0, so readers that only look at Media RSS still show a preview. An item that sets `media.thumbnails` keeps its own and gets no extra one. Without the option, `image` stays JSON Feed-only.
+
 ## Extending with custom fields
 
 The neutral model is deliberately small — anything outside it (Media RSS, Dublin Core extras, a namespaced module hono-feed doesn't model, custom JSON Feed keys) needs an escape hatch. `customXml` / `customNamespaces` (XML formats) and `customJson` (JSON Feed) are that hatch, on both `FeedOptions` (feed-level) and `FeedItem` (item-level):
 :::
 :::kiritan{locale=ja}
 URL は、ほかの URL フィールドと同様に `baseUrl` を基準に絶対 URL になります。どのエントリにも `url` が必要です。出力されるのは RSS 2.0 と Atom 1.0 だけで、JSON Feed には対応するものがありません (JSON Feed では記事の `image` を使ってください)。
+
+フィードのオプションで `itemImageAsThumbnail: true` を指定すると、各記事の `image` が RSS 2.0 と Atom 1.0 でも `<media:thumbnail>` として出力されます。Media RSS だけを見るリーダーでもプレビューが表示されます。`media.thumbnails` を設定した記事は、その指定を優先し、サムネイルを追加しません。指定しない場合、`image` は JSON Feed だけに出力されます。
 
 ## カスタムフィールドで拡張する
 

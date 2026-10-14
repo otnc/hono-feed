@@ -697,6 +697,8 @@ feed.addItem({
 
 URL は、ほかの URL フィールドと同様に `baseUrl` を基準に絶対 URL になります。どのエントリにも `url` が必要です。出力されるのは RSS 2.0 と Atom 1.0 だけで、JSON Feed には対応するものがありません (JSON Feed では記事の `image` を使ってください)。
 
+フィードのオプションで `itemImageAsThumbnail: true` を指定すると、各記事の `image` が RSS 2.0 と Atom 1.0 でも `<media:thumbnail>` として出力されます。Media RSS だけを見るリーダーでもプレビューが表示されます。`media.thumbnails` を設定した記事は、その指定を優先し、サムネイルを追加しません。指定しない場合、`image` は JSON Feed だけに出力されます。
+
 ## カスタムフィールドで拡張する
 
 共通モデルは意図的に小さくしてあります。その範囲外のもの (Dublin Core の追加要素、hono-feed がモデル化していない名前空間付きのモジュール、独自の JSON Feed のキーなど)には、抜け道が必要です。それが `customXml` / `customNamespaces` (XML 形式向け)と `customJson` (JSON Feed 向け)で、`FeedOptions` (フィード単位)と `FeedItem` (記事単位)のどちらにも指定できます。

@@ -47,7 +47,7 @@ export function toRSS2(input: FeedInput, opts: SerializeOptions): string {
   if (!link) throw new TypeError('hono-feed: RSS requires "link" (or "feedUrl")')
 
   const channel = channelNodes(options, caps, base, link, self)
-  for (const item of items) channel.push(rssItem(item, caps, base))
+  for (const item of items) channel.push(rssItem(item, options, caps, base))
 
   const root = el(
     'rss',
@@ -171,7 +171,8 @@ function rootNamespaces(
     'xmlns:itunes': podcastNs.itunes ? ITUNES_NS : undefined,
     'xmlns:podcast': podcastNs.podcast ? PODCAST_NS : undefined,
     'xmlns:fh': hasFh ? 'http://purl.org/syndication/history/1.0' : undefined,
-    'xmlns:media': caps.rss20 && items.some((item) => hasMedia(item.media)) ? MEDIA_NS : undefined,
+    'xmlns:media':
+      caps.rss20 && items.some((item) => hasMedia(item, options)) ? MEDIA_NS : undefined,
   }
 }
 
@@ -180,7 +181,7 @@ function emailLine(email: string, name: string | undefined): string {
   return name ? `${email} (${name})` : email
 }
 
-function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
+function rssItem(item: FeedItem, options: FeedOptions, caps: Caps, base?: string): Node {
   const ch: Node[] = []
   ch.push(tag('title', item.title))
 
@@ -240,7 +241,7 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
   }
 
   if (caps.rss20) ch.push(...podcastItemNodes(item.podcast, enclosure, base))
-  if (caps.rss20) ch.push(...mediaItemNodes(item.media, base))
+  if (caps.rss20) ch.push(...mediaItemNodes(item, options, base))
 
   if (item.customXml) ch.push(...item.customXml.map(specToNode))
 
