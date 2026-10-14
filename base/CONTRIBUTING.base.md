@@ -91,7 +91,7 @@ Keep each change focused and add tests for any new behaviour. When something is 
 
 ## Releasing (maintainers)
 
-Releasing is one manual step. From the Actions tab, run the `release` workflow (`workflow_dispatch`) and give it a `version` input — either a bump keyword (`patch` / `minor` / `major` / `prerelease`) or an explicit version like `0.2.0`. The workflow runs the checks and build, bumps `package.json`, publishes to npm with provenance, pushes the version commit and tag, and creates a GitHub Release with generated notes. It needs an `NPM_TOKEN` secret and write access for the default `GITHUB_TOKEN`.
+Releasing is one manual step. From the Actions tab, run the `release` workflow (`workflow_dispatch`) and give it a `version` input — either a bump keyword (`patch` / `minor` / `major` / `prerelease`) or an explicit version like `0.2.0`. The workflow runs the checks and build, bumps `package.json`, publishes to npm with provenance, regenerates `CHANGELOG.md` with [git-cliff](https://git-cliff.org) (`cliff.toml`), pushes the version commit and tag, and creates a GitHub Release whose notes are the new changelog section. The changelog is built from [Conventional Commits](https://www.conventionalcommits.org) — `feat`, `fix`, `perf`, `refactor` and `docs` are listed, everything else is left out — so write commit messages in that form, and don't edit `CHANGELOG.md` by hand. It needs an `NPM_TOKEN` secret and write access for the default `GITHUB_TOKEN`.
 
 ## License
 
@@ -124,7 +124,7 @@ By contributing, you agree that your contributions are licensed under the [MIT L
 
 ## リリース (メンテナー向け)
 
-リリースの手作業は 1 つだけです。Actions タブから `release` ワークフロー (`workflow_dispatch`)を実行し、`version` 入力を渡します。値は、バージョンを上げるキーワード (`patch` / `minor` / `major` / `prerelease`)か、`0.2.0` のような明示的なバージョンです。ワークフローは検査とビルドを実行し、`package.json` のバージョンを更新して、provenance 付きで npm に公開します。その後、バージョンのコミットとタグを push し、自動生成したノートで GitHub Release を作成します。`NPM_TOKEN` シークレットと、既定の `GITHUB_TOKEN` への書き込み権限が必要です。
+リリースの手作業は 1 つだけです。Actions タブから `release` ワークフロー (`workflow_dispatch`)を実行し、`version` 入力を渡します。値は、バージョンを上げるキーワード (`patch` / `minor` / `major` / `prerelease`)か、`0.2.0` のような明示的なバージョンです。ワークフローは検査とビルドを実行し、`package.json` のバージョンを更新して、provenance 付きで npm に公開します。その後、[git-cliff](https://git-cliff.org) (`cliff.toml`)で `CHANGELOG.md` を再生成し、バージョンのコミットとタグを push して、新しい changelog の節をノートにした GitHub Release を作成します。changelog は [Conventional Commits](https://www.conventionalcommits.org) から作られます。一覧に載るのは `feat`、`fix`、`perf`、`refactor`、`docs` で、それ以外は載りません。コミットメッセージはこの形式で書き、`CHANGELOG.md` は手で編集しないでください。`NPM_TOKEN` シークレットと、既定の `GITHUB_TOKEN` への書き込み権限が必要です。
 
 ## ライセンス
 
