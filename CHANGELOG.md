@@ -2,6 +2,44 @@
 
 All notable changes to this project are documented here. This file is generated from commit messages by [git-cliff](https://git-cliff.org) when the `release` workflow runs.
 
+## [1.2.0](https://github.com/otnc/hono-feed/releases/tag/v1.2.0) - 2026-10-14
+
+### Features
+
+- Add paginate() to build RFC 5005 paging links
+- Add feedExtensionMap for hono/ssg
+- Add toOPML and serveOpml
+- Add Media RSS thumbnails and content via item.media
+- Add item.source for RSS 2.0 and Atom 1.0
+- Send WebSub hub and self Link headers from serveFeed
+- Map item.comments to Atom link rel=replies
+- Add generic links to feed options and items
+- Add absolutizeContent to resolve relative URLs in item HTML
+- Add itemImageAsThumbnail to emit item.image as media:thumbnail
+- Add lint rules and an ignore option to lintInput
+- Add robots and contentDisposition options to serveFeed
+- Add more Podcasting 2.0 tags (person, license, location, images, socialInteract, medium, trailer, season, episode)
+
+### Bug fixes
+
+- Keep supporting Node.js 20 in engines
+- Avoid a control-character regex in header validation
+
+### Refactoring
+
+- Speed up default ETag hashing and remove duplicated code
+- Share Atom and RSS 1.0/1.1 serializer helpers
+- Split toRSS2 into channel and namespace builders
+
+### Documentation
+
+- Tidy comments and add usage examples to public API docs
+- Join hard-wrapped comments and docs into single lines
+- Make README, CONTRIBUTING and HONOFEED_DEP bilingual with Kiritan
+- Document WebSub Link headers and Atom replies for comments
+- Remove reference to optional fields in RSS conformance test description
+- Add waitUntil and hono/jsx recipes for notifyHub and feedLinks
+
 ## [1.1.0](https://github.com/otnc/hono-feed/releases/tag/v1.1.0) - 2026-07-14
 
 ### Features
@@ -296,6 +334,7 @@ All notable changes to this project are documented here. This file is generated 
 
 - Add README and CONTRIBUTING
 
+[1.2.0]: https://github.com/otnc/hono-feed/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/otnc/hono-feed/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/otnc/hono-feed/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/otnc/hono-feed/compare/v0.7.1...v1.0.0
