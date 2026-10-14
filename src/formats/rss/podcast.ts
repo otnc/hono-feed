@@ -1,4 +1,15 @@
-import type { Enclosure, FeedItem, FeedOptions, ItemPodcast } from '../../types'
+import type {
+  Enclosure,
+  FeedItem,
+  FeedOptions,
+  ItemPodcast,
+  PodcastImages,
+  PodcastLicense,
+  PodcastLocation,
+  PodcastPerson,
+  PodcastSocialInteract,
+} from '../../types'
+import { rfc822 } from '../../utils/date'
 import { firstEnclosure } from '../../utils/enclosure'
 import { absolutize } from '../../utils/url'
 import { el, type Node, tag } from '../../utils/xml'
@@ -24,7 +35,18 @@ function hasItunesFeedFields(p: NonNullable<FeedOptions['podcast']>): boolean {
 }
 
 function hasPodcastNsFeedFields(p: NonNullable<FeedOptions['podcast']>): boolean {
-  return p.guid !== undefined || p.locked !== undefined || (p.funding?.length ?? 0) > 0
+  return (
+    p.guid !== undefined ||
+    p.locked !== undefined ||
+    (p.funding?.length ?? 0) > 0 ||
+    (p.person?.length ?? 0) > 0 ||
+    p.license !== undefined ||
+    p.medium !== undefined ||
+    p.location !== undefined ||
+    p.images !== undefined ||
+    (p.trailer?.length ?? 0) > 0 ||
+    (p.socialInteract?.length ?? 0) > 0
+  )
 }
 
 function hasItunesItemFields(p: ItemPodcast): boolean {
@@ -42,7 +64,68 @@ function hasItunesItemFields(p: ItemPodcast): boolean {
 }
 
 function hasPodcastNsItemFields(p: ItemPodcast): boolean {
-  return (p.transcript?.length ?? 0) > 0 || p.chapters !== undefined
+  return (
+    (p.transcript?.length ?? 0) > 0 ||
+    p.chapters !== undefined ||
+    (p.person?.length ?? 0) > 0 ||
+    p.license !== undefined ||
+    p.location !== undefined ||
+    p.images !== undefined ||
+    (p.socialInteract?.length ?? 0) > 0 ||
+    p.podcastSeason !== undefined ||
+    p.podcastEpisode !== undefined
+  )
+}
+
+// Podcasting 2.0 elements that look the same at feed and item level.
+function sharedPodcastNodes(
+  p: {
+    person?: PodcastPerson[]
+    license?: PodcastLicense
+    location?: PodcastLocation
+    images?: PodcastImages
+    socialInteract?: PodcastSocialInteract[]
+  },
+  base: string | undefined,
+): Node[] {
+  const nodes: Node[] = []
+  for (const person of p.person ?? []) {
+    nodes.push(
+      el(
+        'podcast:person',
+        {
+          role: person.role,
+          group: person.group,
+          img: absolutize(person.img, base),
+          href: absolutize(person.href, base),
+        },
+        person.name,
+      ),
+    )
+  }
+  if (p.license) {
+    nodes.push(
+      el('podcast:license', { url: absolutize(p.license.url, base) }, p.license.identifier),
+    )
+  }
+  if (p.location) {
+    nodes.push(
+      el('podcast:location', { geo: p.location.geo, osm: p.location.osm }, p.location.name),
+    )
+  }
+  if (p.images) nodes.push(el('podcast:images', { srcset: p.images.srcset }))
+  for (const social of p.socialInteract ?? []) {
+    nodes.push(
+      el('podcast:socialInteract', {
+        protocol: social.protocol,
+        uri: absolutize(social.uri, base),
+        accountId: social.accountId,
+        accountUrl: absolutize(social.accountUrl, base),
+        priority: social.priority,
+      }),
+    )
+  }
+  return nodes
 }
 
 /**
@@ -121,6 +204,23 @@ export function podcastChannelNodes(p: FeedOptions['podcast'], base: string | un
       nodes.push(el('podcast:funding', { url: absolutize(funding.url, base) }, funding.text))
     }
   }
+  if (p.medium) nodes.push(tag('podcast:medium', p.medium))
+  for (const trailer of p.trailer ?? []) {
+    nodes.push(
+      el(
+        'podcast:trailer',
+        {
+          url: absolutize(trailer.url, base),
+          pubdate: rfc822(trailer.pubDate),
+          length: trailer.length,
+          type: trailer.type,
+          season: trailer.season,
+        },
+        trailer.title,
+      ),
+    )
+  }
+  nodes.push(...sharedPodcastNodes(p, base))
   return nodes
 }
 
@@ -165,5 +265,24 @@ export function podcastItemNodes(
       }),
     )
   }
+  if (podcast.podcastSeason) {
+    nodes.push(
+      el(
+        'podcast:season',
+        { name: podcast.podcastSeason.name },
+        String(podcast.podcastSeason.number),
+      ),
+    )
+  }
+  if (podcast.podcastEpisode) {
+    nodes.push(
+      el(
+        'podcast:episode',
+        { display: podcast.podcastEpisode.display },
+        String(podcast.podcastEpisode.number),
+      ),
+    )
+  }
+  nodes.push(...sharedPodcastNodes(podcast, base))
   return nodes
 }

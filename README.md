@@ -535,6 +535,37 @@ feed.addItem({
 
 `podcast` is ignored outside RSS 2.0 (every other RSS version, Atom, and JSON Feed) — there's no equivalent to map it to. An explicit `customNamespaces` entry for `xmlns:itunes` / `xmlns:podcast` always wins over the automatic declaration.
 
+### More Podcasting 2.0 tags
+
+Beyond `guid` / `locked` / `funding` / `transcript` / `chapters`, these [Podcasting 2.0](https://github.com/Podcastindex-org/podcast-namespace) elements are modeled:
+
+| Element | Feed (`options.podcast`) | Episode (`item.podcast`) |
+| --- | --- | --- |
+| `podcast:person` | `person: [{ name, role?, group?, img?, href? }]` | same |
+| `podcast:license` | `license: { identifier, url? }` | same |
+| `podcast:location` | `location: { name, geo?, osm? }` | same |
+| `podcast:images` | `images: { srcset }` | same |
+| `podcast:socialInteract` | `socialInteract: [{ protocol, uri?, accountId?, accountUrl?, priority? }]` | same |
+| `podcast:medium` | `medium: 'podcast' \| 'music' \| 'video' \| …` | — |
+| `podcast:trailer` | `trailer: [{ title, url, pubDate, length?, type?, season? }]` | — |
+| `podcast:season` | — | `podcastSeason: { number, name? }` |
+| `podcast:episode` | — | `podcastEpisode: { number, display? }` |
+
+```ts
+feed.addItem({
+  title: 'Episode 12.5',
+  link: 'https://example.com/12-5',
+  podcast: {
+    person: [{ name: 'Ann Host', role: 'host', img: '/ann.jpg' }],
+    license: { identifier: 'CC-BY-4.0' },
+    podcastSeason: { number: 2, name: 'Race to Mars' },
+    podcastEpisode: { number: 12.5, display: 'Ch.12.5' },
+  },
+})
+```
+
+URLs (`img`, `href`, the license `url`, `uri`, `accountUrl`, the trailer `url`) are absolutized against `baseUrl`. `podcastSeason` / `podcastEpisode` are separate from the iTunes `season` / `episode` because the Podcasting 2.0 versions can carry a name or label and a fractional number. `podcast:value` (Value4Value) and `podcast:liveItem` are not modeled; reach for `customXml` if you need them.
+
 ## Feed discovery
 
 Serving a feed is half the story — it also has to be *findable*. `hono-feed/discovery` generates the `<link rel="alternate">` tags browsers and feed readers look for, and an HTTP `Link` header equivalent, from the same MIME-type table `serveFeed` itself uses (so they can never drift apart).
