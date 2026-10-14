@@ -279,6 +279,22 @@ app.get('/feed', (c) =>
 
 必要な項目がオブジェクトで足りるなら、オブジェクト形式をおすすめします。ディレクティブ名のタイプミスやカンマの付け忘れが起こりません。ただし生の文字列が非推奨になったわけではありません。ヘッダー本来の形であり、`CacheControlDirectives` がまだ扱っていないディレクティブ (やベンダー拡張)を使う手段として残っています。どちらの形式も正式にサポートしていて、どちらかをなくす予定はありません。
 
+## 追加のレスポンスヘッダー
+
+`serveFeed` を自分でラップしなくて済むように、省略可能なヘッダーを 2 つ用意しています。どちらも既定では送りません。
+
+- **`robots`**: `X-Robots-Tag` を送ります。`robots: 'noindex'` を指定すると、フィード自体は検索結果に出さず、リーダーからの取得はそのまま可能です。
+- **`contentDisposition`**: `Content-Disposition` を送ります。`{ filename: 'feed.xml' }` なら `inline; filename="feed.xml"` になります。`type: 'attachment'` を足すと、ブラウザーで表示せずダウンロードさせます。文字列を渡した場合は、そのまま送ります。ファイル名が ASCII 以外なら、RFC 8187 の `filename*` も付きます。どちらの値も制御文字を含むと例外を投げるので、ユーザー入力から作った値でヘッダーが分割されることはありません。
+
+```ts
+serveFeed(c, input, {
+  robots: 'noindex',
+  contentDisposition: { filename: 'feed.xml', type: 'attachment' },
+})
+```
+
+CORS は `hono/cors` で足りるので、このパッケージでは扱いません。
+
 ## 304 で処理を省く
 
 既定では、条件付きリクエストに答えるときでも、データを取得し直すためのやり取りが毎回丸ごと発生します。`serveFeed` は ETag の計算にシリアライズ済みの本文を必要とするので、`304` を返せるのはフィードを組み立てた*後*になるからです。`input` をデータベースから読み込んでいる場合、新しい内容がないポーリングのたびに無駄なクエリが走ります。しかもフィードリーダーは頻繁にポーリングします。
@@ -708,6 +724,8 @@ feed.addItem({
 
 URL は、ほかの URL フィールドと同様に `baseUrl` を基準に絶対 URL になります。どのエントリにも `url` が必要です。出力されるのは RSS 2.0 と Atom 1.0 だけで、JSON Feed には対応するものがありません (JSON Feed では記事の `image` を使ってください)。
 
+フィードのオプションで `itemImageAsThumbnail: true` を指定すると、各記事の `image` が RSS 2.0 と Atom 1.0 でも `<media:thumbnail>` として出力されます。Media RSS だけを見るリーダーでもプレビューが表示されます。`media.thumbnails` を設定した記事は、その指定を優先し、サムネイルを追加しません。指定しない場合、`image` は JSON Feed だけに出力されます。
+
 ## カスタムフィールドで拡張する
 
 共通モデルは意図的に小さくしてあります。その範囲外のもの (Dublin Core の追加要素、hono-feed がモデル化していない名前空間付きのモジュール、独自の JSON Feed のキーなど)には、抜け道が必要です。それが `customXml` / `customNamespaces` (XML 形式向け)と `customJson` (JSON Feed 向け)で、`FeedOptions` (フィード単位)と `FeedItem` (記事単位)のどちらにも指定できます。
@@ -753,7 +771,7 @@ const xml = toAtom({ options, items }, { baseUrl: 'https://example.com' })
 
 ## リント
 
-`validateInput` が検証するのは、ドキュメントを壊すものだけです (タイトルがない、Atom の author がない、など)。`lintInput` はさらに踏み込み、仕様上は省略可能でも、実際のリーダーやディレクトリが期待している項目を指摘します。たとえばフィードの `description` / `language` / `image` がない、記事に `id`、`author`、日付がない、`podcast` を設定したのにポッドキャストのメタデータが不完全、などです。例外は投げず、警告の `string[]` を返します (問題がなければ空)。`serveFeed` はこれを呼ばないので、テストや CI 向けの機能で、配信の経路では使いません。
+`validateInput` が検証するのは、ドキュメントを壊すものだけです (タイトルがない、Atom の author がない、など)。`lintInput` はさらに踏み込み、仕様上は省略可能でも、実際のリーダーやディレクトリが期待している項目を指摘します。たとえばフィードの `description` / `language` / `image` がない、記事に `id`、`author`、日付がない、`podcast` を設定したのにポッドキャストのメタデータが不完全、などです。よくあるミスも検出します。記事の `id` の重複、未来の日付 (多くはタイムゾーンの取り違え)、`content` / `description` に残った相対 URL (リーダーが解決できません)、`type` や `length` がない enclosure、長すぎる、または HTML が混ざったタイトル、100 件を超えるのに `paging` がないフィード、などです。例外は投げず、警告の `string[]` を返します (問題がなければ空)。`serveFeed` はこれを呼ばないので、テストや CI 向けの機能で、配信の経路では使いません。
 
 ```ts
 import { lintInput } from 'hono-feed'
@@ -761,6 +779,8 @@ import { lintInput } from 'hono-feed'
 const warnings = lintInput({ options, items }, 'rss')
 // e.g. expect(lintInput({ options, items }, 'rss')).toEqual([]) in a CI check
 ```
+
+すべてのルールに ID (`LintRuleId`) があり、許容するルールだけ無効にできます。たとえば `lintInput(input, 'rss', { ignore: ['feed-language', 'item-count'] })` のように指定します。`future-date` ルールは現在時刻と比較するので、テストを決定的にしたい場合は `now` を渡してください。
 
 ## コントリビュート
 

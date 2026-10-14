@@ -279,6 +279,22 @@ app.get('/feed', (c) =>
 
 The object form is recommended when the fields cover what you need — it can't typo a directive name or forget a comma. The raw string isn't deprecated, though: it's the header's own native shape, and it's still the way to reach directives (or vendor extensions) `CacheControlDirectives` doesn't model yet. Both forms are first-class and neither is going away.
 
+## Extra response headers
+
+Two optional headers cover the cases that otherwise need a wrapper around `serveFeed`. Both are omitted by default:
+
+- **`robots`** sends `X-Robots-Tag`. `robots: 'noindex'` keeps the feed document itself out of search results while readers can still fetch it.
+- **`contentDisposition`** sends `Content-Disposition`. Pass `{ filename: 'feed.xml' }` for `inline; filename="feed.xml"`, add `type: 'attachment'` to make browsers download the feed instead of rendering it, or pass a raw string to send it as-is. A non-ASCII filename also gets an RFC 8187 `filename*`. Control characters in either value throw, so a value taken from user input can't split the header.
+
+```ts
+serveFeed(c, input, {
+  robots: 'noindex',
+  contentDisposition: { filename: 'feed.xml', type: 'attachment' },
+})
+```
+
+CORS is left to `hono/cors`, which already covers a feed fetched from a browser.
+
 ## Skipping work on a 304
 
 By default, answering a conditional request still costs a full round trip through your data: `serveFeed` needs the serialized body to compute its ETag, so a `304` only happens *after* you've already built the feed. If `input` is loaded from a database, that's a wasted query on every poll that finds nothing new — and feed readers poll a lot.
@@ -708,6 +724,8 @@ feed.addItem({
 
 URLs are absolutized against `baseUrl` like every other URL field, and every entry needs a `url`. It is emitted for RSS 2.0 and Atom 1.0 only; JSON Feed has no equivalent (use the item's `image` there).
 
+Set `itemImageAsThumbnail: true` in the feed options to also emit each item's `image` as a `<media:thumbnail>` in RSS 2.0 and Atom 1.0, so readers that only look at Media RSS still show a preview. An item that sets `media.thumbnails` keeps its own and gets no extra one. Without the option, `image` stays JSON Feed-only.
+
 ## Extending with custom fields
 
 The neutral model is deliberately small — anything outside it (Media RSS, Dublin Core extras, a namespaced module hono-feed doesn't model, custom JSON Feed keys) needs an escape hatch. `customXml` / `customNamespaces` (XML formats) and `customJson` (JSON Feed) are that hatch, on both `FeedOptions` (feed-level) and `FeedItem` (item-level):
@@ -753,7 +771,7 @@ const xml = toAtom({ options, items }, { baseUrl: 'https://example.com' })
 
 ## Linting
 
-`validateInput` only enforces what breaks the document (a missing title, a missing Atom author, …). `lintInput` goes further: it flags fields that are optional per spec but expected by real readers and directories — a missing feed `description`/`language`/`image`, an item with no `id`, `author`, or date, incomplete Podcast metadata once `podcast` is set, and so on. It never throws and returns a plain `string[]` of warnings (empty when clean), and `serveFeed` never calls it — it's for tests and CI, not the serve path:
+`validateInput` only enforces what breaks the document (a missing title, a missing Atom author, …). `lintInput` goes further: it flags fields that are optional per spec but expected by real readers and directories — a missing feed `description`/`language`/`image`, an item with no `id`, `author`, or date, incomplete Podcast metadata once `podcast` is set, and so on. It also catches common mistakes: duplicate item ids, a date in the future (usually a timezone mix-up), relative URLs left in `content`/`description` (readers can't resolve them), an enclosure with no `type` or `length`, an overlong or HTML-laden title, and a feed of more than 100 items with no `paging`. It never throws and returns a plain `string[]` of warnings (empty when clean), and `serveFeed` never calls it — it's for tests and CI, not the serve path:
 
 ```ts
 import { lintInput } from 'hono-feed'
@@ -761,6 +779,8 @@ import { lintInput } from 'hono-feed'
 const warnings = lintInput({ options, items }, 'rss')
 // e.g. expect(lintInput({ options, items }, 'rss')).toEqual([]) in a CI check
 ```
+
+Every rule has an id (`LintRuleId`), so you can silence the ones you accept: `lintInput(input, 'rss', { ignore: ['feed-language', 'item-count'] })`. The `future-date` rule compares against the current time; pass `now` for a deterministic test.
 
 ## Contributing
 

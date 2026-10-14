@@ -101,3 +101,56 @@ describe('Media RSS', () => {
     expect(() => validateInput(withMedia, 'rss')).not.toThrow()
   })
 })
+
+describe('item.image as a media:thumbnail', () => {
+  const withImage: FeedInput = {
+    ...plain,
+    options: { ...plain.options, itemImageAsThumbnail: true },
+    items: [{ ...plain.items[0], image: '/cover.jpg' }],
+  }
+  const THUMB = '<media:thumbnail url="https://example.com/cover.jpg"/>'
+
+  it('emits item.image as media:thumbnail in RSS 2.0 and Atom 1.0 when opted in, declaring xmlns:media', () => {
+    for (const out of [toRSS(withImage, opts), toAtom(withImage, opts)]) {
+      expect(out).toContain(MEDIA_NS)
+      expect(out).toContain(THUMB)
+    }
+  })
+
+  it('defers to explicit media.thumbnails instead of adding a second one', () => {
+    const both: FeedInput = {
+      ...withImage,
+      items: [{ ...withImage.items[0], media: { thumbnails: [{ url: '/thumb.jpg' }] } }],
+    }
+    const out = toRSS(both, opts)
+    expect(out).toContain('<media:thumbnail url="https://example.com/thumb.jpg"/>')
+    expect(out).not.toContain('cover.jpg')
+  })
+
+  it('keeps media:content and adds the image thumbnail when only contents are set', () => {
+    const contentsOnly: FeedInput = {
+      ...withImage,
+      items: [{ ...withImage.items[0], media: { contents: [{ url: '/clip.mp4' }] } }],
+    }
+    const out = toAtom(contentsOnly, opts)
+    expect(out).toContain('<media:content url="https://example.com/clip.mp4"/>')
+    expect(out).toContain(THUMB)
+  })
+
+  it('is off by default, leaving image JSON Feed-only', () => {
+    const notOptedIn: FeedInput = {
+      ...withImage,
+      options: { ...withImage.options, itemImageAsThumbnail: undefined },
+    }
+    for (const out of [toRSS(notOptedIn, opts), toAtom(notOptedIn, opts)]) {
+      expect(out).not.toContain('media:')
+      expect(out).not.toContain('cover.jpg')
+    }
+  })
+
+  it('leaves older RSS/Atom versions and JSON Feed unchanged', () => {
+    expect(toRSS(withImage, { ...opts, rssVersion: '0.92' })).not.toContain('media:')
+    expect(toAtom(withImage, { ...opts, atomVersion: '0.3' })).not.toContain('media:')
+    expect(toJSONFeed(withImage, opts)).toContain('"image":"https://example.com/cover.jpg"')
+  })
+})

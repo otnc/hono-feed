@@ -1,11 +1,61 @@
 import type { Context } from 'hono'
-import type { CacheControlDirectives } from '../types'
+import type { CacheControlDirectives, ContentDispositionOptions } from '../types'
 import { serializeCacheControl } from './cache-control'
 import { resolveEtag } from './etag'
 
 const ENCODER = new TextEncoder()
 
 export const DEFAULT_CACHE_CONTROL = 'public, max-age=3600'
+
+function hasControlCharacter(value: string): boolean {
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i)
+    if (code <= 0x1f || code === 0x7f) return true
+  }
+  return false
+}
+
+function assertHeaderSafe(name: string, value: string): void {
+  if (hasControlCharacter(value)) {
+    throw new TypeError(`hono-feed: ${name} must not contain control characters`)
+  }
+}
+
+/** `Content-Disposition` value; a non-ASCII name gets an ASCII fallback plus an RFC 8187 `filename*`. */
+export function contentDispositionValue(value: string | ContentDispositionOptions): string {
+  if (typeof value === 'string') {
+    assertHeaderSafe('contentDisposition', value)
+    return value
+  }
+  assertHeaderSafe('contentDisposition filename', value.filename)
+  const type = value.type ?? 'inline'
+  const fallback = value.filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '\\$&')
+  const parts = [type, `filename="${fallback}"`]
+  if (/[^\x20-\x7e]/.test(value.filename)) {
+    const encoded = encodeURIComponent(value.filename).replace(
+      /['()*]/g,
+      (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`,
+    )
+    parts.push(`filename*=UTF-8''${encoded}`)
+  }
+  return parts.join('; ')
+}
+
+/** Headers contributed by the `robots` and `contentDisposition` serve options. */
+export function extraHeaders(options: {
+  robots?: string
+  contentDisposition?: string | ContentDispositionOptions
+}): Record<string, string> {
+  const headers: Record<string, string> = {}
+  if (options.robots) {
+    assertHeaderSafe('robots', options.robots)
+    headers['X-Robots-Tag'] = options.robots
+  }
+  if (options.contentDisposition) {
+    headers['Content-Disposition'] = contentDispositionValue(options.contentDisposition)
+  }
+  return headers
+}
 
 export function cacheControlValue(
   cacheControl: string | CacheControlDirectives | false,
@@ -67,6 +117,8 @@ export interface RespondOptions {
   vary?: boolean
   /** A ready `Link` header value. */
   link?: string
+  /** Additional ready headers (see `extraHeaders`). */
+  extraHeaders?: Record<string, string>
 }
 
 /** Build the final 200 or 304 for a serialized body: caching headers, conditional requests and HEAD. */
@@ -76,6 +128,7 @@ export function respond(c: Context, body: string, options: RespondOptions): Resp
   if (cacheControl) headers['Cache-Control'] = cacheControl
   if (options.vary) headers.Vary = 'Accept'
   if (options.link) headers.Link = options.link
+  Object.assign(headers, options.extraHeaders)
 
   let etagValue: string | undefined
   if (options.etagValue !== undefined) {
