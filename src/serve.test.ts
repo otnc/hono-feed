@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { describe, expect, it, vi } from 'vitest'
 import { Feed } from './feed'
 import { serveFeed } from './serve'
+import { extraHeaders } from './utils/respond'
 
 const buildFeed = () =>
   new Feed({
@@ -800,5 +801,73 @@ describe('serveFeed: etagFrom', () => {
     a.get('/feed', (c) => serveFeed(c, buildFeed(), { etagFrom: () => 'rev-11' }))
     const res = await a.request('/feed')
     expect(res.headers.get('last-modified')).toBe('Mon, 29 Jun 2026 00:00:00 GMT')
+  })
+})
+
+describe('robots and contentDisposition options', () => {
+  const appWith = (options: Parameters<typeof serveFeed>[2]) => {
+    const a = new Hono()
+    a.get('/feed', (c) =>
+      serveFeed(
+        c,
+        new Feed({ title: 't', link: 'https://example.com/' }).addItem({ title: 'a' }),
+        options,
+      ),
+    )
+    return a
+  }
+
+  it('sends neither header by default', async () => {
+    const res = await appWith({}).request('https://example.com/feed')
+    expect(res.headers.get('x-robots-tag')).toBeNull()
+    expect(res.headers.get('content-disposition')).toBeNull()
+  })
+
+  it('sends X-Robots-Tag from robots', async () => {
+    const res = await appWith({ robots: 'noindex' }).request('https://example.com/feed')
+    expect(res.headers.get('x-robots-tag')).toBe('noindex')
+  })
+
+  it('builds inline and attachment Content-Disposition from a filename', async () => {
+    const inline = await appWith({ contentDisposition: { filename: 'feed.xml' } }).request(
+      'https://example.com/feed',
+    )
+    expect(inline.headers.get('content-disposition')).toBe('inline; filename="feed.xml"')
+    const attachment = await appWith({
+      contentDisposition: { filename: 'feed.xml', type: 'attachment' },
+    }).request('https://example.com/feed')
+    expect(attachment.headers.get('content-disposition')).toBe('attachment; filename="feed.xml"')
+  })
+
+  it('sends a raw Content-Disposition string as-is', async () => {
+    const res = await appWith({ contentDisposition: 'attachment' }).request(
+      'https://example.com/feed',
+    )
+    expect(res.headers.get('content-disposition')).toBe('attachment')
+  })
+
+  it('gives a non-ASCII filename an ASCII fallback plus an RFC 8187 filename*', async () => {
+    const res = await appWith({ contentDisposition: { filename: 'ブログ "x".xml' } }).request(
+      'https://example.com/feed',
+    )
+    expect(res.headers.get('content-disposition')).toBe(
+      `inline; filename="___ \\"x\\".xml"; filename*=UTF-8''%E3%83%96%E3%83%AD%E3%82%B0%20%22x%22.xml`,
+    )
+  })
+
+  it('rejects control characters instead of splitting the header', () => {
+    expect(() => extraHeaders({ robots: 'noindex\r\nSet-Cookie: a=b' })).toThrow(TypeError)
+    expect(() => extraHeaders({ contentDisposition: { filename: 'a\nb' } })).toThrow(TypeError)
+    expect(() => extraHeaders({ contentDisposition: 'inline\r\nX: y' })).toThrow(TypeError)
+  })
+
+  it('also sends them on a 304', async () => {
+    const app = appWith({ robots: 'noindex' })
+    const first = await app.request('https://example.com/feed')
+    const res = await app.request('https://example.com/feed', {
+      headers: { 'If-None-Match': first.headers.get('etag') ?? '' },
+    })
+    expect(res.status).toBe(304)
+    expect(res.headers.get('x-robots-tag')).toBe('noindex')
   })
 })

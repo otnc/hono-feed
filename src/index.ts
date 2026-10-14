@@ -12,6 +12,7 @@ export type {
   Author,
   CacheControlDirectives,
   Category,
+  ContentDispositionOptions,
   Enclosure,
   FeedFormat,
   FeedInput,

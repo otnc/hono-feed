@@ -385,6 +385,22 @@ app.get('/feed', (c) =>
 
 The object form is recommended when the fields cover what you need — it can't typo a directive name or forget a comma. The raw string isn't deprecated, though: it's the header's own native shape, and it's still the way to reach directives (or vendor extensions) `CacheControlDirectives` doesn't model yet. Both forms are first-class and neither is going away.
 
+## Extra response headers
+
+Two optional headers cover the cases that otherwise need a wrapper around `serveFeed`. Both are omitted by default:
+
+- **`robots`** sends `X-Robots-Tag`. `robots: 'noindex'` keeps the feed document itself out of search results while readers can still fetch it.
+- **`contentDisposition`** sends `Content-Disposition`. Pass `{ filename: 'feed.xml' }` for `inline; filename="feed.xml"`, add `type: 'attachment'` to make browsers download the feed instead of rendering it, or pass a raw string to send it as-is. A non-ASCII filename also gets an RFC 8187 `filename*`. Control characters in either value throw, so a value taken from user input can't split the header.
+
+```ts
+serveFeed(c, input, {
+  robots: 'noindex',
+  contentDisposition: { filename: 'feed.xml', type: 'attachment' },
+})
+```
+
+CORS is left to `hono/cors`, which already covers a feed fetched from a browser.
+
 ## Skipping work on a 304
 
 By default, answering a conditional request still costs a full round trip through your data: `serveFeed` needs the serialized body to compute its ETag, so a `304` only happens *after* you've already built the feed. If `input` is loaded from a database, that's a wasted query on every poll that finds nothing new — and feed readers poll a lot.
@@ -398,6 +414,22 @@ Two options fix this, and they can be used together:
 `false` を指定すると、これまでどおりヘッダーを完全に省略します。
 
 必要な項目がオブジェクトで足りるなら、オブジェクト形式をおすすめします。ディレクティブ名のタイプミスやカンマの付け忘れが起こりません。ただし生の文字列が非推奨になったわけではありません。ヘッダー本来の形であり、`CacheControlDirectives` がまだ扱っていないディレクティブ (やベンダー拡張)を使う手段として残っています。どちらの形式も正式にサポートしていて、どちらかをなくす予定はありません。
+
+## 追加のレスポンスヘッダー
+
+`serveFeed` を自分でラップしなくて済むように、省略可能なヘッダーを 2 つ用意しています。どちらも既定では送りません。
+
+- **`robots`**: `X-Robots-Tag` を送ります。`robots: 'noindex'` を指定すると、フィード自体は検索結果に出さず、リーダーからの取得はそのまま可能です。
+- **`contentDisposition`**: `Content-Disposition` を送ります。`{ filename: 'feed.xml' }` なら `inline; filename="feed.xml"` になります。`type: 'attachment'` を足すと、ブラウザーで表示せずダウンロードさせます。文字列を渡した場合は、そのまま送ります。ファイル名が ASCII 以外なら、RFC 8187 の `filename*` も付きます。どちらの値も制御文字を含むと例外を投げるので、ユーザー入力から作った値でヘッダーが分割されることはありません。
+
+```ts
+serveFeed(c, input, {
+  robots: 'noindex',
+  contentDisposition: { filename: 'feed.xml', type: 'attachment' },
+})
+```
+
+CORS は `hono/cors` で足りるので、このパッケージでは扱いません。
 
 ## 304 で処理を省く
 
