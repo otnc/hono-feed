@@ -79,6 +79,87 @@ export interface PodcastChapters {
   type?: string
 }
 
+/** `podcast:person` (Podcasting 2.0) — a host, guest or other contributor. */
+export interface PodcastPerson {
+  /** Display name (the element's text). */
+  name: string
+  /** Role such as `'host'`, `'guest'`, `'producer'`; defaults to `host` for readers when omitted. */
+  role?: string
+  /** Group such as `'cast'` or `'writing'`. */
+  group?: string
+  /** Avatar image URL. */
+  img?: string
+  /** Homepage or profile URL. */
+  href?: string
+}
+
+/** `podcast:license` (Podcasting 2.0). */
+export interface PodcastLicense {
+  /** SPDX identifier (e.g. `'CC-BY-4.0'`) or a free-form name (the element's text). */
+  identifier: string
+  /** URL of the full license text, recommended when `identifier` isn't an SPDX one. */
+  url?: string
+}
+
+/** `podcast:location` (Podcasting 2.0) — the subject or origin of the show or episode. */
+export interface PodcastLocation {
+  /** Human-readable place name (the element's text). */
+  name: string
+  /** A `geo:` URI, e.g. `'geo:30.2672,-97.7431'`. */
+  geo?: string
+  /** OpenStreetMap identifier, e.g. `'R113314'`. */
+  osm?: string
+}
+
+/** `podcast:images` (Podcasting 2.0) — responsive artwork as an HTML `srcset`-style string. */
+export interface PodcastImages {
+  /** e.g. `'https://x.test/a-320.jpg 320w, https://x.test/a-640.jpg 640w'`. */
+  srcset: string
+}
+
+/** `podcast:socialInteract` (Podcasting 2.0) — where listeners can discuss the show or an episode. */
+export interface PodcastSocialInteract {
+  /** `'activitypub'`, `'twitter'`, `'disabled'`, … */
+  protocol: string
+  /** URL of the root post or comment thread. */
+  uri?: string
+  /** The publisher's account handle on that protocol. */
+  accountId?: string
+  /** Link to the publisher's account. */
+  accountUrl?: string
+  /** Preference order when several are given; lower is preferred. */
+  priority?: number
+}
+
+/** `podcast:trailer` (Podcasting 2.0) — a trailer for the show, at feed level. */
+export interface PodcastTrailer {
+  /** Trailer title (the element's text). */
+  title: string
+  url: string
+  /** Publication date, emitted as `pubdate` in RFC 822 form. */
+  pubDate: Date
+  /** Size in bytes. */
+  length?: number
+  /** MIME type. */
+  type?: string
+  /** Season the trailer belongs to. */
+  season?: number
+}
+
+/** `podcast:season` (Podcasting 2.0) — a season number with an optional name. */
+export interface PodcastSeason {
+  number: number
+  /** Season name, e.g. `'Race to Mars'`. */
+  name?: string
+}
+
+/** `podcast:episode` (Podcasting 2.0) — an episode number, which may be fractional. */
+export interface PodcastEpisode {
+  number: number
+  /** Display label, e.g. `'Ch.3'`. */
+  display?: string
+}
+
 /**
  * Podcast metadata for the feed as a whole (RSS 2.0 only — ignored by Atom, JSON Feed, and every other RSS version). Covers the iTunes namespace and the Podcasting 2.0 namespace; `xmlns:itunes` / `xmlns:podcast` are declared automatically, only when a field from that namespace is actually set somewhere in the feed. An explicit `customNamespaces` entry for either prefix always wins over the automatic one.
  */
@@ -113,6 +194,20 @@ export interface FeedPodcast {
   complete?: boolean
   /** `itunes:new-feed-url` — feed moved; directories should re-point to this URL. */
   newFeedUrl?: string
+  /** `podcast:person` — one element per entry. */
+  person?: PodcastPerson[]
+  /** `podcast:license`. */
+  license?: PodcastLicense
+  /** `podcast:medium` — what kind of content the feed carries. */
+  medium?: 'podcast' | 'music' | 'video' | 'film' | 'audiobook' | 'newsletter' | 'blog'
+  /** `podcast:location`. */
+  location?: PodcastLocation
+  /** `podcast:images`. */
+  images?: PodcastImages
+  /** `podcast:trailer` — one element per entry. */
+  trailer?: PodcastTrailer[]
+  /** `podcast:socialInteract` — one element per entry. */
+  socialInteract?: PodcastSocialInteract[]
 }
 
 /** Podcast metadata for a single episode (RSS 2.0 only — see `FeedPodcast`). */
@@ -137,6 +232,20 @@ export interface ItemPodcast {
   title?: string
   /** `itunes:block` — `true` hides this episode from Apple Podcasts. */
   block?: boolean
+  /** `podcast:person` — one element per entry. */
+  person?: PodcastPerson[]
+  /** `podcast:license`. */
+  license?: PodcastLicense
+  /** `podcast:location`. */
+  location?: PodcastLocation
+  /** `podcast:images`. */
+  images?: PodcastImages
+  /** `podcast:socialInteract` — one element per entry. */
+  socialInteract?: PodcastSocialInteract[]
+  /** `podcast:season` — unlike `season` (`itunes:season`), it can carry a name. */
+  podcastSeason?: PodcastSeason
+  /** `podcast:episode` — unlike `episode` (`itunes:episode`), it can be fractional and carry a display label. */
+  podcastEpisode?: PodcastEpisode
 }
 
 /**

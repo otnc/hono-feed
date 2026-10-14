@@ -508,6 +508,37 @@ feed.addItem({
 
 `podcast` は RSS 2.0 以外 (ほかのすべての RSS バージョン、Atom、JSON Feed)では無視されます。対応づけられる項目がないためです。`xmlns:itunes` / `xmlns:podcast` を `customNamespaces` に明示した場合は、自動の宣言より常にそちらが優先されます。
 
+### Podcasting 2.0 のその他のタグ
+
+`guid` / `locked` / `funding` / `transcript` / `chapters` のほかに、次の [Podcasting 2.0](https://github.com/Podcastindex-org/podcast-namespace) の要素を扱えます。
+
+| 要素 | フィード (`options.podcast`) | エピソード (`item.podcast`) |
+| --- | --- | --- |
+| `podcast:person` | `person: [{ name, role?, group?, img?, href? }]` | 同じ |
+| `podcast:license` | `license: { identifier, url? }` | 同じ |
+| `podcast:location` | `location: { name, geo?, osm? }` | 同じ |
+| `podcast:images` | `images: { srcset }` | 同じ |
+| `podcast:socialInteract` | `socialInteract: [{ protocol, uri?, accountId?, accountUrl?, priority? }]` | 同じ |
+| `podcast:medium` | `medium: 'podcast' \| 'music' \| 'video' \| …` | なし |
+| `podcast:trailer` | `trailer: [{ title, url, pubDate, length?, type?, season? }]` | なし |
+| `podcast:season` | なし | `podcastSeason: { number, name? }` |
+| `podcast:episode` | なし | `podcastEpisode: { number, display? }` |
+
+```ts
+feed.addItem({
+  title: 'Episode 12.5',
+  link: 'https://example.com/12-5',
+  podcast: {
+    person: [{ name: 'Ann Host', role: 'host', img: '/ann.jpg' }],
+    license: { identifier: 'CC-BY-4.0' },
+    podcastSeason: { number: 2, name: 'Race to Mars' },
+    podcastEpisode: { number: 12.5, display: 'Ch.12.5' },
+  },
+})
+```
+
+URL (`img`、`href`、ライセンスの `url`、`uri`、`accountUrl`、トレーラーの `url`)は `baseUrl` を基準に絶対 URL になります。`podcastSeason` / `podcastEpisode` を iTunes の `season` / `episode` と分けているのは、Podcasting 2.0 版には名前や表示用ラベルと、小数の番号を持たせられるためです。`podcast:value` (Value4Value)と `podcast:liveItem` は扱いません。必要なら `customXml` を使ってください。
+
 ## フィードの発見
 
 フィードを配信するだけでは半分です。*見つけてもらえる*ようにする必要もあります。`hono-feed/discovery` は、ブラウザーやフィードリーダーが探す `<link rel="alternate">` タグと、それに相当する HTTP の `Link` ヘッダーを生成します。`serveFeed` 自身が使うのと同じ MIME タイプの表から作るので、両者がずれることはありません。
