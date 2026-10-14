@@ -49,6 +49,22 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # CHANGELOG.md is rebuilt from the commit history (cliff.toml) with the new version as the latest release, and the same section becomes the GitHub Release notes.
+      - name: Generate changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --tag ${{ steps.bump.outputs.version }}
+        env:
+          OUTPUT: CHANGELOG.md
+      - name: Generate release notes
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --unreleased --strip all --tag ${{ steps.bump.outputs.version }}
+        env:
+          OUTPUT: RELEASE_NOTES.md
+
       # pnpm doesn't do the OIDC exchange, so publish uses npm directly
       - run: npm install -g npm@11
       - run: npm publish --access public --provenance
@@ -57,9 +73,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          # Only commit when the bump actually changed package.json; otherwise just tag and release.
-          if [ "${{ steps.bump.outputs.changed }}" = "true" ]; then
-            git commit -am "release: ${{ steps.bump.outputs.version }}"
+          # Only commit when the bump or the regenerated changelog changed something; otherwise just tag and release.
+          git add package.json CHANGELOG.md
+          if ! git diff --cached --quiet; then
+            git commit -m "release: ${{ steps.bump.outputs.version }}"
           fi
           if ! git rev-parse -q --verify "refs/tags/${{ steps.bump.outputs.version }}" >/dev/null; then
             git tag "${{ steps.bump.outputs.version }}"
@@ -69,4 +86,11 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ steps.bump.outputs.version }}" --title "${{ steps.bump.outputs.version }}" --generate-notes
+        run: |
+          # The notes are the new changelog section minus its version heading. Re-releasing a version with no new commits leaves it empty, so fall back to GitHub's generated notes.
+          if [ -s RELEASE_NOTES.md ]; then
+            sed -i '1,2d' RELEASE_NOTES.md
+            gh release create "${{ steps.bump.outputs.version }}" --title "${{ steps.bump.outputs.version }}" --notes-file RELEASE_NOTES.md
+          else
+            gh release create "${{ steps.bump.outputs.version }}" --title "${{ steps.bump.outputs.version }}" --generate-notes
+          fi

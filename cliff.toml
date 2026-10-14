@@ -1,0 +1,54 @@
+# git-cliff configuration: https://git-cliff.org/docs/configuration
+# CHANGELOG.md is generated from Conventional Commits; do not edit it by hand.
+# Regenerate with: npx git-cliff -o CHANGELOG.md
+
+[changelog]
+header = """
+# Changelog
+
+All notable changes to this project are documented here. This file is generated from commit messages by [git-cliff](https://git-cliff.org) when the `release` workflow runs.
+"""
+body = """
+{% if version %}## [{{ version | trim_start_matches(pat="v") }}](https://github.com/otnc/hono-feed/releases/tag/{{ version }}) - {{ timestamp | date(format="%Y-%m-%d") }}{% else %}## Unreleased{% endif %}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim | upper_first }}
+
+{% for commit in commits -%}
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message | upper_first }}
+{% endfor -%}
+{% endfor %}
+"""
+footer = """
+{% for release in releases -%}
+{% if release.version -%}
+{% if release.previous.version -%}
+[{{ release.version | trim_start_matches(pat="v") }}]: https://github.com/otnc/hono-feed/compare/{{ release.previous.version }}...{{ release.version }}
+{% else -%}
+[{{ release.version | trim_start_matches(pat="v") }}]: https://github.com/otnc/hono-feed/releases/tag/{{ release.version }}
+{% endif -%}
+{% endif -%}
+{% endfor -%}
+"""
+trim = false
+
+[git]
+conventional_commits = true
+# Commits that are not Conventional Commits (the initial commit, a license change, a bare "fix") are left out.
+filter_unconventional = true
+# Pull requests are merged with merge commits; the commits inside them are what get listed.
+filter_commits = false
+topo_order = false
+sort_commits = "oldest"
+tag_pattern = "v[0-9].*"
+# Groups are ordered by their key, hence the numeric prefix (stripped in the template).
+commit_parsers = [
+  { message = "^release", skip = true },
+  { message = "^Revert", skip = true },
+  { message = "^feat", group = "<!-- 0 -->Features" },
+  { message = "^fix", group = "<!-- 1 -->Bug fixes" },
+  { message = "^perf", group = "<!-- 2 -->Performance" },
+  { message = "^refactor", group = "<!-- 3 -->Refactoring" },
+  { message = "^docs", group = "<!-- 4 -->Documentation" },
+  # Everything else (test, ci, chore, build, style, pj, scripts, …) is not user-facing.
+  { message = ".*", skip = true },
+]
