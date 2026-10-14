@@ -1,5 +1,6 @@
 export { Feed } from './feed'
 export { toAtom, toJSONFeed, toRSS } from './formats'
+export type { LintOptions, LintRuleId } from './lint'
 export { lintInput } from './lint'
 export type { FeedMiddlewareEnv, ServeFeedFn } from './middleware'
 export { feed as feedMiddleware } from './middleware'
@@ -12,10 +13,12 @@ export type {
   Author,
   CacheControlDirectives,
   Category,
+  ContentDispositionOptions,
   Enclosure,
   FeedFormat,
   FeedInput,
   FeedItem,
+  FeedLink,
   FeedOptions,
   FeedPodcast,
   ItemMedia,
@@ -25,8 +28,16 @@ export type {
   MediaContent,
   MediaThumbnail,
   PodcastChapters,
+  PodcastEpisode,
   PodcastFunding,
+  PodcastImages,
+  PodcastLicense,
+  PodcastLocation,
   PodcastOwner,
+  PodcastPerson,
+  PodcastSeason,
+  PodcastSocialInteract,
+  PodcastTrailer,
   PodcastTranscript,
   RssVersion,
   SerializeOptions,

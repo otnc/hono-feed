@@ -1,7 +1,8 @@
-import type { FeedInput, FeedItem, SerializeOptions } from '../../types'
+import type { FeedInput, FeedItem, FeedOptions, SerializeOptions } from '../../types'
 import { latestDate, rfc3339 } from '../../utils/date'
 import { firstEnclosure } from '../../utils/enclosure'
 import { hubList } from '../../utils/hub'
+import { extraLinkNodes } from '../../utils/links'
 import { pagingMarker, pagingRels } from '../../utils/paging'
 import { absolutize } from '../../utils/url'
 import { el, type Node, specToNode, tag, xmlDocument } from '../../utils/xml'
@@ -41,9 +42,10 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
   // RFC 4287 §4.2.8: icon is a small square, logo a 2:1 image — same roles as RSS <image> and JSON Feed icon/favicon.
   if (options.favicon) feed.push(tag('icon', absolutize(options.favicon, base)))
   if (options.image) feed.push(tag('logo', absolutize(options.image, base)))
+  feed.push(...extraLinkNodes(options.links, 'link', base))
   if (options.customXml) feed.push(...options.customXml.map(specToNode))
 
-  for (const item of items) feed.push(atomEntry10(item, base))
+  for (const item of items) feed.push(atomEntry10(item, options, base))
 
   const hasFh = options.paging !== undefined && pagingMarker(options.paging)
   // renderAttrs drops undefined values, so xml:lang simply vanishes when language is unset.
@@ -51,13 +53,13 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
     xmlns: 'http://www.w3.org/2005/Atom',
     'xml:lang': options.language,
     'xmlns:fh': hasFh ? 'http://purl.org/syndication/history/1.0' : undefined,
-    'xmlns:media': items.some((item) => hasMedia(item.media)) ? MEDIA_NS : undefined,
+    'xmlns:media': items.some((item) => hasMedia(item, options)) ? MEDIA_NS : undefined,
     ...options.customNamespaces,
   }
   return xmlDocument(el('feed', attrs, feed), { pretty: opts.pretty, version: opts.xmlVersion })
 }
 
-function atomEntry10(item: FeedItem, base?: string): Node {
+function atomEntry10(item: FeedItem, options: FeedOptions, base?: string): Node {
   const link = absolutize(item.link, base)
   const id = requireAtomId(item.id ?? link, 'Atom entry')
 
@@ -89,8 +91,9 @@ function atomEntry10(item: FeedItem, base?: string): Node {
   const enclosure = firstEnclosure(item.enclosure)
   if (enclosure) ch.push(atomEnclosureLink(enclosure, base))
 
-  ch.push(...mediaItemNodes(item.media, base))
+  ch.push(...mediaItemNodes(item, options, base))
 
+  ch.push(...extraLinkNodes(item.links, 'link', base))
   if (item.customXml) ch.push(...item.customXml.map(specToNode))
 
   // renderAttrs drops undefined values, so xml:lang simply vanishes when language is unset.

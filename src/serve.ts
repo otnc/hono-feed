@@ -28,6 +28,7 @@ import {
   cacheControlValue,
   DEFAULT_CACHE_CONTROL,
   etagMatches,
+  extraHeaders,
   isConditionalMethod,
   respond,
 } from './utils/respond'
@@ -134,6 +135,7 @@ function serveWithEtagFrom(
     if (cacheControl) headers['Cache-Control'] = cacheControl
     // RFC 9110 §15.4.5: a 304 MUST carry the same Vary a 200 for this request would have.
     if (negotiation.negotiated) headers.Vary = 'Accept'
+    Object.assign(headers, extraHeaders(options))
     return c.body(null, 304, headers)
   }
   return resolveInput(input, (resolved) =>
@@ -302,6 +304,7 @@ function finishServeFeed(
 
   return respond(c, body, {
     link: webSubLinkHeader(resolved.options.hub, feedUrl, base),
+    extraHeaders: extraHeaders(options),
     contentType: CONTENT_TYPE[format],
     cacheControl,
     etag,
