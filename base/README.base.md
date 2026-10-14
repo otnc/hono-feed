@@ -829,6 +829,25 @@ app.get('/', (c) =>
 ```
 
 :::kiritan{locale=en}
+With `hono/jsx`, map `feedLinks()` to `<link>` elements instead of reaching for `raw()`:
+:::
+:::kiritan{locale=ja}
+`hono/jsx` では、`raw()` を使わずに、`feedLinks()` の結果を `<link>` 要素に変換します。
+:::
+
+```tsx
+import { feedLinks } from 'hono-feed/discovery'
+
+const FeedLinks = () => (
+  <>
+    {feedLinks({ title: 'My Blog', rss: '/feed.rss', atom: '/feed.atom' }).map((l) => (
+      <link rel={l.rel} type={l.type} href={l.href} title={l.title} />
+    ))}
+  </>
+)
+```
+
+:::kiritan{locale=en}
 `feedLinks(options)` returns the same data as a plain array (`{ rel, type, href, title? }[]`) instead of a string, for JSX or any other templating you already use. Both accept `baseUrl` to absolutize relative feed URLs; left unset, hrefs stay exactly as given (relative, resolved by the browser against the current page — which is usually what you want).
 
 For the HTTP-header equivalent ([RFC 8288](https://www.rfc-editor.org/rfc/rfc8288)), `feedLinkHeader` is middleware that appends one `Link` header per configured format, but only to responses whose `Content-Type` is HTML — a feed response has no use for advertising its own alternates:
@@ -929,6 +948,21 @@ const results = await notifyHub(
   'https://example.com/feed.rss', // feed URL(s) that changed — string or string[]
 )
 // [{ hub: 'https://pubsubhubbub.appspot.com/', ok: true, status: 204 }]
+```
+
+:::kiritan{locale=en}
+On Cloudflare Workers (and other runtimes that stop work once the response is sent), hand the promise to `waitUntil` so the ping isn't cut off. Without it the request can be cancelled before the hub is reached:
+:::
+:::kiritan{locale=ja}
+Cloudflare Workers など、レスポンスを返すと処理が打ち切られるランタイムでは、Promise を `waitUntil` に渡してください。渡さないと、ハブに届く前にリクエストが中断されることがあります。
+:::
+
+```ts
+app.post('/publish', async (c) => {
+  await savePost(c)
+  c.executionCtx.waitUntil(notifyHub('https://pubsubhubbub.appspot.com/', 'https://example.com/feed.rss'))
+  return c.text('ok')
+})
 ```
 
 :::kiritan{locale=en}

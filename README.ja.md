@@ -559,6 +559,20 @@ app.get('/', (c) =>
 // <link rel="alternate" type="application/atom+xml" title="My Blog" href="/feed.atom">
 ```
 
+`hono/jsx` では、`raw()` を使わずに、`feedLinks()` の結果を `<link>` 要素に変換します。
+
+```tsx
+import { feedLinks } from 'hono-feed/discovery'
+
+const FeedLinks = () => (
+  <>
+    {feedLinks({ title: 'My Blog', rss: '/feed.rss', atom: '/feed.atom' }).map((l) => (
+      <link rel={l.rel} type={l.type} href={l.href} title={l.title} />
+    ))}
+  </>
+)
+```
+
 `feedLinks(options)` は同じデータを文字列ではなく単純な配列 (`{ rel, type, href, title? }[]`)で返します。JSX など、すでに使っているテンプレートの仕組みで使えます。どちらも `baseUrl` を受け取り、相対のフィード URL を絶対 URL にできます。未指定の場合、href は指定したままになります。相対 URL はブラウザーが現在のページを基準に解決するので、多くの場合はそれで問題ありません。
 
 HTTP ヘッダーで同じことをするには ([RFC 8288](https://www.rfc-editor.org/rfc/rfc8288))、ミドルウェアの `feedLinkHeader` を使います。設定したフォーマットごとに `Link` ヘッダーを 1 つ追加しますが、対象は `Content-Type` が HTML の応答だけです。フィードの応答が自分の別形式を宣伝しても意味がないためです。
@@ -625,6 +639,16 @@ const results = await notifyHub(
   'https://example.com/feed.rss', // feed URL(s) that changed — string or string[]
 )
 // [{ hub: 'https://pubsubhubbub.appspot.com/', ok: true, status: 204 }]
+```
+
+Cloudflare Workers など、レスポンスを返すと処理が打ち切られるランタイムでは、Promise を `waitUntil` に渡してください。渡さないと、ハブに届く前にリクエストが中断されることがあります。
+
+```ts
+app.post('/publish', async (c) => {
+  await savePost(c)
+  c.executionCtx.waitUntil(notifyHub('https://pubsubhubbub.appspot.com/', 'https://example.com/feed.rss'))
+  return c.text('ok')
+})
 ```
 
 `notifyHub` は例外を投げません。2xx 以外の応答、ネットワークエラー、中断されたリクエスト (タイムアウトさせたいときは `{ signal }` を渡します)は、すべて拒否(rejection)ではなく結果として報告されます。そのため、到達できないハブが 1 つあっても、公開の流れ全体が失敗することはありません。いずれの場合も、購読者は次のポーリングで更新を受け取れます。
