@@ -1,5 +1,6 @@
 export { Feed } from './feed'
 export { toAtom, toJSONFeed, toRSS } from './formats'
+export type { LintOptions, LintRuleId } from './lint'
 export { lintInput } from './lint'
 export type { FeedMiddlewareEnv, ServeFeedFn } from './middleware'
 export { feed as feedMiddleware } from './middleware'

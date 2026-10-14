@@ -1097,12 +1097,12 @@ const xml = toAtom({ options, items }, { baseUrl: 'https://example.com' })
 :::kiritan{locale=en}
 ## Linting
 
-`validateInput` only enforces what breaks the document (a missing title, a missing Atom author, …). `lintInput` goes further: it flags fields that are optional per spec but expected by real readers and directories — a missing feed `description`/`language`/`image`, an item with no `id`, `author`, or date, incomplete Podcast metadata once `podcast` is set, and so on. It never throws and returns a plain `string[]` of warnings (empty when clean), and `serveFeed` never calls it — it's for tests and CI, not the serve path:
+`validateInput` only enforces what breaks the document (a missing title, a missing Atom author, …). `lintInput` goes further: it flags fields that are optional per spec but expected by real readers and directories — a missing feed `description`/`language`/`image`, an item with no `id`, `author`, or date, incomplete Podcast metadata once `podcast` is set, and so on. It also catches common mistakes: duplicate item ids, a date in the future (usually a timezone mix-up), relative URLs left in `content`/`description` (readers can't resolve them), an enclosure with no `type` or `length`, an overlong or HTML-laden title, and a feed of more than 100 items with no `paging`. It never throws and returns a plain `string[]` of warnings (empty when clean), and `serveFeed` never calls it — it's for tests and CI, not the serve path:
 :::
 :::kiritan{locale=ja}
 ## リント
 
-`validateInput` が検証するのは、ドキュメントを壊すものだけです (タイトルがない、Atom の author がない、など)。`lintInput` はさらに踏み込み、仕様上は省略可能でも、実際のリーダーやディレクトリが期待している項目を指摘します。たとえばフィードの `description` / `language` / `image` がない、記事に `id`、`author`、日付がない、`podcast` を設定したのにポッドキャストのメタデータが不完全、などです。例外は投げず、警告の `string[]` を返します (問題がなければ空)。`serveFeed` はこれを呼ばないので、テストや CI 向けの機能で、配信の経路では使いません。
+`validateInput` が検証するのは、ドキュメントを壊すものだけです (タイトルがない、Atom の author がない、など)。`lintInput` はさらに踏み込み、仕様上は省略可能でも、実際のリーダーやディレクトリが期待している項目を指摘します。たとえばフィードの `description` / `language` / `image` がない、記事に `id`、`author`、日付がない、`podcast` を設定したのにポッドキャストのメタデータが不完全、などです。よくあるミスも検出します。記事の `id` の重複、未来の日付 (多くはタイムゾーンの取り違え)、`content` / `description` に残った相対 URL (リーダーが解決できません)、`type` や `length` がない enclosure、長すぎる、または HTML が混ざったタイトル、100 件を超えるのに `paging` がないフィード、などです。例外は投げず、警告の `string[]` を返します (問題がなければ空)。`serveFeed` はこれを呼ばないので、テストや CI 向けの機能で、配信の経路では使いません。
 :::
 
 ```ts
@@ -1111,6 +1111,13 @@ import { lintInput } from 'hono-feed'
 const warnings = lintInput({ options, items }, 'rss')
 // e.g. expect(lintInput({ options, items }, 'rss')).toEqual([]) in a CI check
 ```
+
+:::kiritan{locale=en}
+Every rule has an id (`LintRuleId`), so you can silence the ones you accept: `lintInput(input, 'rss', { ignore: ['feed-language', 'item-count'] })`. The `future-date` rule compares against the current time; pass `now` for a deterministic test.
+:::
+:::kiritan{locale=ja}
+すべてのルールに ID (`LintRuleId`) があり、許容するルールだけ無効にできます。たとえば `lintInput(input, 'rss', { ignore: ['feed-language', 'item-count'] })` のように指定します。`future-date` ルールは現在時刻と比較するので、テストを決定的にしたい場合は `now` を渡してください。
+:::
 
 :::kiritan{locale=en}
 ## Contributing

@@ -744,7 +744,7 @@ const xml = toAtom({ options, items }, { baseUrl: 'https://example.com' })
 
 ## Linting
 
-`validateInput` only enforces what breaks the document (a missing title, a missing Atom author, …). `lintInput` goes further: it flags fields that are optional per spec but expected by real readers and directories — a missing feed `description`/`language`/`image`, an item with no `id`, `author`, or date, incomplete Podcast metadata once `podcast` is set, and so on. It never throws and returns a plain `string[]` of warnings (empty when clean), and `serveFeed` never calls it — it's for tests and CI, not the serve path:
+`validateInput` only enforces what breaks the document (a missing title, a missing Atom author, …). `lintInput` goes further: it flags fields that are optional per spec but expected by real readers and directories — a missing feed `description`/`language`/`image`, an item with no `id`, `author`, or date, incomplete Podcast metadata once `podcast` is set, and so on. It also catches common mistakes: duplicate item ids, a date in the future (usually a timezone mix-up), relative URLs left in `content`/`description` (readers can't resolve them), an enclosure with no `type` or `length`, an overlong or HTML-laden title, and a feed of more than 100 items with no `paging`. It never throws and returns a plain `string[]` of warnings (empty when clean), and `serveFeed` never calls it — it's for tests and CI, not the serve path:
 
 ```ts
 import { lintInput } from 'hono-feed'
@@ -752,6 +752,8 @@ import { lintInput } from 'hono-feed'
 const warnings = lintInput({ options, items }, 'rss')
 // e.g. expect(lintInput({ options, items }, 'rss')).toEqual([]) in a CI check
 ```
+
+Every rule has an id (`LintRuleId`), so you can silence the ones you accept: `lintInput(input, 'rss', { ignore: ['feed-language', 'item-count'] })`. The `future-date` rule compares against the current time; pass `now` for a deterministic test.
 
 ## Contributing
 
