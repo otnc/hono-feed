@@ -7,10 +7,16 @@ const ENCODER = new TextEncoder()
 
 export const DEFAULT_CACHE_CONTROL = 'public, max-age=3600'
 
-const CONTROL_CHARS = /[\u0000-\u001f\u007f]/
+function hasControlCharacter(value: string): boolean {
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i)
+    if (code <= 0x1f || code === 0x7f) return true
+  }
+  return false
+}
 
 function assertHeaderSafe(name: string, value: string): void {
-  if (CONTROL_CHARS.test(value)) {
+  if (hasControlCharacter(value)) {
     throw new TypeError(`hono-feed: ${name} must not contain control characters`)
   }
 }
