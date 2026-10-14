@@ -181,6 +181,10 @@ export interface FeedOptions {
   /** Atom icon / JSON favicon. */
   favicon?: string
   /**
+   * Rewrite relative `src` / `href` / `poster` / `srcset` URLs in each item's HTML `content` and `description` to absolute ones against `baseUrl`, so images and links survive in a reader that has no page to resolve them against. Default `false`. Only attribute values inside start tags are touched. Needs a base URL (`baseUrl`, which `serveFeed` defaults to the request origin); without one this does nothing.
+   */
+  absolutizeContent?: boolean
+  /**
    * Emit an item's `image` as a `<media:thumbnail>` in RSS 2.0 and Atom 1.0, so readers that show thumbnails pick it up. Default `false`, so `image` stays JSON Feed-only. Items that already set `media.thumbnails` keep their own. `xmlns:media` is declared automatically, only when a thumbnail is emitted.
    */
   itemImageAsThumbnail?: boolean

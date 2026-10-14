@@ -5,12 +5,13 @@ import { warnDeprecated } from '../../utils/deprecation'
 import { enclosureList } from '../../utils/enclosure'
 import { hubList } from '../../utils/hub'
 import { absolutize, selfUrl } from '../../utils/url'
+import { withAbsoluteContent } from '../content'
 
 export { validateInput } from '../../validate'
 
 /** Serialize the neutral model to a JSON Feed 1.1 string. */
-export function toJSONFeed(input: FeedInput, opts: SerializeOptions = {}): string {
-  const { options, items } = input
+export function toJSONFeed(rawInput: FeedInput, opts: SerializeOptions = {}): string {
+  const { options, items } = withAbsoluteContent(rawInput, opts.baseUrl)
   const base = opts.baseUrl
   // 1.0 uses the singular `author` and predates `language`.
   const v1 = opts.jsonFeedVersion === '1'
