@@ -279,6 +279,22 @@ app.get('/feed', (c) =>
 
 The object form is recommended when the fields cover what you need — it can't typo a directive name or forget a comma. The raw string isn't deprecated, though: it's the header's own native shape, and it's still the way to reach directives (or vendor extensions) `CacheControlDirectives` doesn't model yet. Both forms are first-class and neither is going away.
 
+## Extra response headers
+
+Two optional headers cover the cases that otherwise need a wrapper around `serveFeed`. Both are omitted by default:
+
+- **`robots`** sends `X-Robots-Tag`. `robots: 'noindex'` keeps the feed document itself out of search results while readers can still fetch it.
+- **`contentDisposition`** sends `Content-Disposition`. Pass `{ filename: 'feed.xml' }` for `inline; filename="feed.xml"`, add `type: 'attachment'` to make browsers download the feed instead of rendering it, or pass a raw string to send it as-is. A non-ASCII filename also gets an RFC 8187 `filename*`. Control characters in either value throw, so a value taken from user input can't split the header.
+
+```ts
+serveFeed(c, input, {
+  robots: 'noindex',
+  contentDisposition: { filename: 'feed.xml', type: 'attachment' },
+})
+```
+
+CORS is left to `hono/cors`, which already covers a feed fetched from a browser.
+
 ## Skipping work on a 304
 
 By default, answering a conditional request still costs a full round trip through your data: `serveFeed` needs the serialized body to compute its ETag, so a `304` only happens *after* you've already built the feed. If `input` is loaded from a database, that's a wasted query on every poll that finds nothing new — and feed readers poll a lot.

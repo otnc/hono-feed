@@ -374,6 +374,13 @@ export interface SerializeOptions {
   suppressDeprecationWarnings?: boolean
 }
 
+export interface ContentDispositionOptions {
+  /** Suggested file name, e.g. `'feed.xml'`. Must not contain control characters. */
+  filename: string
+  /** `'inline'` (default) lets browsers render the feed; `'attachment'` makes them download it. */
+  type?: 'inline' | 'attachment'
+}
+
 export interface ServeFeedOptions {
   /** Explicit format. When unset, negotiates query -> extension -> Accept -> default. */
   format?: FeedFormat
@@ -414,6 +421,14 @@ export interface ServeFeedOptions {
   lastModified?: boolean
   /** Base URL for absolutizing relative URLs. Defaults to the request origin. */
   baseUrl?: string
+  /**
+   * `X-Robots-Tag` header value, e.g. `'noindex'` to keep the feed itself out of search results while readers can still fetch it. Omitted by default.
+   */
+  robots?: string
+  /**
+   * `Content-Disposition` header. A raw string is sent as-is; `{ filename }` builds `inline; filename="…"` (non-ASCII names also get an RFC 8187 `filename*`), or `attachment` with `type: 'attachment'` to make browsers download the feed instead of rendering it. Omitted by default.
+   */
+  contentDisposition?: string | ContentDispositionOptions
   /** Pretty-print the output. Default false. */
   pretty?: boolean
   /**
