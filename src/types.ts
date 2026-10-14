@@ -180,6 +180,10 @@ export interface FeedOptions {
   image?: string
   /** Atom icon / JSON favicon. */
   favicon?: string
+  /**
+   * Rewrite relative `src` / `href` / `poster` / `srcset` URLs in each item's HTML `content` and `description` to absolute ones against `baseUrl`, so images and links survive in a reader that has no page to resolve them against. Default `false`. Only attribute values inside start tags are touched. Needs a base URL (`baseUrl`, which `serveFeed` defaults to the request origin); without one this does nothing.
+   */
+  absolutizeContent?: boolean
   /** Defaults to 'hono-feed'. */
   generator?: string
   /** RSS ttl in minutes. */

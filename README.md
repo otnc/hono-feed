@@ -414,6 +414,17 @@ An item's `comments` URL becomes `<comments>` in RSS 2.0 and `<link rel="replies
 > [!TIP]
 > hono-feed does the XML escaping for you, but it doesn't HTML-encode entities. If you need that — e.g. to turn arbitrary text into a safe HTML `content`/`description` value — reach for [`he`](https://www.npmjs.com/package/he) (`he.encode(text)`), plus [`@types/he`](https://www.npmjs.com/package/@types/he) for its TypeScript types.
 
+## Absolute URLs in content
+
+`baseUrl` absolutizes the URL *fields* (`link`, `enclosure.url`, …), but not the HTML you put in `content` or `description`. A feed reader has no page to resolve `<img src="/a.png">` or `<a href="/post">` against, so images and links from CMS-sourced HTML break. Set `absolutizeContent: true` in the feed options to rewrite them:
+
+```ts
+new Feed({ title: 'Blog', link: 'https://example.com/', absolutizeContent: true })
+// <img src="/a.png"> -> <img src="https://example.com/a.png">
+```
+
+It rewrites relative `src`, `href`, `poster` and `srcset` values inside start tags, against `baseUrl` (`serveFeed` defaults it to the request origin; without any base it does nothing). Text, comments, CDATA and `<script>` / `<style>` bodies are never touched, and a value that is already absolute, a fragment, or uses another scheme (`mailto:`, `data:`) is left exactly as written. It applies to RSS, Atom and JSON Feed, and is off by default.
+
 ## Options
 
 All options for `serveFeed(c, input, options?)`:

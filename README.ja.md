@@ -414,6 +414,17 @@ feed.addItem({
 > [!TIP]
 > hono-feed は XML エスケープを行いますが、HTML エンティティのエンコードは行いません。必要な場合、たとえば任意のテキストを安全な HTML の `content` / `description` に変換したいときは、[`he`](https://www.npmjs.com/package/he) (`he.encode(text)`)と、その TypeScript の型定義の [`@types/he`](https://www.npmjs.com/package/@types/he) を使ってください。
 
+## 本文中の相対 URL を絶対化する
+
+`baseUrl` が絶対化するのは URL を持つ*項目* (`link`、`enclosure.url` など)で、`content` や `description` に入れた HTML の中身は対象外です。フィードリーダーには `<img src="/a.png">` や `<a href="/post">` を解決する基準のページがないので、CMS から取った HTML の画像やリンクが壊れます。フィードのオプションで `absolutizeContent: true` を指定すると、これを書き換えます。
+
+```ts
+new Feed({ title: 'Blog', link: 'https://example.com/', absolutizeContent: true })
+// <img src="/a.png"> -> <img src="https://example.com/a.png">
+```
+
+開始タグの中にある相対的な `src`、`href`、`poster`、`srcset` の値を、`baseUrl` を基準に書き換えます (`serveFeed` では、既定でリクエストの origin が基準です。基準がない場合は何もしません)。本文のテキスト、コメント、CDATA、`<script>` と `<style>` の中身には触れません。すでに絶対 URL の値、フラグメント、ほかのスキーム (`mailto:` や `data:`) の値は、そのまま残します。RSS、Atom、JSON Feed のすべてに適用され、既定ではオフです。
+
 ## オプション
 
 `serveFeed(c, input, options?)` のオプションの一覧です。

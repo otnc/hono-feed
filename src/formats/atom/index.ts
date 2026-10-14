@@ -1,12 +1,14 @@
 import type { FeedInput, SerializeOptions } from '../../types'
 import { warnDeprecated } from '../../utils/deprecation'
+import { withAbsoluteContent } from '../content'
 import { toAtom03 } from './atom03'
 import { toAtom10 } from './atom10'
 
 export { validateInput } from '../../validate'
 
 /** Serialize the neutral model to Atom. `atomVersion` '0.3' emits the deprecated 0.3. */
-export function toAtom(input: FeedInput, opts: SerializeOptions = {}): string {
+export function toAtom(rawInput: FeedInput, opts: SerializeOptions = {}): string {
+  const input = withAbsoluteContent(rawInput, opts.baseUrl)
   // RFC 4287 §2: Atom documents are "serialized as XML 1.0".
   if (opts.xmlVersion === '1.1') {
     throw new TypeError('hono-feed: Atom must be serialized as XML 1.0 (RFC 4287 §2)')

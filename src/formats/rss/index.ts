@@ -1,5 +1,6 @@
 import type { FeedInput, SerializeOptions } from '../../types'
 import { warnDeprecated } from '../../utils/deprecation'
+import { withAbsoluteContent } from '../content'
 import { toRSS2 } from './rss2'
 import { toRSS10 } from './rss10'
 import { toRSS11 } from './rss11'
@@ -13,7 +14,8 @@ const OBSOLETE_RSS = new Set(['0.90', '0.91', '0.92', '0.93', '0.94'])
 /**
  * Serialize the neutral model to RSS. `rssVersion` '0.90' / '1.0' / '1.1' emit RDF; '2.0' / '0.94' / '0.93' / '0.92' / '0.91' emit the `<rss version="…">` structure.
  */
-export function toRSS(input: FeedInput, opts: SerializeOptions = {}): string {
+export function toRSS(rawInput: FeedInput, opts: SerializeOptions = {}): string {
+  const input = withAbsoluteContent(rawInput, opts.baseUrl)
   const version = opts.rssVersion
   // The 0.90 spec requires the exact <?xml version="1.0"?> declaration.
   if (version === '0.90' && opts.xmlVersion === '1.1') {
