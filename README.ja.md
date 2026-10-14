@@ -781,6 +781,23 @@ URL は、ほかの URL フィールドと同様に `baseUrl` を基準に絶対
 
 フィードのオプションで `itemImageAsThumbnail: true` を指定すると、各記事の `image` が RSS 2.0 と Atom 1.0 でも `<media:thumbnail>` として出力されます。Media RSS だけを見るリーダーでもプレビューが表示されます。`media.thumbnails` を設定した記事は、その指定を優先し、サムネイルを追加しません。指定しない場合、`image` は JSON Feed だけに出力されます。
 
+## 追加のリンク
+
+`FeedOptions` と `FeedItem` の `links` で、専用のフィールドから出力するもの以外のリンクを追加できます。たとえば関連ページ、元の情報源 (`via`)、ライセンス ([RFC 4946](https://www.rfc-editor.org/rfc/rfc4946))、別言語版です。各エントリーは、Atom 1.0 では `<link>`、RSS 2.0 では `<atom:link>` として出力されます。JSON Feed には対応するものがなく、ほかのバージョンでは無視されます。
+
+```ts
+feed.addItem({
+  title: 'Bonjour',
+  link: 'https://example.com/fr/bonjour',
+  links: [
+    { rel: 'alternate', href: '/en/hello', hreflang: 'en', type: 'text/html' },
+    { rel: 'via', href: 'https://origin.example/post' },
+  ],
+})
+```
+
+エントリーは `{ rel, href, type?, hreflang?, title?, length? }` の形で、`href` は `baseUrl` を基準に絶対 URL になります。`rel` と `href` は必須です。すでに専用のフィールドがある関係 (`self`、`hub`、`enclosure`、`replies`、ページングのもの)を指定すると例外を投げるので、同じリンクが二重に出力されることはありません。
+
 ## カスタムフィールドで拡張する
 
 共通モデルは意図的に小さくしてあります。その範囲外のもの (Dublin Core の追加要素、hono-feed がモデル化していない名前空間付きのモジュール、独自の JSON Feed のキーなど)には、抜け道が必要です。それが `customXml` / `customNamespaces` (XML 形式向け)と `customJson` (JSON Feed 向け)で、`FeedOptions` (フィード単位)と `FeedItem` (記事単位)のどちらにも指定できます。

@@ -1,5 +1,6 @@
-import type { FeedFormat, FeedInput } from './types'
+import type { FeedFormat, FeedInput, FeedLink } from './types'
 import { hasAuthor } from './utils/author'
+import { RESERVED_LINK_RELS } from './utils/links'
 import { hasIriScheme } from './utils/url'
 
 /**
@@ -22,6 +23,8 @@ export function validateInput(input: FeedInput, format: FeedFormat): void {
       'hono-feed: paging "complete" and "archive" are mutually exclusive (RFC 5005 §2/§4)',
     )
   }
+
+  assertValidLinks(options.links, 'feed.links')
 
   // RSS <skipHours> holds GMT hours (0–23).
   if (options.skipHours?.some((hour) => !Number.isInteger(hour) || hour < 0 || hour > 23)) {
@@ -72,6 +75,7 @@ export function validateInput(input: FeedInput, format: FeedFormat): void {
     if (item.source && (!item.source.title || !item.source.url)) {
       throw new TypeError(`hono-feed: item[${i}] "source" requires both "title" and "url"`)
     }
+    assertValidLinks(item.links, `item[${i}].links`)
     assertValidDate(item.published, `item[${i}].published`)
     assertValidDate(item.updated, `item[${i}].updated`)
 
@@ -111,4 +115,18 @@ function assertValidDate(d: Date | undefined, label: string): void {
   if (!(d instanceof Date) || Number.isNaN(d.getTime())) {
     throw new TypeError(`hono-feed: ${label} must be a valid Date`)
   }
+}
+
+// A link needs a relation and a target, and a relation that has its own field would be emitted twice.
+function assertValidLinks(links: FeedLink[] | undefined, label: string): void {
+  links?.forEach((link, j) => {
+    if (!link.rel || !link.href) {
+      throw new TypeError(`hono-feed: ${label}[${j}] requires both "rel" and "href"`)
+    }
+    if (RESERVED_LINK_RELS.has(link.rel.toLowerCase())) {
+      throw new TypeError(
+        `hono-feed: ${label}[${j}] rel "${link.rel}" has its own field and can't be set through "links"`,
+      )
+    }
+  })
 }

@@ -2,6 +2,7 @@ import type { FeedInput, FeedItem, FeedOptions, SerializeOptions } from '../../t
 import { latestDate, rfc3339 } from '../../utils/date'
 import { firstEnclosure } from '../../utils/enclosure'
 import { hubList } from '../../utils/hub'
+import { extraLinkNodes } from '../../utils/links'
 import { pagingMarker, pagingRels } from '../../utils/paging'
 import { absolutize } from '../../utils/url'
 import { el, type Node, specToNode, tag, xmlDocument } from '../../utils/xml'
@@ -41,6 +42,7 @@ export function toAtom10(input: FeedInput, opts: SerializeOptions): string {
   // RFC 4287 §4.2.8: icon is a small square, logo a 2:1 image — same roles as RSS <image> and JSON Feed icon/favicon.
   if (options.favicon) feed.push(tag('icon', absolutize(options.favicon, base)))
   if (options.image) feed.push(tag('logo', absolutize(options.image, base)))
+  feed.push(...extraLinkNodes(options.links, 'link', base))
   if (options.customXml) feed.push(...options.customXml.map(specToNode))
 
   for (const item of items) feed.push(atomEntry10(item, options, base))
@@ -91,6 +93,7 @@ function atomEntry10(item: FeedItem, options: FeedOptions, base?: string): Node 
 
   ch.push(...mediaItemNodes(item, options, base))
 
+  ch.push(...extraLinkNodes(item.links, 'link', base))
   if (item.customXml) ch.push(...item.customXml.map(specToNode))
 
   // renderAttrs drops undefined values, so xml:lang simply vanishes when language is unset.

@@ -781,6 +781,23 @@ URLs are absolutized against `baseUrl` like every other URL field, and every ent
 
 Set `itemImageAsThumbnail: true` in the feed options to also emit each item's `image` as a `<media:thumbnail>` in RSS 2.0 and Atom 1.0, so readers that only look at Media RSS still show a preview. An item that sets `media.thumbnails` keeps its own and gets no extra one. Without the option, `image` stays JSON Feed-only.
 
+## Extra links
+
+`links` on `FeedOptions` and `FeedItem` adds links beyond the ones hono-feed emits from dedicated fields: a related page, the original source (`via`), a license ([RFC 4946](https://www.rfc-editor.org/rfc/rfc4946)), or an alternate-language version. Each entry is an Atom `<link>` (Atom 1.0) or an `<atom:link>` (RSS 2.0); JSON Feed has no equivalent and every other version ignores them.
+
+```ts
+feed.addItem({
+  title: 'Bonjour',
+  link: 'https://example.com/fr/bonjour',
+  links: [
+    { rel: 'alternate', href: '/en/hello', hreflang: 'en', type: 'text/html' },
+    { rel: 'via', href: 'https://origin.example/post' },
+  ],
+})
+```
+
+Entries are `{ rel, href, type?, hreflang?, title?, length? }`, and `href` is absolutized against `baseUrl`. Both `rel` and `href` are required. Relations that already have a field (`self`, `hub`, `enclosure`, `replies`, and the paging ones) throw, so a link is never emitted twice.
+
 ## Extending with custom fields
 
 The neutral model is deliberately small — anything outside it (Media RSS, Dublin Core extras, a namespaced module hono-feed doesn't model, custom JSON Feed keys) needs an escape hatch. `customXml` / `customNamespaces` (XML formats) and `customJson` (JSON Feed) are that hatch, on both `FeedOptions` (feed-level) and `FeedItem` (item-level):
