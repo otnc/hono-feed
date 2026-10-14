@@ -385,6 +385,22 @@ app.get('/feed', (c) =>
 
 The object form is recommended when the fields cover what you need — it can't typo a directive name or forget a comma. The raw string isn't deprecated, though: it's the header's own native shape, and it's still the way to reach directives (or vendor extensions) `CacheControlDirectives` doesn't model yet. Both forms are first-class and neither is going away.
 
+## Extra response headers
+
+Two optional headers cover the cases that otherwise need a wrapper around `serveFeed`. Both are omitted by default:
+
+- **`robots`** sends `X-Robots-Tag`. `robots: 'noindex'` keeps the feed document itself out of search results while readers can still fetch it.
+- **`contentDisposition`** sends `Content-Disposition`. Pass `{ filename: 'feed.xml' }` for `inline; filename="feed.xml"`, add `type: 'attachment'` to make browsers download the feed instead of rendering it, or pass a raw string to send it as-is. A non-ASCII filename also gets an RFC 8187 `filename*`. Control characters in either value throw, so a value taken from user input can't split the header.
+
+```ts
+serveFeed(c, input, {
+  robots: 'noindex',
+  contentDisposition: { filename: 'feed.xml', type: 'attachment' },
+})
+```
+
+CORS is left to `hono/cors`, which already covers a feed fetched from a browser.
+
 ## Skipping work on a 304
 
 By default, answering a conditional request still costs a full round trip through your data: `serveFeed` needs the serialized body to compute its ETag, so a `304` only happens *after* you've already built the feed. If `input` is loaded from a database, that's a wasted query on every poll that finds nothing new — and feed readers poll a lot.
@@ -398,6 +414,22 @@ Two options fix this, and they can be used together:
 `false` を指定すると、これまでどおりヘッダーを完全に省略します。
 
 必要な項目がオブジェクトで足りるなら、オブジェクト形式をおすすめします。ディレクティブ名のタイプミスやカンマの付け忘れが起こりません。ただし生の文字列が非推奨になったわけではありません。ヘッダー本来の形であり、`CacheControlDirectives` がまだ扱っていないディレクティブ (やベンダー拡張)を使う手段として残っています。どちらの形式も正式にサポートしていて、どちらかをなくす予定はありません。
+
+## 追加のレスポンスヘッダー
+
+`serveFeed` を自分でラップしなくて済むように、省略可能なヘッダーを 2 つ用意しています。どちらも既定では送りません。
+
+- **`robots`**: `X-Robots-Tag` を送ります。`robots: 'noindex'` を指定すると、フィード自体は検索結果に出さず、リーダーからの取得はそのまま可能です。
+- **`contentDisposition`**: `Content-Disposition` を送ります。`{ filename: 'feed.xml' }` なら `inline; filename="feed.xml"` になります。`type: 'attachment'` を足すと、ブラウザーで表示せずダウンロードさせます。文字列を渡した場合は、そのまま送ります。ファイル名が ASCII 以外なら、RFC 8187 の `filename*` も付きます。どちらの値も制御文字を含むと例外を投げるので、ユーザー入力から作った値でヘッダーが分割されることはありません。
+
+```ts
+serveFeed(c, input, {
+  robots: 'noindex',
+  contentDisposition: { filename: 'feed.xml', type: 'attachment' },
+})
+```
+
+CORS は `hono/cors` で足りるので、このパッケージでは扱いません。
 
 ## 304 で処理を省く
 
@@ -595,6 +627,17 @@ An item's `comments` URL becomes `<comments>` in RSS 2.0 and `<link rel="replies
 :::
 
 :::kiritan{locale=en}
+## Absolute URLs in content
+
+`baseUrl` absolutizes the URL *fields* (`link`, `enclosure.url`, …), but not the HTML you put in `content` or `description`. A feed reader has no page to resolve `<img src="/a.png">` or `<a href="/post">` against, so images and links from CMS-sourced HTML break. Set `absolutizeContent: true` in the feed options to rewrite them:
+
+```ts
+new Feed({ title: 'Blog', link: 'https://example.com/', absolutizeContent: true })
+// <img src="/a.png"> -> <img src="https://example.com/a.png">
+```
+
+It rewrites relative `src`, `href`, `poster` and `srcset` values inside start tags, against `baseUrl` (`serveFeed` defaults it to the request origin; without any base it does nothing). Text, comments, CDATA and `<script>` / `<style>` bodies are never touched, and a value that is already absolute, a fragment, or uses another scheme (`mailto:`, `data:`) is left exactly as written. It applies to RSS, Atom and JSON Feed, and is off by default.
+
 ## Options
 
 All options for `serveFeed(c, input, options?)`:
@@ -623,6 +666,17 @@ All options for `serveFeed(c, input, options?)`:
 | `suppressDeprecationWarnings` | `boolean` | `false` | Mute warnings for deprecated versions |
 :::
 :::kiritan{locale=ja}
+## 本文中の相対 URL を絶対化する
+
+`baseUrl` が絶対化するのは URL を持つ*項目* (`link`、`enclosure.url` など)で、`content` や `description` に入れた HTML の中身は対象外です。フィードリーダーには `<img src="/a.png">` や `<a href="/post">` を解決する基準のページがないので、CMS から取った HTML の画像やリンクが壊れます。フィードのオプションで `absolutizeContent: true` を指定すると、これを書き換えます。
+
+```ts
+new Feed({ title: 'Blog', link: 'https://example.com/', absolutizeContent: true })
+// <img src="/a.png"> -> <img src="https://example.com/a.png">
+```
+
+開始タグの中にある相対的な `src`、`href`、`poster`、`srcset` の値を、`baseUrl` を基準に書き換えます (`serveFeed` では、既定でリクエストの origin が基準です。基準がない場合は何もしません)。本文のテキスト、コメント、CDATA、`<script>` と `<style>` の中身には触れません。すでに絶対 URL の値、フラグメント、ほかのスキーム (`mailto:` や `data:`) の値は、そのまま残します。RSS、Atom、JSON Feed のすべてに適用され、既定ではオフです。
+
 ## オプション
 
 `serveFeed(c, input, options?)` のオプションの一覧です。
@@ -738,6 +792,37 @@ feed.addItem({
 
 `podcast` is ignored outside RSS 2.0 (every other RSS version, Atom, and JSON Feed) — there's no equivalent to map it to. An explicit `customNamespaces` entry for `xmlns:itunes` / `xmlns:podcast` always wins over the automatic declaration.
 
+### More Podcasting 2.0 tags
+
+Beyond `guid` / `locked` / `funding` / `transcript` / `chapters`, these [Podcasting 2.0](https://github.com/Podcastindex-org/podcast-namespace) elements are modeled:
+
+| Element | Feed (`options.podcast`) | Episode (`item.podcast`) |
+| --- | --- | --- |
+| `podcast:person` | `person: [{ name, role?, group?, img?, href? }]` | same |
+| `podcast:license` | `license: { identifier, url? }` | same |
+| `podcast:location` | `location: { name, geo?, osm? }` | same |
+| `podcast:images` | `images: { srcset }` | same |
+| `podcast:socialInteract` | `socialInteract: [{ protocol, uri?, accountId?, accountUrl?, priority? }]` | same |
+| `podcast:medium` | `medium: 'podcast' \| 'music' \| 'video' \| …` | — |
+| `podcast:trailer` | `trailer: [{ title, url, pubDate, length?, type?, season? }]` | — |
+| `podcast:season` | — | `podcastSeason: { number, name? }` |
+| `podcast:episode` | — | `podcastEpisode: { number, display? }` |
+
+```ts
+feed.addItem({
+  title: 'Episode 12.5',
+  link: 'https://example.com/12-5',
+  podcast: {
+    person: [{ name: 'Ann Host', role: 'host', img: '/ann.jpg' }],
+    license: { identifier: 'CC-BY-4.0' },
+    podcastSeason: { number: 2, name: 'Race to Mars' },
+    podcastEpisode: { number: 12.5, display: 'Ch.12.5' },
+  },
+})
+```
+
+URLs (`img`, `href`, the license `url`, `uri`, `accountUrl`, the trailer `url`) are absolutized against `baseUrl`. `podcastSeason` / `podcastEpisode` are separate from the iTunes `season` / `episode` because the Podcasting 2.0 versions can carry a name or label and a fractional number. `podcast:value` (Value4Value) and `podcast:liveItem` are not modeled; reach for `customXml` if you need them.
+
 ## Feed discovery
 
 Serving a feed is half the story — it also has to be *findable*. `hono-feed/discovery` generates the `<link rel="alternate">` tags browsers and feed readers look for, and an HTTP `Link` header equivalent, from the same MIME-type table `serveFeed` itself uses (so they can never drift apart).
@@ -748,6 +833,37 @@ For an HTML `<head>`:
 `item.podcast.duration` は省略可能です。未設定の場合、`itunes:duration` は記事の `enclosure.duration` ([前述](#フィードに含める内容))にフォールバックします。そのため、`duration` を持つ通常の `Enclosure` だけで、`podcast` に同じ値を重ねて書かなくても、ポッドキャストのディレクトリに届きます。
 
 `podcast` は RSS 2.0 以外 (ほかのすべての RSS バージョン、Atom、JSON Feed)では無視されます。対応づけられる項目がないためです。`xmlns:itunes` / `xmlns:podcast` を `customNamespaces` に明示した場合は、自動の宣言より常にそちらが優先されます。
+
+### Podcasting 2.0 のその他のタグ
+
+`guid` / `locked` / `funding` / `transcript` / `chapters` のほかに、次の [Podcasting 2.0](https://github.com/Podcastindex-org/podcast-namespace) の要素を扱えます。
+
+| 要素 | フィード (`options.podcast`) | エピソード (`item.podcast`) |
+| --- | --- | --- |
+| `podcast:person` | `person: [{ name, role?, group?, img?, href? }]` | 同じ |
+| `podcast:license` | `license: { identifier, url? }` | 同じ |
+| `podcast:location` | `location: { name, geo?, osm? }` | 同じ |
+| `podcast:images` | `images: { srcset }` | 同じ |
+| `podcast:socialInteract` | `socialInteract: [{ protocol, uri?, accountId?, accountUrl?, priority? }]` | 同じ |
+| `podcast:medium` | `medium: 'podcast' \| 'music' \| 'video' \| …` | なし |
+| `podcast:trailer` | `trailer: [{ title, url, pubDate, length?, type?, season? }]` | なし |
+| `podcast:season` | なし | `podcastSeason: { number, name? }` |
+| `podcast:episode` | なし | `podcastEpisode: { number, display? }` |
+
+```ts
+feed.addItem({
+  title: 'Episode 12.5',
+  link: 'https://example.com/12-5',
+  podcast: {
+    person: [{ name: 'Ann Host', role: 'host', img: '/ann.jpg' }],
+    license: { identifier: 'CC-BY-4.0' },
+    podcastSeason: { number: 2, name: 'Race to Mars' },
+    podcastEpisode: { number: 12.5, display: 'Ch.12.5' },
+  },
+})
+```
+
+URL (`img`、`href`、ライセンスの `url`、`uri`、`accountUrl`、トレーラーの `url`)は `baseUrl` を基準に絶対 URL になります。`podcastSeason` / `podcastEpisode` を iTunes の `season` / `episode` と分けているのは、Podcasting 2.0 版には名前や表示用ラベルと、小数の番号を持たせられるためです。`podcast:value` (Value4Value)と `podcast:liveItem` は扱いません。必要なら `customXml` を使ってください。
 
 ## フィードの発見
 
@@ -772,6 +888,25 @@ app.get('/', (c) =>
 )
 // <link rel="alternate" type="application/rss+xml" title="My Blog" href="/feed.rss">
 // <link rel="alternate" type="application/atom+xml" title="My Blog" href="/feed.atom">
+```
+
+:::kiritan{locale=en}
+With `hono/jsx`, map `feedLinks()` to `<link>` elements instead of reaching for `raw()`:
+:::
+:::kiritan{locale=ja}
+`hono/jsx` では、`raw()` を使わずに、`feedLinks()` の結果を `<link>` 要素に変換します。
+:::
+
+```tsx
+import { feedLinks } from 'hono-feed/discovery'
+
+const FeedLinks = () => (
+  <>
+    {feedLinks({ title: 'My Blog', rss: '/feed.rss', atom: '/feed.atom' }).map((l) => (
+      <link rel={l.rel} type={l.type} href={l.href} title={l.title} />
+    ))}
+  </>
+)
 ```
 
 :::kiritan{locale=en}
@@ -875,6 +1010,21 @@ const results = await notifyHub(
   'https://example.com/feed.rss', // feed URL(s) that changed — string or string[]
 )
 // [{ hub: 'https://pubsubhubbub.appspot.com/', ok: true, status: 204 }]
+```
+
+:::kiritan{locale=en}
+On Cloudflare Workers (and other runtimes that stop work once the response is sent), hand the promise to `waitUntil` so the ping isn't cut off. Without it the request can be cancelled before the hub is reached:
+:::
+:::kiritan{locale=ja}
+Cloudflare Workers など、レスポンスを返すと処理が打ち切られるランタイムでは、Promise を `waitUntil` に渡してください。渡さないと、ハブに届く前にリクエストが中断されることがあります。
+:::
+
+```ts
+app.post('/publish', async (c) => {
+  await savePost(c)
+  c.executionCtx.waitUntil(notifyHub('https://pubsubhubbub.appspot.com/', 'https://example.com/feed.rss'))
+  return c.text('ok')
+})
 ```
 
 :::kiritan{locale=en}
@@ -1023,6 +1173,8 @@ feed.addItem({
 :::kiritan{locale=en}
 URLs are absolutized against `baseUrl` like every other URL field, and every entry needs a `url`. It is emitted for RSS 2.0 and Atom 1.0 only; JSON Feed has no equivalent (use the item's `image` there).
 
+Set `itemImageAsThumbnail: true` in the feed options to also emit each item's `image` as a `<media:thumbnail>` in RSS 2.0 and Atom 1.0, so readers that only look at Media RSS still show a preview. An item that sets `media.thumbnails` keeps its own and gets no extra one. Without the option, `image` stays JSON Feed-only.
+
 ## Extra links
 
 `links` on `FeedOptions` and `FeedItem` adds links beyond the ones hono-feed emits from dedicated fields: a related page, the original source (`via`), a license ([RFC 4946](https://www.rfc-editor.org/rfc/rfc4946)), or an alternate-language version. Each entry is an Atom `<link>` (Atom 1.0) or an `<atom:link>` (RSS 2.0); JSON Feed has no equivalent and every other version ignores them.
@@ -1046,6 +1198,8 @@ The neutral model is deliberately small — anything outside it (Media RSS, Dubl
 :::
 :::kiritan{locale=ja}
 URL は、ほかの URL フィールドと同様に `baseUrl` を基準に絶対 URL になります。どのエントリにも `url` が必要です。出力されるのは RSS 2.0 と Atom 1.0 だけで、JSON Feed には対応するものがありません (JSON Feed では記事の `image` を使ってください)。
+
+フィードのオプションで `itemImageAsThumbnail: true` を指定すると、各記事の `image` が RSS 2.0 と Atom 1.0 でも `<media:thumbnail>` として出力されます。Media RSS だけを見るリーダーでもプレビューが表示されます。`media.thumbnails` を設定した記事は、その指定を優先し、サムネイルを追加しません。指定しない場合、`image` は JSON Feed だけに出力されます。
 
 ## 追加のリンク
 
@@ -1127,12 +1281,12 @@ const xml = toAtom({ options, items }, { baseUrl: 'https://example.com' })
 :::kiritan{locale=en}
 ## Linting
 
-`validateInput` only enforces what breaks the document (a missing title, a missing Atom author, …). `lintInput` goes further: it flags fields that are optional per spec but expected by real readers and directories — a missing feed `description`/`language`/`image`, an item with no `id`, `author`, or date, incomplete Podcast metadata once `podcast` is set, and so on. It never throws and returns a plain `string[]` of warnings (empty when clean), and `serveFeed` never calls it — it's for tests and CI, not the serve path:
+`validateInput` only enforces what breaks the document (a missing title, a missing Atom author, …). `lintInput` goes further: it flags fields that are optional per spec but expected by real readers and directories — a missing feed `description`/`language`/`image`, an item with no `id`, `author`, or date, incomplete Podcast metadata once `podcast` is set, and so on. It also catches common mistakes: duplicate item ids, a date in the future (usually a timezone mix-up), relative URLs left in `content`/`description` (readers can't resolve them), an enclosure with no `type` or `length`, an overlong or HTML-laden title, and a feed of more than 100 items with no `paging`. It never throws and returns a plain `string[]` of warnings (empty when clean), and `serveFeed` never calls it — it's for tests and CI, not the serve path:
 :::
 :::kiritan{locale=ja}
 ## リント
 
-`validateInput` が検証するのは、ドキュメントを壊すものだけです (タイトルがない、Atom の author がない、など)。`lintInput` はさらに踏み込み、仕様上は省略可能でも、実際のリーダーやディレクトリが期待している項目を指摘します。たとえばフィードの `description` / `language` / `image` がない、記事に `id`、`author`、日付がない、`podcast` を設定したのにポッドキャストのメタデータが不完全、などです。例外は投げず、警告の `string[]` を返します (問題がなければ空)。`serveFeed` はこれを呼ばないので、テストや CI 向けの機能で、配信の経路では使いません。
+`validateInput` が検証するのは、ドキュメントを壊すものだけです (タイトルがない、Atom の author がない、など)。`lintInput` はさらに踏み込み、仕様上は省略可能でも、実際のリーダーやディレクトリが期待している項目を指摘します。たとえばフィードの `description` / `language` / `image` がない、記事に `id`、`author`、日付がない、`podcast` を設定したのにポッドキャストのメタデータが不完全、などです。よくあるミスも検出します。記事の `id` の重複、未来の日付 (多くはタイムゾーンの取り違え)、`content` / `description` に残った相対 URL (リーダーが解決できません)、`type` や `length` がない enclosure、長すぎる、または HTML が混ざったタイトル、100 件を超えるのに `paging` がないフィード、などです。例外は投げず、警告の `string[]` を返します (問題がなければ空)。`serveFeed` はこれを呼ばないので、テストや CI 向けの機能で、配信の経路では使いません。
 :::
 
 ```ts
@@ -1141,6 +1295,13 @@ import { lintInput } from 'hono-feed'
 const warnings = lintInput({ options, items }, 'rss')
 // e.g. expect(lintInput({ options, items }, 'rss')).toEqual([]) in a CI check
 ```
+
+:::kiritan{locale=en}
+Every rule has an id (`LintRuleId`), so you can silence the ones you accept: `lintInput(input, 'rss', { ignore: ['feed-language', 'item-count'] })`. The `future-date` rule compares against the current time; pass `now` for a deterministic test.
+:::
+:::kiritan{locale=ja}
+すべてのルールに ID (`LintRuleId`) があり、許容するルールだけ無効にできます。たとえば `lintInput(input, 'rss', { ignore: ['feed-language', 'item-count'] })` のように指定します。`future-date` ルールは現在時刻と比較するので、テストを決定的にしたい場合は `now` を渡してください。
+:::
 
 :::kiritan{locale=en}
 ## Contributing

@@ -279,6 +279,22 @@ app.get('/feed', (c) =>
 
 The object form is recommended when the fields cover what you need — it can't typo a directive name or forget a comma. The raw string isn't deprecated, though: it's the header's own native shape, and it's still the way to reach directives (or vendor extensions) `CacheControlDirectives` doesn't model yet. Both forms are first-class and neither is going away.
 
+## Extra response headers
+
+Two optional headers cover the cases that otherwise need a wrapper around `serveFeed`. Both are omitted by default:
+
+- **`robots`** sends `X-Robots-Tag`. `robots: 'noindex'` keeps the feed document itself out of search results while readers can still fetch it.
+- **`contentDisposition`** sends `Content-Disposition`. Pass `{ filename: 'feed.xml' }` for `inline; filename="feed.xml"`, add `type: 'attachment'` to make browsers download the feed instead of rendering it, or pass a raw string to send it as-is. A non-ASCII filename also gets an RFC 8187 `filename*`. Control characters in either value throw, so a value taken from user input can't split the header.
+
+```ts
+serveFeed(c, input, {
+  robots: 'noindex',
+  contentDisposition: { filename: 'feed.xml', type: 'attachment' },
+})
+```
+
+CORS is left to `hono/cors`, which already covers a feed fetched from a browser.
+
 ## Skipping work on a 304
 
 By default, answering a conditional request still costs a full round trip through your data: `serveFeed` needs the serialized body to compute its ETag, so a `304` only happens *after* you've already built the feed. If `input` is loaded from a database, that's a wasted query on every poll that finds nothing new — and feed readers poll a lot.
@@ -414,6 +430,17 @@ An item's `comments` URL becomes `<comments>` in RSS 2.0 and `<link rel="replies
 > [!TIP]
 > hono-feed does the XML escaping for you, but it doesn't HTML-encode entities. If you need that — e.g. to turn arbitrary text into a safe HTML `content`/`description` value — reach for [`he`](https://www.npmjs.com/package/he) (`he.encode(text)`), plus [`@types/he`](https://www.npmjs.com/package/@types/he) for its TypeScript types.
 
+## Absolute URLs in content
+
+`baseUrl` absolutizes the URL *fields* (`link`, `enclosure.url`, …), but not the HTML you put in `content` or `description`. A feed reader has no page to resolve `<img src="/a.png">` or `<a href="/post">` against, so images and links from CMS-sourced HTML break. Set `absolutizeContent: true` in the feed options to rewrite them:
+
+```ts
+new Feed({ title: 'Blog', link: 'https://example.com/', absolutizeContent: true })
+// <img src="/a.png"> -> <img src="https://example.com/a.png">
+```
+
+It rewrites relative `src`, `href`, `poster` and `srcset` values inside start tags, against `baseUrl` (`serveFeed` defaults it to the request origin; without any base it does nothing). Text, comments, CDATA and `<script>` / `<style>` bodies are never touched, and a value that is already absolute, a fragment, or uses another scheme (`mailto:`, `data:`) is left exactly as written. It applies to RSS, Atom and JSON Feed, and is off by default.
+
 ## Options
 
 All options for `serveFeed(c, input, options?)`:
@@ -508,6 +535,37 @@ feed.addItem({
 
 `podcast` is ignored outside RSS 2.0 (every other RSS version, Atom, and JSON Feed) — there's no equivalent to map it to. An explicit `customNamespaces` entry for `xmlns:itunes` / `xmlns:podcast` always wins over the automatic declaration.
 
+### More Podcasting 2.0 tags
+
+Beyond `guid` / `locked` / `funding` / `transcript` / `chapters`, these [Podcasting 2.0](https://github.com/Podcastindex-org/podcast-namespace) elements are modeled:
+
+| Element | Feed (`options.podcast`) | Episode (`item.podcast`) |
+| --- | --- | --- |
+| `podcast:person` | `person: [{ name, role?, group?, img?, href? }]` | same |
+| `podcast:license` | `license: { identifier, url? }` | same |
+| `podcast:location` | `location: { name, geo?, osm? }` | same |
+| `podcast:images` | `images: { srcset }` | same |
+| `podcast:socialInteract` | `socialInteract: [{ protocol, uri?, accountId?, accountUrl?, priority? }]` | same |
+| `podcast:medium` | `medium: 'podcast' \| 'music' \| 'video' \| …` | — |
+| `podcast:trailer` | `trailer: [{ title, url, pubDate, length?, type?, season? }]` | — |
+| `podcast:season` | — | `podcastSeason: { number, name? }` |
+| `podcast:episode` | — | `podcastEpisode: { number, display? }` |
+
+```ts
+feed.addItem({
+  title: 'Episode 12.5',
+  link: 'https://example.com/12-5',
+  podcast: {
+    person: [{ name: 'Ann Host', role: 'host', img: '/ann.jpg' }],
+    license: { identifier: 'CC-BY-4.0' },
+    podcastSeason: { number: 2, name: 'Race to Mars' },
+    podcastEpisode: { number: 12.5, display: 'Ch.12.5' },
+  },
+})
+```
+
+URLs (`img`, `href`, the license `url`, `uri`, `accountUrl`, the trailer `url`) are absolutized against `baseUrl`. `podcastSeason` / `podcastEpisode` are separate from the iTunes `season` / `episode` because the Podcasting 2.0 versions can carry a name or label and a fractional number. `podcast:value` (Value4Value) and `podcast:liveItem` are not modeled; reach for `customXml` if you need them.
+
 ## Feed discovery
 
 Serving a feed is half the story — it also has to be *findable*. `hono-feed/discovery` generates the `<link rel="alternate">` tags browsers and feed readers look for, and an HTTP `Link` header equivalent, from the same MIME-type table `serveFeed` itself uses (so they can never drift apart).
@@ -530,6 +588,20 @@ app.get('/', (c) =>
 )
 // <link rel="alternate" type="application/rss+xml" title="My Blog" href="/feed.rss">
 // <link rel="alternate" type="application/atom+xml" title="My Blog" href="/feed.atom">
+```
+
+With `hono/jsx`, map `feedLinks()` to `<link>` elements instead of reaching for `raw()`:
+
+```tsx
+import { feedLinks } from 'hono-feed/discovery'
+
+const FeedLinks = () => (
+  <>
+    {feedLinks({ title: 'My Blog', rss: '/feed.rss', atom: '/feed.atom' }).map((l) => (
+      <link rel={l.rel} type={l.type} href={l.href} title={l.title} />
+    ))}
+  </>
+)
 ```
 
 `feedLinks(options)` returns the same data as a plain array (`{ rel, type, href, title? }[]`) instead of a string, for JSX or any other templating you already use. Both accept `baseUrl` to absolutize relative feed URLs; left unset, hrefs stay exactly as given (relative, resolved by the browser against the current page — which is usually what you want).
@@ -598,6 +670,16 @@ const results = await notifyHub(
   'https://example.com/feed.rss', // feed URL(s) that changed — string or string[]
 )
 // [{ hub: 'https://pubsubhubbub.appspot.com/', ok: true, status: 204 }]
+```
+
+On Cloudflare Workers (and other runtimes that stop work once the response is sent), hand the promise to `waitUntil` so the ping isn't cut off. Without it the request can be cancelled before the hub is reached:
+
+```ts
+app.post('/publish', async (c) => {
+  await savePost(c)
+  c.executionCtx.waitUntil(notifyHub('https://pubsubhubbub.appspot.com/', 'https://example.com/feed.rss'))
+  return c.text('ok')
+})
 ```
 
 `notifyHub` never throws — a non-2xx response, a network error, and an aborted request (pass `{ signal }` to time one out) are all reported as a result rather than a rejection, so one unreachable hub can't fail your publish flow. Subscribers still get the update on their next poll either way.
@@ -697,6 +779,8 @@ feed.addItem({
 
 URLs are absolutized against `baseUrl` like every other URL field, and every entry needs a `url`. It is emitted for RSS 2.0 and Atom 1.0 only; JSON Feed has no equivalent (use the item's `image` there).
 
+Set `itemImageAsThumbnail: true` in the feed options to also emit each item's `image` as a `<media:thumbnail>` in RSS 2.0 and Atom 1.0, so readers that only look at Media RSS still show a preview. An item that sets `media.thumbnails` keeps its own and gets no extra one. Without the option, `image` stays JSON Feed-only.
+
 ## Extra links
 
 `links` on `FeedOptions` and `FeedItem` adds links beyond the ones hono-feed emits from dedicated fields: a related page, the original source (`via`), a license ([RFC 4946](https://www.rfc-editor.org/rfc/rfc4946)), or an alternate-language version. Each entry is an Atom `<link>` (Atom 1.0) or an `<atom:link>` (RSS 2.0); JSON Feed has no equivalent and every other version ignores them.
@@ -759,7 +843,7 @@ const xml = toAtom({ options, items }, { baseUrl: 'https://example.com' })
 
 ## Linting
 
-`validateInput` only enforces what breaks the document (a missing title, a missing Atom author, …). `lintInput` goes further: it flags fields that are optional per spec but expected by real readers and directories — a missing feed `description`/`language`/`image`, an item with no `id`, `author`, or date, incomplete Podcast metadata once `podcast` is set, and so on. It never throws and returns a plain `string[]` of warnings (empty when clean), and `serveFeed` never calls it — it's for tests and CI, not the serve path:
+`validateInput` only enforces what breaks the document (a missing title, a missing Atom author, …). `lintInput` goes further: it flags fields that are optional per spec but expected by real readers and directories — a missing feed `description`/`language`/`image`, an item with no `id`, `author`, or date, incomplete Podcast metadata once `podcast` is set, and so on. It also catches common mistakes: duplicate item ids, a date in the future (usually a timezone mix-up), relative URLs left in `content`/`description` (readers can't resolve them), an enclosure with no `type` or `length`, an overlong or HTML-laden title, and a feed of more than 100 items with no `paging`. It never throws and returns a plain `string[]` of warnings (empty when clean), and `serveFeed` never calls it — it's for tests and CI, not the serve path:
 
 ```ts
 import { lintInput } from 'hono-feed'
@@ -767,6 +851,8 @@ import { lintInput } from 'hono-feed'
 const warnings = lintInput({ options, items }, 'rss')
 // e.g. expect(lintInput({ options, items }, 'rss')).toEqual([]) in a CI check
 ```
+
+Every rule has an id (`LintRuleId`), so you can silence the ones you accept: `lintInput(input, 'rss', { ignore: ['feed-language', 'item-count'] })`. The `future-date` rule compares against the current time; pass `now` for a deterministic test.
 
 ## Contributing
 
