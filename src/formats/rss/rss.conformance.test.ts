@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { FeedInput } from '../../types'
 import { toRSS } from './index'
 
-// A "spec-complete" input: every field a conformant feed needs is filled in, so these tests describe the guarantees hono-feed gives you when you supply everything it asks for — not the behaviour of partially-filled input (see docs/rss-atom-json-audit.md for gaps that only show up when optional-but-spec-required fields are omitted).
+// A "spec-complete" input: every field a conformant feed needs is filled in, so these tests describe the guarantees hono-feed gives you when you supply everything it asks for — not the behaviour of partially-filled input.
 const complete: FeedInput = {
   options: {
     title: 'example blog',
