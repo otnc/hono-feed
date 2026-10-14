@@ -1023,12 +1023,46 @@ feed.addItem({
 :::kiritan{locale=en}
 URLs are absolutized against `baseUrl` like every other URL field, and every entry needs a `url`. It is emitted for RSS 2.0 and Atom 1.0 only; JSON Feed has no equivalent (use the item's `image` there).
 
+## Extra links
+
+`links` on `FeedOptions` and `FeedItem` adds links beyond the ones hono-feed emits from dedicated fields: a related page, the original source (`via`), a license ([RFC 4946](https://www.rfc-editor.org/rfc/rfc4946)), or an alternate-language version. Each entry is an Atom `<link>` (Atom 1.0) or an `<atom:link>` (RSS 2.0); JSON Feed has no equivalent and every other version ignores them.
+
+```ts
+feed.addItem({
+  title: 'Bonjour',
+  link: 'https://example.com/fr/bonjour',
+  links: [
+    { rel: 'alternate', href: '/en/hello', hreflang: 'en', type: 'text/html' },
+    { rel: 'via', href: 'https://origin.example/post' },
+  ],
+})
+```
+
+Entries are `{ rel, href, type?, hreflang?, title?, length? }`, and `href` is absolutized against `baseUrl`. Both `rel` and `href` are required. Relations that already have a field (`self`, `hub`, `enclosure`, `replies`, and the paging ones) throw, so a link is never emitted twice.
+
 ## Extending with custom fields
 
 The neutral model is deliberately small — anything outside it (Media RSS, Dublin Core extras, a namespaced module hono-feed doesn't model, custom JSON Feed keys) needs an escape hatch. `customXml` / `customNamespaces` (XML formats) and `customJson` (JSON Feed) are that hatch, on both `FeedOptions` (feed-level) and `FeedItem` (item-level):
 :::
 :::kiritan{locale=ja}
 URL は、ほかの URL フィールドと同様に `baseUrl` を基準に絶対 URL になります。どのエントリにも `url` が必要です。出力されるのは RSS 2.0 と Atom 1.0 だけで、JSON Feed には対応するものがありません (JSON Feed では記事の `image` を使ってください)。
+
+## 追加のリンク
+
+`FeedOptions` と `FeedItem` の `links` で、専用のフィールドから出力するもの以外のリンクを追加できます。たとえば関連ページ、元の情報源 (`via`)、ライセンス ([RFC 4946](https://www.rfc-editor.org/rfc/rfc4946))、別言語版です。各エントリーは、Atom 1.0 では `<link>`、RSS 2.0 では `<atom:link>` として出力されます。JSON Feed には対応するものがなく、ほかのバージョンでは無視されます。
+
+```ts
+feed.addItem({
+  title: 'Bonjour',
+  link: 'https://example.com/fr/bonjour',
+  links: [
+    { rel: 'alternate', href: '/en/hello', hreflang: 'en', type: 'text/html' },
+    { rel: 'via', href: 'https://origin.example/post' },
+  ],
+})
+```
+
+エントリーは `{ rel, href, type?, hreflang?, title?, length? }` の形で、`href` は `baseUrl` を基準に絶対 URL になります。`rel` と `href` は必須です。すでに専用のフィールドがある関係 (`self`、`hub`、`enclosure`、`replies`、ページングのもの)を指定すると例外を投げるので、同じリンクが二重に出力されることはありません。
 
 ## カスタムフィールドで拡張する
 

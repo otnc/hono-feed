@@ -3,6 +3,7 @@ import { firstAuthor } from '../../utils/author'
 import { rfc822 } from '../../utils/date'
 import { firstEnclosure } from '../../utils/enclosure'
 import { hubList } from '../../utils/hub'
+import { extraLinkNodes } from '../../utils/links'
 import { pagingMarker, pagingRels } from '../../utils/paging'
 import { absolutize, isUrl, selfUrl } from '../../utils/url'
 import { cdata, el, type Node, raw, specToNode, tag, xmlDocument } from '../../utils/xml'
@@ -141,6 +142,8 @@ function channelNodes(
   // Podcast metadata (iTunes / Podcasting 2.0) is RSS 2.0-only, like the rest of caps.rss20.
   if (caps.rss20) channel.push(...podcastChannelNodes(options.podcast, base))
 
+  if (caps.rss20) channel.push(...extraLinkNodes(options.links, 'atom:link', base))
+
   // Escape hatch: appended unconditionally (no caps gating) — the caller opted in explicitly.
   if (options.customXml) channel.push(...options.customXml.map(specToNode))
   return channel
@@ -241,6 +244,8 @@ function rssItem(item: FeedItem, caps: Caps, base?: string): Node {
 
   if (caps.rss20) ch.push(...podcastItemNodes(item.podcast, enclosure, base))
   if (caps.rss20) ch.push(...mediaItemNodes(item.media, base))
+
+  if (caps.rss20) ch.push(...extraLinkNodes(item.links, 'atom:link', base))
 
   if (item.customXml) ch.push(...item.customXml.map(specToNode))
 

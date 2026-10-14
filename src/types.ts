@@ -80,6 +80,22 @@ export interface PodcastChapters {
 }
 
 /**
+ * An additional link beyond the ones hono-feed emits from dedicated fields — a related page, the original source, a license, or an alternate language (Atom 1.0 and RSS 2.0 only).
+ */
+export interface FeedLink {
+  /** Relation, e.g. `'related'`, `'via'`, `'license'` (RFC 4946), `'alternate'`. Relations that have their own field (`self`, `hub`, `enclosure`, `replies`, and the paging ones) are rejected. */
+  rel: string
+  href: string
+  /** MIME type of the target. */
+  type?: string
+  /** Language of the target, for `rel="alternate"` translations. */
+  hreflang?: string
+  title?: string
+  /** Size in bytes (Atom `length`). */
+  length?: number
+}
+
+/**
  * Podcast metadata for the feed as a whole (RSS 2.0 only — ignored by Atom, JSON Feed, and every other RSS version). Covers the iTunes namespace and the Podcasting 2.0 namespace; `xmlns:itunes` / `xmlns:podcast` are declared automatically, only when a field from that namespace is actually set somewhere in the feed. An explicit `customNamespaces` entry for either prefix always wins over the automatic one.
  */
 export interface FeedPodcast {
@@ -180,6 +196,8 @@ export interface FeedOptions {
   image?: string
   /** Atom icon / JSON favicon. */
   favicon?: string
+  /** Additional links: Atom `<link>` / RSS 2.0 `<atom:link>`. No JSON Feed equivalent. */
+  links?: FeedLink[]
   /** Defaults to 'hono-feed'. */
   generator?: string
   /** RSS ttl in minutes. */
@@ -303,6 +321,8 @@ export interface FeedItem {
   comments?: string
   /** Media RSS thumbnails and content. `xmlns:media` is declared automatically, only when one is set. RSS 2.0 and Atom 1.0 only; no JSON Feed mapping (use `image`). */
   media?: ItemMedia
+  /** Additional links: Atom `<link>` / RSS 2.0 `<atom:link>`. No JSON Feed equivalent. */
+  links?: FeedLink[]
   /** Where the item was republished from. RSS 2.0 and Atom 1.0 only; no JSON Feed equivalent. */
   source?: ItemSource
   /** JSON image. */

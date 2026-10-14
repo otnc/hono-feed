@@ -16,6 +16,7 @@ export type {
   FeedFormat,
   FeedInput,
   FeedItem,
+  FeedLink,
   FeedOptions,
   FeedPodcast,
   ItemMedia,
