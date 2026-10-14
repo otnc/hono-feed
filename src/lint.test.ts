@@ -176,3 +176,97 @@ describe('lintInput', () => {
     expect(() => lintInput(empty, 'atom')).not.toThrow()
   })
 })
+
+describe('lintInput rules', () => {
+  const withItem = (patch: Partial<FeedInput['items'][number]>): FeedInput => ({
+    ...clean,
+    items: [{ ...clean.items[0], ...patch }],
+  })
+  const now = new Date('2026-07-01T00:00:00Z')
+
+  it('flags items that share an id (or fall back to the same link)', () => {
+    const dup: FeedInput = { ...clean, items: [clean.items[0], { ...clean.items[0] }] }
+    expect(lintInput(dup, 'rss')).toEqual([expect.stringMatching(/item\[1\].*item\[0\]/)])
+    const byLink: FeedInput = {
+      ...clean,
+      items: [
+        { ...clean.items[0], id: undefined },
+        { ...clean.items[0], id: undefined },
+      ],
+    }
+    expect(lintInput(byLink, 'rss', { ignore: ['item-id'] })).toEqual([
+      expect.stringMatching(/same id\/link/),
+    ])
+  })
+
+  it('flags a date more than a day in the future, but not a small skew', () => {
+    const future = withItem({ published: new Date('2026-07-03T00:00:00Z') })
+    expect(lintInput(future, 'rss', { now })).toEqual([
+      expect.stringMatching(/"published" is in the future/),
+    ])
+    expect(
+      lintInput(withItem({ updated: new Date('2026-07-01T05:00:00Z') }), 'rss', { now }),
+    ).toEqual([])
+  })
+
+  it('flags relative URLs in content and description, not absolute, fragment or mailto ones', () => {
+    const relative = withItem({ content: '<img src="/a.png"><a href="post">x</a>' })
+    expect(lintInput(relative, 'atom')).toEqual([
+      expect.stringMatching(/"content" has 2 relative URL\(s\), e\.g\. "\/a\.png"/),
+    ])
+    expect(lintInput(withItem({ description: "<a href='x/y'>" }), 'rss')).toEqual([
+      expect.stringMatching(/"description"/),
+    ])
+    const fine = withItem({
+      content:
+        '<a href="https://a.test/">a</a><a href="//a.test">b</a><a href="#top">c</a><a href="mailto:a@b.c">d</a>',
+    })
+    expect(lintInput(fine, 'atom')).toEqual([])
+  })
+
+  it('flags an enclosure with no type or a zero length', () => {
+    const noLength = withItem({ enclosure: { url: 'https://a.test/a.mp3', type: 'audio/mpeg' } })
+    expect(lintInput(noLength, 'rss')).toEqual([expect.stringMatching(/no "length"/)])
+    const noType = withItem({ enclosure: { url: 'https://a.test/a.mp3', type: '', length: 5 } })
+    expect(lintInput(noType, 'rss')).toEqual([expect.stringMatching(/no "type"/)])
+    const ok = withItem({
+      enclosure: { url: 'https://a.test/a.mp3', type: 'audio/mpeg', length: 5 },
+    })
+    expect(lintInput(ok, 'rss')).toEqual([])
+  })
+
+  it('flags an overlong title and a title containing HTML', () => {
+    expect(lintInput(withItem({ title: 'x'.repeat(151) }), 'rss')).toEqual([
+      expect.stringMatching(/151 characters/),
+    ])
+    expect(lintInput(withItem({ title: 'a <b>bold</b> move' }), 'rss')).toEqual([
+      expect.stringMatching(/HTML markup/),
+    ])
+    expect(lintInput(withItem({ title: '1 < 2 and 3 > 2' }), 'rss')).toEqual([])
+  })
+
+  it('suggests paging for a feed over 100 items, unless paging is set', () => {
+    const many: FeedInput = {
+      ...clean,
+      items: Array.from({ length: 101 }, (_, i) => ({
+        ...clean.items[0],
+        id: `https://example.com/${i}`,
+        link: `https://example.com/${i}`,
+      })),
+    }
+    expect(lintInput(many, 'rss')).toEqual([expect.stringMatching(/101 items.*paging/)])
+    const paged: FeedInput = {
+      ...many,
+      options: { ...many.options, paging: { next: 'https://example.com/?p=2' } },
+    }
+    expect(lintInput(paged, 'rss')).toEqual([])
+  })
+
+  it('skips ignored rules, including the pre-existing ones', () => {
+    const bare: FeedInput = { options: { title: 't' }, items: [{ title: 'a' }] }
+    const all = lintInput(bare, 'rss')
+    const filtered = lintInput(bare, 'rss', { ignore: ['feed-description', 'item-author'] })
+    expect(all.length - filtered.length).toBe(2)
+    expect(filtered.join('\n')).not.toMatch(/"description"|"author"/)
+  })
+})
